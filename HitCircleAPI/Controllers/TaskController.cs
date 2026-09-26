@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HitCircleAPI.Controllers;
 
+/// <summary>运维任务：用户数据快照、清缓存、打包日志。</summary>
 [ApiController]
 [Route("task")]
 public class TaskController(
@@ -13,6 +14,13 @@ public class TaskController(
     IOsuApiService osuApi,
     ILogger<TaskController> logger) : ControllerBase
 {
+    /// <summary>把所有绑定用户的四种模式数据快照进历史表，供资料卡对比用。</summary>
+    /// <remarks>
+    /// 每个用户每种模式各发一次 osu! API 请求，串行执行，耗时较长。
+    /// 单个失败不会中断整体，失败的条目会收集到响应的 errors 里。
+    /// </remarks>
+    /// <response code="200">全部成功。</response>
+    /// <response code="500">有部分失败，errors 里是失败明细。</response>
     [HttpPost("update_user_info")]
     public async Task<IActionResult> UpdateUserInfo()
     {
@@ -77,6 +85,9 @@ public class TaskController(
         return Ok(new { message = "User info updated" });
     }
 
+    /// <summary>清空谱面 osu! 文件缓存与用户头像、背景缓存。</summary>
+    /// <response code="200">清理完成。</response>
+    /// <response code="500">清理过程中出错。</response>
     [HttpPost("clear_cache")]
     public IActionResult ClearCache()
     {
@@ -115,7 +126,12 @@ public class TaskController(
         return Ok(new { message = "Cache cleared" });
     }
 
+    /// <summary>把日志目录打包成 zip 下载。</summary>
+    /// <response code="200">logs.zip。</response>
+    /// <response code="404">没有日志目录。</response>
+    /// <response code="500">打包失败。</response>
     [HttpPost("pack_logs")]
+    [Produces("application/zip")]
     public IActionResult PackLogs()
     {
         var logDir = Path.Combine(AppContext.BaseDirectory, "logs");

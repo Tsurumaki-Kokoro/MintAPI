@@ -8,6 +8,7 @@ using Ossapi.Models;
 
 namespace HitCircleAPI.Controllers;
 
+/// <summary>成绩图：最近游玩、最好成绩、指定谱面成绩。</summary>
 [ApiController]
 [Route("score")]
 public class ScoreController(
@@ -17,7 +18,18 @@ public class ScoreController(
     DefaultScoreTheme scoreTheme,
     ILogger<ScoreController> logger) : ControllerBase
 {
+    /// <summary>渲染最近一次游玩的成绩图。</summary>
+    /// <param name="platform">平台标识，如 qq、discord。</param>
+    /// <param name="platform_uid">该平台上的用户 ID。</param>
+    /// <param name="game_mode">游戏模式（0=osu!，1=taiko，2=catch，3=mania），默认沿用绑定时的模式。</param>
+    /// <param name="include_fails">是否把失败的成绩也算进最近游玩。</param>
+    /// <param name="theme">渲染主题，默认 default。</param>
+    /// <response code="200">渲染好的 PNG 成绩图。</response>
+    /// <response code="400">取成绩失败。</response>
+    /// <response code="404">用户未绑定，或没有游玩记录。</response>
+    /// <response code="500">取用户信息失败。</response>
     [HttpGet("recent_play")]
+    [Produces("image/png")]
     public async Task<IActionResult> RecentPlay(
         [FromQuery] string platform,
         [FromQuery] string platform_uid,
@@ -60,7 +72,18 @@ public class ScoreController(
         return await RenderScoreAsync(scores[0], userInfo, mode);
     }
 
+    /// <summary>渲染第 N 个最好成绩（BP）的成绩图。</summary>
+    /// <param name="platform">平台标识，如 qq、discord。</param>
+    /// <param name="platform_uid">该平台上的用户 ID。</param>
+    /// <param name="game_mode">游戏模式（0=osu!，1=taiko，2=catch，3=mania），默认沿用绑定时的模式。</param>
+    /// <param name="best_index">第几个 BP，从 1 开始。</param>
+    /// <param name="theme">渲染主题，默认 default。</param>
+    /// <response code="200">渲染好的 PNG 成绩图。</response>
+    /// <response code="400">取成绩失败。</response>
+    /// <response code="404">用户未绑定，或 BP 序号超出成绩数量。</response>
+    /// <response code="500">取用户信息失败。</response>
     [HttpGet("best_play")]
+    [Produces("image/png")]
     public async Task<IActionResult> BestPlay(
         [FromQuery] string platform,
         [FromQuery] string platform_uid,
@@ -103,7 +126,18 @@ public class ScoreController(
         return await RenderScoreAsync(scores[0], userInfo, mode);
     }
 
+    /// <summary>渲染指定用户在指定谱面上的成绩图。</summary>
+    /// <param name="platform">平台标识，如 qq、discord。</param>
+    /// <param name="platform_uid">该平台上的用户 ID。</param>
+    /// <param name="beatmap_id">谱面 ID。</param>
+    /// <param name="game_mode">游戏模式（0=osu!，1=taiko，2=catch，3=mania），默认沿用绑定时的模式。</param>
+    /// <param name="theme">渲染主题，默认 default。</param>
+    /// <response code="200">渲染好的 PNG 成绩图。</response>
+    /// <response code="400">取成绩失败。</response>
+    /// <response code="404">用户未绑定，或该谱面没有该用户的成绩。</response>
+    /// <response code="500">取用户信息失败。</response>
     [HttpGet("user_score")]
+    [Produces("image/png")]
     public async Task<IActionResult> UserScore(
         [FromQuery] string platform,
         [FromQuery] string platform_uid,

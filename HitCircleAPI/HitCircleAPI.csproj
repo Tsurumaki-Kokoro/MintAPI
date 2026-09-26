@@ -7,6 +7,10 @@
         <RootNamespace>HitCircleAPI</RootNamespace>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <!-- XML 文档注释：OpenAPI 描述文字的唯一来源，见 OpenApi/XmlCommentsProvider.cs -->
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <!-- 注释只写给控制器；其余公开成员缺注释不告警 -->
+        <NoWarn>$(NoWarn);CS1591</NoWarn>
         <RustCrateDir>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', '..', 'native', 'rosu-pp-ffi'))</RustCrateDir>
         <RustReleaseDir>$([MSBuild]::NormalizeDirectory('$(RustCrateDir)', 'target', 'release'))</RustReleaseDir>
         <RustNativeLib Condition="$([MSBuild]::IsOSPlatform('Windows'))">$(RustReleaseDir)rosu_pp_ffi.dll</RustNativeLib>

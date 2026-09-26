@@ -10,6 +10,7 @@ public record BindUserRequest(string OsuUsername, string Platform, string Platfo
 public record UnbindUserRequest(string Platform, string PlatformUid);
 public record UpdateGameModeRequest(string Platform, string PlatformUid, int GameMode);
 
+/// <summary>平台账号与 osu! 用户的绑定关系。</summary>
 [ApiController]
 [Route("users")]
 public class UserController(
@@ -17,6 +18,12 @@ public class UserController(
     IOsuApiService osuApi,
     ILogger<UserController> logger) : ControllerBase
 {
+    /// <summary>把平台账号绑定到一个 osu! 用户。</summary>
+    /// <param name="data">绑定信息：osu! 用户名，以及平台标识与该平台的用户 ID。</param>
+    /// <response code="200">绑定成功。</response>
+    /// <response code="400">按用户名找不到 osu! 用户。</response>
+    /// <response code="409">该平台账号已经绑定过。</response>
+    /// <response code="500">写库失败。</response>
     [HttpPost("bind")]
     public async Task<IActionResult> BindUser([FromBody] BindUserRequest data)
     {
@@ -58,6 +65,11 @@ public class UserController(
         return Ok(new { message = "bind user success" });
     }
 
+    /// <summary>解除平台账号的绑定。</summary>
+    /// <param name="data">要解绑的平台账号。</param>
+    /// <response code="200">解绑成功。</response>
+    /// <response code="404">该平台账号没有绑定记录。</response>
+    /// <response code="500">写库失败。</response>
     [HttpPost("unbind")]
     public async Task<IActionResult> UnbindUser([FromBody] UnbindUserRequest data)
     {
@@ -80,6 +92,11 @@ public class UserController(
         return Ok(new { message = "unbind user success" });
     }
 
+    /// <summary>修改该绑定默认使用的游戏模式。</summary>
+    /// <param name="data">平台账号，以及目标模式（0=osu!，1=taiko，2=catch，3=mania）。</param>
+    /// <response code="200">修改成功。</response>
+    /// <response code="404">该平台账号没有绑定记录。</response>
+    /// <response code="500">写库失败。</response>
     [HttpPost("update_mode")]
     public async Task<IActionResult> UpdateMode([FromBody] UpdateGameModeRequest data)
     {

@@ -8,6 +8,7 @@ using Ossapi.Enums;
 
 namespace HitCircleAPI.Controllers;
 
+/// <summary>用户资料卡。</summary>
 [ApiController]
 [Route("user_info")]
 public class UserInfoController(
@@ -18,7 +19,18 @@ public class UserInfoController(
     IPpCalculatorService ppCalc,
     ILogger<UserInfoController> logger) : ControllerBase
 {
+    /// <summary>渲染用户资料卡。</summary>
+    /// <param name="platform">平台标识，如 qq、discord。</param>
+    /// <param name="platform_uid">该平台上的用户 ID。</param>
+    /// <param name="game_mode">游戏模式（0=osu!，1=taiko，2=catch，3=mania），默认沿用绑定时的模式。</param>
+    /// <param name="user_name">改用这个 osu! 用户名取数据，而不是绑定时的账号。</param>
+    /// <param name="compare_with">与 N 天前的数据对比；取历史表里最接近那天的一条。</param>
+    /// <param name="theme">渲染主题，默认 default。</param>
+    /// <response code="200">渲染好的 PNG 资料卡。</response>
+    /// <response code="404">用户未绑定。</response>
+    /// <response code="500">取用户信息或渲染失败。</response>
     [HttpGet]
+    [Produces("image/png")]
     public async Task<IActionResult> GetUserInfo(
         [FromQuery] string platform,
         [FromQuery] string platform_uid,
@@ -77,6 +89,14 @@ public class UserInfoController(
         return File(image, "image/png");
     }
 
+    /// <summary>上传资料卡背景图。</summary>
+    /// <param name="platform">平台标识，如 qq、discord。</param>
+    /// <param name="platform_uid">该平台上的用户 ID。</param>
+    /// <param name="background_file">背景图文件。</param>
+    /// <response code="200">上传成功。</response>
+    /// <response code="400">文件为空。</response>
+    /// <response code="404">用户未绑定。</response>
+    /// <response code="500">写缓存失败。</response>
     [HttpPost("update_background")]
     public async Task<IActionResult> UpdateBackground(
         [FromForm] string platform,
@@ -108,6 +128,14 @@ public class UserInfoController(
         return Ok(new { message = "Background updated successfully" });
     }
 
+    /// <summary>给定 pp 值，算出需要多少 pp 才能挤进 BP 列表、以及会排在第几位。</summary>
+    /// <param name="platform">平台标识，如 qq、discord。</param>
+    /// <param name="platform_uid">该平台上的用户 ID。</param>
+    /// <param name="pp">目标 pp 值。</param>
+    /// <response code="200">JSON：required_pp 与 position。</response>
+    /// <response code="400">取成绩失败。</response>
+    /// <response code="404">用户未绑定，或没有成绩记录。</response>
+    /// <response code="500">取用户信息失败。</response>
     [HttpGet("extra/performance_control")]
     public async Task<IActionResult> PerformanceControl(
         [FromQuery] string platform,
@@ -152,6 +180,11 @@ public class UserInfoController(
         return Ok(new { required_pp = requiredPp, position });
     }
 
+    /// <summary>成绩分析图（尚未实现）。</summary>
+    /// <param name="platform">平台标识，如 qq、discord。</param>
+    /// <param name="platform_uid">该平台上的用户 ID。</param>
+    /// <param name="theme">渲染主题，默认 default。</param>
+    /// <response code="501">尚未实现。</response>
     [HttpGet("extra/performance_analyze")]
     public IActionResult PerformanceAnalyze(
         [FromQuery] string platform,

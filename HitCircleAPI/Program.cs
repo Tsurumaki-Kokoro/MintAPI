@@ -1,5 +1,6 @@
 using HitCircleAPI.Data;
 using HitCircleAPI.Middleware;
+using HitCircleAPI.OpenApi;
 using HitCircleAPI.Services;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
@@ -88,6 +89,9 @@ try
     // ── OpenAPI / Scalar ─────────────────────────────────────────
     builder.Services.AddOpenApi(options =>
     {
+        // .NET 9 的 OpenAPI 生成器不读 XML 文档注释，这一步把控制器注释接进去。
+        options.AddXmlComments(typeof(Program).Assembly);
+
         options.AddDocumentTransformer((document, _, _) =>
         {
             document.Components ??= new Microsoft.OpenApi.Models.OpenApiComponents();
