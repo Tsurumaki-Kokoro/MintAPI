@@ -1,0 +1,27 @@
+# ── 构建产物 ────────────────────────────────────────────────
+bin/
+obj/
+/packages/
+/_ReSharper.Caches/
+native/rosu-pp-ffi/target/
+
+# ── IDE ─────────────────────────────────────────────────────
+# .idea/ 下已有 3 个文件被跟踪（encodings.xml 等），gitignore 不影响它们；
+# 这里只挡住 Rider 每次打开都会新生成的 user 级文件。
+.idea/
+riderModule.iml
+*.DotSettings.user
+
+# ── 运行时产物 ──────────────────────────────────────────────
+# cache/ 是下载的 .osu 文件与头像缓存，logs/ 是 Serilog 滚动日志，
+# 两者都由应用在运行时生成，不入库。
+HitCircleAPI/cache/
+HitCircleAPI/logs/
+
+# ── 本地配置（含真实凭据）─────────────────────────────────
+# appsettings.json 是入库模板，真实值写在这个 Development 覆盖文件里。
+# 需要哪些字段见同目录的 appsettings.Development.json.example。
+HitCircleAPI/appsettings.Development.json
+
+# ── 操作系统 ────────────────────────────────────────────────
+.DS_Store

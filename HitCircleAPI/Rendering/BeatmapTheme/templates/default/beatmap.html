@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+@font-face { font-family: 'HarmonyBold'; src: url('{{ base_url }}/fonts/HarmonyOS_Sans_SC_Bold.ttf'); }
+@font-face { font-family: 'Extra'; src: url('{{ base_url }}/fonts/Extra.otf'); }
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  width: 1200px;
+  height: 600px;
+  overflow: hidden;
+  position: relative;
+  background: #000;
+}
+
+#bg {
+  position: absolute;
+  width: 1200px;
+  height: 600px;
+  object-fit: cover;
+  filter: blur(4px) brightness(0.55);
+  transform: scale(1.05);
+}
+
+#layout {
+  position: absolute;
+  width: 1200px;
+  height: 600px;
+}
+
+.abs { position: absolute; }
+.f15 { font-family: 'HarmonyBold', sans-serif; font-size: 15px; color: #fff; }
+.f20 { font-family: 'HarmonyBold', sans-serif; font-size: 20px; color: #fff; }
+.f25 { font-family: 'HarmonyBold', sans-serif; font-size: 25px; color: #fff; }
+.extra30 { font-family: 'Extra', sans-serif; font-size: 30px; color: #fff; }
+.gold { color: #ffcc22; }
+.black { color: #000; }
+
+.diff-bar-track {
+  position: absolute;
+  height: 8px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 4px;
+}
+.diff-bar-fill { height: 8px; background: #fff; border-radius: 4px; }
+.diff-bar-fill.gold-bar { background: #ffcc22; }
+
+#stars-badge {
+  position: absolute;
+  left: 90px; top: 65px;
+  width: 85px; height: 30px;
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+#mapper-avatar {
+  position: absolute;
+  left: 50px; top: 400px;
+  width: 100px; height: 100px;
+  border-radius: 10px;
+  object-fit: cover;
+}
+</style>
+</head>
+<body>
+
+<img id="bg" src="{{ bg_data_url }}" />
+<img id="layout" src="{{ base_url }}/assets/beatmap/default/layout/{{ mode_layout }}.png" />
+
+<!-- Mode icon -->
+<span class="abs extra30" style="left:50px;top:65px;line-height:1">{{ mode_icon }}</span>
+
+<!-- Stars badge -->
+<div id="stars-badge" style="background:{{ stars_bg_color }}">
+  <span class="{{ stars_text_class }} f20">★{{ stars | math.round 2 }}</span>
+</div>
+
+<!-- Map ID -->
+<span class="abs f20" style="right:10px;top:80px;transform:translateY(-50%)">SET ID: {{ beatmapset_id }}  |  MAP ID: {{ beatmap_id }}</span>
+
+<!-- Version -->
+<span class="abs f20" style="left:180px;top:78px;transform:translateY(-50%);white-space:nowrap;overflow:hidden;max-width:700px">{{ version }}</span>
+
+<!-- Title | by artist -->
+<span class="abs f20" style="left:50px;top:37px;transform:translateY(-50%);white-space:nowrap;overflow:hidden;max-width:900px">{{ title }} | by {{ artist }}</span>
+
+<!-- Source -->
+{{ if source != "" }}
+<span class="abs f20" style="right:10px;top:37px;transform:translateY(-50%)">Source: {{ source }}</span>
+{{ end }}
+
+<!-- Status -->
+<span class="abs f20" style="left:1100px;top:304px;transform:translate(-50%,-50%)">{{ status }}</span>
+
+<!-- Diff info: length, bpm, circles, sliders -->
+{{ for info in diff_info }}
+<span class="abs f20 gold" style="left:{{ 770 + for.index * 120 }}px;top:365px;transform:translateY(-50%)">{{ info }}</span>
+{{ end }}
+
+<!-- Diff bars: CS, HP, OD, AR -->
+{{ for d in diff_bars }}
+<div class="abs diff-bar-track" style="left:890px;top:{{ 426 + for.index * 35 }}px;width:250px">
+  <div class="diff-bar-fill" style="width:{{ d.width }}px"></div>
+</div>
+<span class="abs f20" style="left:1170px;top:{{ 428 + for.index * 35 }}px;transform:translate(-50%,-50%)">{{ d.label }}</span>
+{{ end }}
+
+<!-- Star diff bar -->
+<div class="abs diff-bar-track" style="left:890px;top:566px;width:250px">
+  <div class="diff-bar-fill gold-bar" style="width:{{ star_bar_width }}px"></div>
+</div>
+<span class="abs f20 gold" style="left:1170px;top:568px;transform:translate(-50%,-50%)">{{ stars | math.round 2 }}</span>
+
+<!-- Mapper avatar -->
+<img id="mapper-avatar" src="{{ mapper_avatar_data_url }}" />
+
+<!-- Mapper info -->
+<span class="abs f20" style="left:160px;top:400px">谱师:</span>
+<span class="abs f20" style="left:160px;top:425px">{{ mapper_username }}</span>
+<span class="abs f20" style="left:160px;top:460px">上架时间:</span>
+<span class="abs f20" style="left:160px;top:485px">{{ ranked_date }}</span>
+
+<!-- Max combo -->
+<span class="abs f20" style="left:50px;top:570px;transform:translateY(-50%)">最大连击: {{ max_combo }}</span>
+
+<!-- SS PP -->
+<span class="abs f20" style="left:320px;top:570px;transform:translateY(-50%)">SS PP: {{ ss_pp }}</span>
+
+</body>
+</html>
