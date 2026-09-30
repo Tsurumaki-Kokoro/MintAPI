@@ -1071,7 +1071,7 @@ public class OssapiClient : IDisposable
         var query = key is not null
             ? new Dictionary<string, object?> { ["key"] = key }
             : null;
-        return await GetAsync<User>(url, query, ct);
+        return await GetAsync<User>(url, query, ct, ensureSuccess: true);
     }
 
     /// <summary>Get kudosu history of a user.</summary>

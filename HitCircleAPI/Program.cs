@@ -76,6 +76,7 @@ try
         maxConcurrency: config.GetValue("Rendering:MaxConcurrency", 4),
         timeout: TimeSpan.FromMilliseconds(config.GetValue("Rendering:TimeoutMs", 8000))));
 
+    builder.Services.AddSingleton<HitCircleAPI.Rendering.AvatarCardTheme.AvatarCardTheme>();
     builder.Services.AddSingleton<HitCircleAPI.Rendering.ScoreTheme.DefaultScoreTheme>();
     builder.Services.AddSingleton<HitCircleAPI.Rendering.UserInfoTheme.DefaultUserInfoTheme>();
     builder.Services.AddSingleton<HitCircleAPI.Rendering.PerformanceAnalyzeTheme.PerformanceAnalyzeTheme>();
