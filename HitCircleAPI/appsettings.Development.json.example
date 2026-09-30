@@ -1,6 +1,4 @@
 {
-  // 复制为 appsettings.Development.json 后填入真实值。
-  // 那个文件名已被 .gitignore 忽略 —— 不要把它提交上来。
   "ApiKey": "<自拟一个高强度随机串>",
   "OsuApi": {
     "ClientId": 24578,

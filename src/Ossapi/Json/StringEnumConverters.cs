@@ -3,9 +3,7 @@ using Ossapi.Enums;
 
 namespace Ossapi.Json;
 
-/// <summary>
-/// Base class for enum converters that map between C# enum members and arbitrary API string values.
-/// </summary>
+/// <summary>Maps enum members to API string values.</summary>
 public abstract class StringEnumConverterBase<T> : JsonConverter<T> where T : struct, Enum
 {
     protected abstract IReadOnlyDictionary<string, T> ApiStringToEnum { get; }
@@ -299,9 +297,7 @@ public class ChannelTypeConverter : StringEnumConverterBase<ChannelType>
     protected override IReadOnlyDictionary<ChannelType, string> EnumToApiString  => Reverse;
 }
 
-/// <summary>
-/// Simple lowercase-string converters for enums where names match perfectly.
-/// </summary>
+/// <summary>Converts matching enum names to lowercase strings.</summary>
 public class SimpleStringEnumConverter<T> : JsonConverter<T> where T : struct, Enum
 {
     private readonly Dictionary<string, T> _forward;

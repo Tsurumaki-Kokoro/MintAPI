@@ -2,11 +2,7 @@ using Microsoft.Playwright;
 
 namespace HitCircleAPI.Services;
 
-/// <summary>
-/// 独占 Playwright 的浏览器实例。必须在应用启动时启动：惰性启动会把 Chromium
-/// 冷启动（1–3 秒）转嫁给第一个用户，而且浏览器缺失时失败会发生在请求路径里，
-/// 而不是启动日志里。
-/// </summary>
+/// <summary>管理进程级 Playwright 浏览器实例。</summary>
 public sealed class PlaywrightBrowserProvider(ILogger<PlaywrightBrowserProvider> logger) : IBrowserProvider
 {
     private readonly SemaphoreSlim _initLock = new(1, 1);

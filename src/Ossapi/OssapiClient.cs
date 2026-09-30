@@ -7,9 +7,7 @@ using Ossapi.Mods;
 
 namespace Ossapi;
 
-/// <summary>
-/// Async osu! API v2 client.
-/// </summary>
+/// <summary>Asynchronous osu! API v2 client.</summary>
 public class OssapiClient : IDisposable
 {
     private const string BaseUrl      = "https://osu.ppy.sh/api/v2";
@@ -21,9 +19,7 @@ public class OssapiClient : IDisposable
     private readonly JsonSerializerSettings _jsonSettings;
     private bool _disposed;
 
-    /// <summary>
-    /// Creates a client using the Client Credentials OAuth2 grant (public data only).
-    /// </summary>
+    /// <summary>Creates a client-credentials client for public data.</summary>
     /// <param name="clientId">Your osu! OAuth application client ID.</param>
     /// <param name="clientSecret">Your osu! OAuth application client secret.</param>
     /// <param name="tokenDirectory">Directory to store token cache files. Defaults to AppData.</param>
@@ -45,9 +41,7 @@ public class OssapiClient : IDisposable
         _jsonSettings = BuildJsonSettings();
     }
 
-    /// <summary>
-    /// Creates a client with a pre-configured HttpClient (for testing or DI scenarios).
-    /// </summary>
+    /// <summary>Creates a client with a configured HTTP client.</summary>
     public OssapiClient(HttpClient httpClient)
     {
         _http = httpClient;
@@ -1230,4 +1224,3 @@ public record ForumPollRequest(
     int LengthDays    = 0,
     int MaxOptions    = 1,
     bool VoteChange   = false);
-

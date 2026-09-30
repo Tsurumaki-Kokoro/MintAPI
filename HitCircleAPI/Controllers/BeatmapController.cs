@@ -16,10 +16,10 @@ public class BeatmapController(
 {
     /// <summary>取谱面背景原图。</summary>
     /// <param name="beatmap_id">谱面 ID，与 beatmapset_id 二选一。</param>
-    /// <param name="beatmapset_id">谱面集 ID，与 beatmap_id 二选一；只给谱面集时取其中第一张图。</param>
+    /// <param name="beatmapset_id">谱面集 ID；取首张谱面背景。</param>
     /// <response code="200">谱面背景图（JPEG）。</response>
     /// <response code="400">两个 ID 都没给。</response>
-    /// <response code="500">取谱面信息、osu! 文件或背景失败。</response>
+    /// <response code="500">读取失败。</response>
     [HttpGet("cover")]
     [Produces("image/jpeg")]
     public async Task<IActionResult> GetBeatmapCover(
@@ -81,12 +81,12 @@ public class BeatmapController(
     }
 
     /// <summary>渲染谱面或谱面集信息图。</summary>
-    /// <param name="beatmap_id">谱面 ID，与 beatmapset_id 二选一；渲染单张谱面的成绩信息。</param>
-    /// <param name="beatmapset_id">谱面集 ID，与 beatmap_id 二选一；渲染整个谱面集。</param>
+    /// <param name="beatmap_id">谱面 ID，与 beatmapset_id 二选一。</param>
+    /// <param name="beatmapset_id">谱面集 ID，与 beatmap_id 二选一。</param>
     /// <param name="theme">渲染主题，默认 default。</param>
-    /// <response code="200">渲染好的 PNG 图片。</response>
-    /// <response code="400">两个 ID 都没给，或取谱面信息失败。</response>
-    /// <response code="500">取 osu! 文件、背景或谱师信息失败。</response>
+    /// <response code="200">PNG 图片。</response>
+    /// <response code="400">参数或谱面无效。</response>
+    /// <response code="500">读取或渲染失败。</response>
     [HttpGet("info")]
     [Produces("image/png")]
     public async Task<IActionResult> GetBeatmapInfo(

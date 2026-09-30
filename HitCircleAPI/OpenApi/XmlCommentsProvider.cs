@@ -5,17 +5,14 @@ using System.Xml.Linq;
 
 namespace HitCircleAPI.OpenApi;
 
-/// <summary>一个成员的 XML 文档注释。</summary>
+/// <summary>成员的 XML 文档注释。</summary>
 public sealed record XmlCommentMember(
     string? Summary,
     string? Remarks,
     IReadOnlyDictionary<string, string> Parameters,
     IReadOnlyDictionary<string, string> Responses);
 
-/// <summary>
-/// 读取编译器生成的 XML 文档注释，并按成员 ID（<c>M:Namespace.Type.Method(System.Int32)</c>）索引。
-/// .NET 9 的 Microsoft.AspNetCore.OpenApi 不会自己读这个文件，转换器要靠它取描述文字。
-/// </summary>
+/// <summary>读取并索引 XML 文档注释。</summary>
 public sealed class XmlCommentsProvider
 {
     private static readonly Regex Whitespace = new(@"\s+", RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -26,7 +23,7 @@ public sealed class XmlCommentsProvider
 
     private static XmlCommentsProvider Empty { get; } = new([]);
 
-    /// <summary>拼出编译器写进 XML 的成员 ID。泛型参数要展开成 <c>Nullable{Int32}</c> 这种元数据写法。</summary>
+    /// <summary>生成 XML 文档成员 ID。</summary>
     public static string MemberId(MethodInfo method)
     {
         var id = new StringBuilder("M:");
@@ -65,7 +62,7 @@ public sealed class XmlCommentsProvider
         return new XmlCommentsProvider(members);
     }
 
-    /// <summary>加载程序集旁边的同名 XML 文档注释；没有该文件时返回空表（生产镜像不带它）。</summary>
+    /// <summary>加载程序集 XML 注释；文件不存在时返回空表。</summary>
     public static XmlCommentsProvider FromAssembly(Assembly assembly)
     {
         var path = Path.Combine(AppContext.BaseDirectory, $"{assembly.GetName().Name}.xml");
@@ -94,7 +91,7 @@ public sealed class XmlCommentsProvider
         return result;
     }
 
-    // 源码里的注释通常折成多行带缩进，直接塞进 OpenAPI 会把这些换行带进 UI。
+    // 合并注释中的空白。
     private static string? Text(XElement? element)
     {
         if (element is null) return null;

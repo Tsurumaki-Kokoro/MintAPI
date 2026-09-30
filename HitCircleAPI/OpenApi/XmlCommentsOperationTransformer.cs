@@ -5,7 +5,7 @@ using Microsoft.OpenApi.Models;
 
 namespace HitCircleAPI.OpenApi;
 
-/// <summary>把控制器的 XML 文档注释写进 OpenAPI operation。</summary>
+/// <summary>将 XML 文档注释写入 OpenAPI 操作。</summary>
 public sealed class XmlCommentsOperationTransformer(XmlCommentsProvider comments) : IOpenApiOperationTransformer
 {
     public Task TransformAsync(
@@ -19,7 +19,7 @@ public sealed class XmlCommentsOperationTransformer(XmlCommentsProvider comments
         if (!comments.TryGet(action.MethodInfo, out var member) || member is null)
             return Task.CompletedTask;
 
-        // [FromBody] 的参数在 OpenAPI 里是 requestBody 而不是 parameter，得单独认出来。
+        // 请求体参数单独处理。
         var bodyParameterName = context.Description.ParameterDescriptions
             .FirstOrDefault(p => p.Source == BindingSource.Body)?.Name;
 
@@ -27,7 +27,7 @@ public sealed class XmlCommentsOperationTransformer(XmlCommentsProvider comments
         return Task.CompletedTask;
     }
 
-    /// <summary>把一条注释应用到 operation 上。文档里没有的名字（参数、状态码）一律忽略。</summary>
+    /// <summary>将成员注释应用到 OpenAPI 操作。</summary>
     public static void Apply(OpenApiOperation operation, XmlCommentMember member, string? bodyParameterName = null)
     {
         if (member.Summary is not null)

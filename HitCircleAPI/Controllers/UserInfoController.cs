@@ -23,14 +23,14 @@ public class UserInfoController(
     ILogger<UserInfoController> logger) : ControllerBase
 {
     /// <summary>渲染用户资料卡。</summary>
-    /// <param name="platform">平台标识，如 qq、discord。</param>
-    /// <param name="platform_uid">该平台上的用户 ID。</param>
-    /// <param name="game_mode">游戏模式（0=osu!，1=taiko，2=catch，3=mania），默认沿用绑定时的模式。</param>
-    /// <param name="user_name">改用这个 osu! 用户名取数据，而不是绑定时的账号。</param>
-    /// <param name="compare_with">与 N 天前的数据对比；取历史表里最接近那天的一条。</param>
-    /// <param name="theme">渲染主题：default 或 apple，默认 default。</param>
-    /// <response code="200">渲染好的 PNG 资料卡。</response>
-    /// <response code="400">不支持的渲染主题。</response>
+    /// <param name="platform">平台，如 qq、discord。</param>
+    /// <param name="platform_uid">平台用户 ID。</param>
+    /// <param name="game_mode">模式 0–3，默认使用绑定模式。</param>
+    /// <param name="user_name">指定 osu! 用户名。</param>
+    /// <param name="compare_with">对比 N 天前的最近记录。</param>
+    /// <param name="theme">渲染主题：default 或 apple。</param>
+    /// <response code="200">PNG 资料卡。</response>
+    /// <response code="400">主题无效。</response>
     /// <response code="404">用户未绑定。</response>
     /// <response code="500">取用户信息或渲染失败。</response>
     [HttpGet]
@@ -97,8 +97,8 @@ public class UserInfoController(
     }
 
     /// <summary>上传资料卡背景图。</summary>
-    /// <param name="platform">平台标识，如 qq、discord。</param>
-    /// <param name="platform_uid">该平台上的用户 ID。</param>
+    /// <param name="platform">平台。</param>
+    /// <param name="platform_uid">平台用户 ID。</param>
     /// <param name="background_file">背景图文件。</param>
     /// <response code="200">上传成功。</response>
     /// <response code="400">文件为空。</response>
@@ -135,9 +135,9 @@ public class UserInfoController(
         return Ok(new { message = "Background updated successfully" });
     }
 
-    /// <summary>给定 pp 值，算出需要多少 pp 才能挤进 BP 列表、以及会排在第几位。</summary>
-    /// <param name="platform">平台标识，如 qq、discord。</param>
-    /// <param name="platform_uid">该平台上的用户 ID。</param>
+    /// <summary>计算目标 pp 的 BP 排名和所需 pp。</summary>
+    /// <param name="platform">平台。</param>
+    /// <param name="platform_uid">平台用户 ID。</param>
     /// <param name="pp">目标 pp 值。</param>
     /// <response code="200">JSON：required_pp 与 position。</response>
     /// <response code="400">取成绩失败。</response>
@@ -188,10 +188,10 @@ public class UserInfoController(
     }
 
     /// <summary>渲染 BP 成绩分析图。</summary>
-    /// <param name="platform">平台标识，如 qq、discord。</param>
-    /// <param name="platform_uid">该平台上的用户 ID。</param>
-    /// <param name="theme">渲染主题：default 或 apple，均使用苹果风格，默认 default。</param>
-    /// <response code="200">包含 BP 曲线、评级、星数、Mod、Mapper 等分析数据的 PNG 图片。</response>
+    /// <param name="platform">平台。</param>
+    /// <param name="platform_uid">平台用户 ID。</param>
+    /// <param name="theme">渲染主题：default 或 apple。</param>
+    /// <response code="200">PNG 分析图。</response>
     /// <response code="400">主题不支持或取成绩失败。</response>
     /// <response code="404">用户未绑定，或没有成绩记录。</response>
     /// <response code="500">取用户信息或渲染失败。</response>

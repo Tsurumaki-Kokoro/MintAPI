@@ -2,11 +2,7 @@ using System.Collections.ObjectModel;
 
 namespace Ossapi.Mods;
 
-/// <summary>
-/// Represents an osu! mod or mod combination as a bitmask integer.
-/// NC is defined as DT+NC (576), matching in-game behavior. Use _NC (512) for the raw bit.
-/// PF is defined as SD+PF, matching in-game behavior. Use _PF for the raw bit.
-/// </summary>
+/// <summary>Represents an osu! mod bitmask, including compound NC and PF values.</summary>
 public readonly struct Mod : IEquatable<Mod>
 {
     public int Value { get; }
@@ -186,11 +182,7 @@ public readonly struct Mod : IEquatable<Mod>
         return string.Join(" ", Decompose(clean: true).Select(m => IntToMod[m.Value].Long));
     }
 
-    /// <summary>
-    /// Decomposes into atomic component mods, ordered by <see cref="Order"/>.
-    /// When <paramref name="clean"/> is true, DT is removed if NC is present,
-    /// and SD is removed if PF is present.
-    /// </summary>
+    /// <summary>Returns ordered atomic mods; clean mode removes DT from NC and SD from PF.</summary>
     public IReadOnlyList<Mod> Decompose(bool clean = false)
     {
         var value = Value;

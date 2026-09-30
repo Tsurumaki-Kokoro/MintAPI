@@ -9,10 +9,7 @@ namespace Ossapi.Models;
 // Cursor
 // ---------------------------------------------------------------------------
 
-/// <summary>
-/// Dynamic pagination cursor. Stores arbitrary key/value pairs per endpoint.
-/// Pass a null cursor_string/cursor to signal "no more pages".
-/// </summary>
+/// <summary>Endpoint-specific pagination cursor.</summary>
 public class Cursor : Dictionary<string, object?>
 {
     public Cursor() { }

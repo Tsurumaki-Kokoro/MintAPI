@@ -3,9 +3,7 @@ using Microsoft.AspNetCore.Diagnostics;
 
 namespace HitCircleAPI.Middleware;
 
-/// <summary>
-/// 把"稍后重试"类异常映射成 503 + Retry-After。其余异常交回默认处理器（500）。
-/// </summary>
+/// <summary>将可重试异常映射为 503 和 Retry-After。</summary>
 public sealed class RetryableExceptionHandler(
     ILogger<RetryableExceptionHandler> logger) : IExceptionHandler
 {

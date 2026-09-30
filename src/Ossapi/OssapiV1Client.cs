@@ -4,10 +4,7 @@ using Ossapi.Mods;
 
 namespace Ossapi.V1;
 
-/// <summary>
-/// Async osu! API v1 client. Uses a legacy API key for authentication.
-/// v1 is read-only and exposes beatmaps, users, scores, replays, and matches.
-/// </summary>
+/// <summary>Asynchronous read-only osu! API v1 client.</summary>
 public class OssapiV1Client : IDisposable
 {
     private const string BaseUrl    = "https://osu.ppy.sh/api/";
@@ -33,9 +30,7 @@ public class OssapiV1Client : IDisposable
     // Endpoints
     // -------------------------------------------------------------------------
 
-    /// <summary>
-    /// Get beatmaps. At least one filter parameter should be provided.
-    /// </summary>
+    /// <summary>Get beatmaps using at least one filter.</summary>
     public Task<List<V1Beatmap>> GetBeatmapsAsync(
         DateTimeOffset? since    = null,
         int? beatmapsetId        = null,
@@ -85,10 +80,7 @@ public class OssapiV1Client : IDisposable
             ["limit"] = limit,
         }, ct, injectBeatmapId: beatmapId);
 
-    /// <summary>
-    /// Get the base64-encoded replay data for a score.
-    /// Returns the raw base64 string as returned by the API.
-    /// </summary>
+    /// <summary>Get base64 replay data for a score.</summary>
     public async Task<string> GetReplayAsync(
         int? beatmapId       = null,
         string? user         = null,

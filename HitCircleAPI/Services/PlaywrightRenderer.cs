@@ -3,10 +3,7 @@ using Microsoft.Playwright;
 
 namespace HitCircleAPI.Services;
 
-/// <summary>
-/// 用 Chromium 把 HTML 截成 PNG。并发上限与超时由 <see cref="GuardedRenderService"/> 负责，
-/// 这里只管"怎么渲染"。
-/// </summary>
+/// <summary>使用 Chromium 将 HTML 渲染为 PNG。</summary>
 public sealed class PlaywrightRenderer(IBrowserProvider browserProvider) : IRenderService
 {
     public async Task<byte[]> RenderHtmlAsync(string html, int width, int height, CancellationToken cancellationToken = default)
@@ -28,8 +25,7 @@ public sealed class PlaywrightRenderer(IBrowserProvider browserProvider) : IRend
             cancellationToken.ThrowIfCancellationRequested();
             var page = await context.NewPageAsync();
 
-            // Load 覆盖 <img>；@font-face 不在 load 事件里，必须单独等 fonts.ready。
-            // 不用 NetworkIdle：它有 500ms 静默窗口的硬底，页面挂住时会一直等到默认超时。
+            // 等待图片和字体加载。
             await page.GotoAsync($"file://{tmpFile}", new PageGotoOptions
             {
                 WaitUntil = WaitUntilState.Load,

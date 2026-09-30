@@ -4,9 +4,7 @@ using Ossapi.Mods;
 
 namespace Ossapi.Json;
 
-/// <summary>
-/// Deserializes a Mod from either a legacy integer bitmask or a string acronym, or an array of acronyms or mod objects.
-/// </summary>
+/// <summary>Deserializes mods from legacy and current API formats.</summary>
 public class ModConverter : JsonConverter<Mod>
 {
     public override Mod ReadJson(JsonReader reader, Type objectType, Mod existingValue,

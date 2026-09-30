@@ -5,11 +5,7 @@ using Ossapi.Models;
 
 namespace Ossapi.Json;
 
-/// <summary>
-/// Deserializes an <see cref="Event"/> JSON object to the correct subclass by
-/// reading the <c>type</c> discriminator field first. Only activates for the
-/// exact <see cref="Event"/> base type, not subclasses, to avoid recursion.
-/// </summary>
+/// <summary>Deserializes events by their <c>type</c> discriminator.</summary>
 public class EventConverter : JsonConverter
 {
     private static readonly Dictionary<EventType, Type> TypeMap = new()
@@ -56,10 +52,7 @@ public class EventConverter : JsonConverter
     public override bool CanWrite => false;
 }
 
-/// <summary>
-/// Deserializes a <see cref="BeatmapsetEvent"/> JSON object, picking the correct
-/// concrete type for the <c>comment</c> field based on the <c>type</c> discriminator.
-/// </summary>
+/// <summary>Deserializes beatmapset event comments by event type.</summary>
 public class BeatmapsetEventConverter : JsonConverter
 {
     private static readonly Dictionary<BeatmapsetEventType, Type> CommentTypeMap = new()

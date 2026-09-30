@@ -10,10 +10,10 @@ namespace HitCircleAPI.Controllers;
 public class MultiplayerController(MultiplayerService multiplayer, MultiplayerTheme renderer,
     ILogger<MultiplayerController> logger) : ControllerBase
 {
-    /// <summary>渲染多人房逐局历史，按完整对局分页；仅展示已结束的对局。</summary>
-    /// <param name="mp_id">必填，正整数多人房 ID。</param>
-    /// <param name="theme">apple 或 default，均使用苹果风格模板。</param>
-    /// <param name="page">图片页码，从 1 开始；总页数见 X-Page-Count 响应头。</param>
+    /// <summary>渲染多人房已结束对局。</summary>
+    /// <param name="mp_id">多人房 ID。</param>
+    /// <param name="theme">渲染主题：apple 或 default。</param>
+    /// <param name="page">页码，从 1 开始。</param>
     /// <param name="team_type">可选：head-to-head、team-vs、tag-coop 或 tag-team-vs。</param>
     /// <response code="200">PNG 图片，X-Page-Count 表示总页数。</response>
     /// <response code="400">参数无效或没有已结束的对局。</response>
@@ -25,11 +25,11 @@ public class MultiplayerController(MultiplayerService multiplayer, MultiplayerTh
         [FromQuery] int page = 1, [FromQuery] string? team_type = null)
         => RenderAsync(mp_id, theme, page, team_type, null);
 
-    /// <summary>渲染玩家评分排名。零分不参与评分；平局单列，个人并列第一均计为第一。</summary>
-    /// <param name="mp_id">必填，正整数多人房 ID。</param>
+    /// <summary>渲染玩家评分排名。</summary>
+    /// <param name="mp_id">多人房 ID。</param>
     /// <param name="algorithm">osuplus、bathbot 或 flashlight，默认 osuplus。</param>
-    /// <param name="theme">apple 或 default，均使用苹果风格模板。</param>
-    /// <param name="page">图片页码，从 1 开始，每页最多 24 位玩家。</param>
+    /// <param name="theme">渲染主题：apple 或 default。</param>
+    /// <param name="page">页码，从 1 开始。</param>
     /// <param name="team_type">可选：head-to-head 或 team-vs；混合模式必须选择。</param>
     /// <response code="200">PNG 图片，X-Page-Count 表示总页数。</response>
     /// <response code="400">参数无效、没有有效成绩或模式不支持评分。</response>

@@ -2,13 +2,7 @@ using Newtonsoft.Json;
 
 namespace Ossapi.Json;
 
-/// <summary>
-/// Handles the multiple timestamp formats the osu! API can return:
-/// - ISO 8601 with timezone: "2021-01-01T00:00:00+00:00"
-/// - ISO 8601 with fractional seconds: "2021-01-01T00:00:00.000000Z"
-/// - Date-only: "2021-01-01"
-/// - Unix milliseconds (integer): 1609459200000
-/// </summary>
+/// <summary>Parses osu! timestamps in ISO, date-only, or Unix-millisecond formats.</summary>
 public class DateTimeOffsetConverter : JsonConverter<DateTimeOffset?>
 {
     public static readonly DateTimeOffsetConverter Instance = new();

@@ -4,11 +4,7 @@ using IdentityModel.Client;
 
 namespace Ossapi.Auth;
 
-/// <summary>
-/// DelegatingHandler that injects a Bearer token into every request.
-/// Supports Client Credentials grant only (Phase 1).
-/// Authorization Code grant will be added in Phase 4.
-/// </summary>
+/// <summary>Adds a client-credentials bearer token to requests.</summary>
 public class OssapiAuthHandler : DelegatingHandler
 {
     private readonly int _clientId;
@@ -39,7 +35,7 @@ public class OssapiAuthHandler : DelegatingHandler
 
         var response = await base.SendAsync(request, cancellationToken);
 
-        // If 401, the token may have been revoked — refresh and retry once
+        // Refresh once after an unauthorized response.
         if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
         {
             _cachedToken = null;
