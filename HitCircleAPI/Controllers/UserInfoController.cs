@@ -1,6 +1,7 @@
 using HitCircleAPI.Data;
 using HitCircleAPI.Models.Entities;
 using HitCircleAPI.Rendering.UserInfoTheme;
+using HitCircleAPI.Rendering.PerformanceAnalyzeTheme;
 using HitCircleAPI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -16,6 +17,7 @@ public class UserInfoController(
     IOsuApiService osuApi,
     IImageCacheService imageCache,
     DefaultUserInfoTheme userInfoTheme,
+    PerformanceAnalyzeTheme performanceAnalyzeTheme,
     IPpCalculatorService ppCalc,
     ILogger<UserInfoController> logger) : ControllerBase
 {
@@ -184,19 +186,66 @@ public class UserInfoController(
         return Ok(new { required_pp = requiredPp, position });
     }
 
-    /// <summary>成绩分析图（尚未实现）。</summary>
+    /// <summary>渲染 BP 成绩分析图。</summary>
     /// <param name="platform">平台标识，如 qq、discord。</param>
     /// <param name="platform_uid">该平台上的用户 ID。</param>
-    /// <param name="theme">渲染主题，默认 default。</param>
-    /// <response code="501">尚未实现。</response>
+    /// <param name="theme">渲染主题：default 或 apple，均使用苹果风格，默认 default。</param>
+    /// <response code="200">包含 BP 曲线、评级、星数、Mod、Mapper 等分析数据的 PNG 图片。</response>
+    /// <response code="400">主题不支持或取成绩失败。</response>
+    /// <response code="404">用户未绑定，或没有成绩记录。</response>
+    /// <response code="500">取用户信息或渲染失败。</response>
     [HttpGet("extra/performance_analyze")]
-    public IActionResult PerformanceAnalyze(
+    [Produces("image/png")]
+    public async Task<IActionResult> PerformanceAnalyze(
         [FromQuery] string platform,
         [FromQuery] string platform_uid,
         [FromQuery] string theme = "default")
     {
-        // BP analyze uses a separate chart-based theme; not yet implemented
-        return StatusCode(501, "Performance analyze not yet implemented");
+        if (theme is not ("default" or "apple"))
+            return BadRequest("Unsupported performance analysis theme. Use default or apple.");
+
+        var userModel = await db.Users
+            .FirstOrDefaultAsync(u => u.Platform == platform && u.PlatformUid == platform_uid);
+        if (userModel is null)
+            return NotFound("User not found");
+
+        var mode = (GameMode)userModel.GameMode;
+        Ossapi.Models.User userInfo;
+        try
+        {
+            userInfo = await osuApi.GetUserAsync(userModel.OsuUid, mode);
+        }
+        catch (Exception ex) when (ex is not RetryableException)
+        {
+            logger.LogError(ex, "Failed to get user info for {OsuUid}", userModel.OsuUid);
+            return StatusCode(500, "Failed to get user info");
+        }
+
+        List<Ossapi.Models.Score> scores;
+        try
+        {
+            scores = await osuApi.GetUserScoresAsync(userInfo.Id, ScoreType.Best, mode, limit: 100);
+        }
+        catch (Exception ex) when (ex is not RetryableException)
+        {
+            logger.LogError(ex, "Failed to get best scores for user {UserId}", userInfo.Id);
+            return BadRequest($"Failed to get scores: {ex.Message}");
+        }
+
+        if (scores.Count == 0)
+            return NotFound("No play record found");
+
+        try
+        {
+            var image = await performanceAnalyzeTheme.RenderAsync(userInfo, scores,
+                GameModeToString(userModel.GameMode).ToUpperInvariant());
+            return File(image, "image/png");
+        }
+        catch (Exception ex) when (ex is not RetryableException)
+        {
+            logger.LogError(ex, "Failed to render BP analysis image for user {UserId}", userInfo.Id);
+            return StatusCode(500, "Failed to render BP analysis image");
+        }
     }
 
     private static string GameModeToString(int mode) => mode switch

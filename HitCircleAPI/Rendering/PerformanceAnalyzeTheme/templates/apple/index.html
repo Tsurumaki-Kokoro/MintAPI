@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<style>
+@font-face { font-family: Harmony; src: url('{{ base_url }}/fonts/HarmonyOS_Sans_SC_Regular.ttf'); }
+@font-face { font-family: Harmony; src: url('{{ base_url }}/fonts/HarmonyOS_Sans_SC_Bold.ttf'); font-weight: 700; }
+* { box-sizing: border-box; }
+html, body { width: 1600px; height: 1220px; overflow: hidden; margin: 0; }
+body { background: #fafaf8; color: #17191d; font-family: Harmony, -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; }
+.page { width: 100%; height: 100%; padding: 50px 64px 34px; }
+.muted { color: #777d85; }
+.blue { color: #205caa; }
+.eyebrow { font-size: 13px; font-weight: 700; letter-spacing: .12em; color: #205caa; }
+.header { height: 117px; display: flex; align-items: flex-start; border-bottom: 2px solid #22272d; }
+.avatar { width: 80px; height: 80px; object-fit: cover; border-radius: 9px; margin-right: 24px; }
+.identity { flex: 1; min-width: 0; }
+.name { font-size: 39px; font-weight: 700; letter-spacing: -.055em; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 790px; }
+.meta { font-size: 15px; color: #777d85; margin-top: 2px; }
+.header-total { width: 330px; text-align: right; }
+.header-total .number { font-size: 43px; font-weight: 700; letter-spacing: -.05em; line-height: 1.1; margin-top: 4px; }
+.header-total .sub { color: #777d85; font-size: 14px; margin-top: 5px; }
+.kpis { display: grid; grid-template-columns: repeat(6, 1fr); height: 94px; margin-top: 26px; border-top: 1px solid #d8dce1; border-bottom: 1px solid #d8dce1; }
+.kpi { padding: 15px 20px; border-right: 1px solid #e1e4e8; min-width: 0; }
+.kpi:first-child { padding-left: 0; }
+.kpi:last-child { border-right: 0; }
+.kpi-label { font-size: 13px; color: #787e85; }
+.kpi-value { margin-top: 5px; font-size: 28px; font-weight: 700; letter-spacing: -.035em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.insights { height: 44px; margin-top: 13px; display: flex; align-items: center; gap: 34px; color: #555d66; font-size: 15px; }
+.insights strong { color: #20252b; font-weight: 700; }
+.insights > span + span { border-left: 1px solid #d6dbe0; padding-left: 34px; }
+.row { display: grid; gap: 30px; }
+.main-row { grid-template-columns: 970px 1fr; height: 313px; margin-top: 12px; }
+.middle-row { grid-template-columns: repeat(3, 1fr); height: 284px; margin-top: 20px; }
+.bottom-row { grid-template-columns: repeat(3, 1fr); height: 176px; margin-top: 20px; }
+.panel { position: relative; min-width: 0; border-top: 2px solid #252b32; }
+.panel + .panel { border-left: 1px solid #d8dce1; padding-left: 23px; }
+.panel-heading { height: 45px; display: flex; align-items: center; justify-content: space-between; gap: 15px; }
+.panel-title { font-size: 19px; font-weight: 700; letter-spacing: -.02em; white-space: nowrap; }
+.panel-index { color: #205caa; font-size: 14px; font-weight: 700; margin-right: 10px; }
+.panel-note { color: #7b8188; font-size: 12px; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.curve { width: 930px; height: 258px; display: block; }
+.chart-grid { stroke: #dce1e6; stroke-width: 1; }
+.curve-line { stroke: #205caa; stroke-width: 3.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.axis-text { fill: #7a8189; font-family: Harmony, sans-serif; font-size: 14px; }
+.chart-label { fill: #205caa; font-family: Harmony, sans-serif; font-size: 14px; font-weight: 700; }
+.grade-strip { height: 20px; display: flex; margin: 12px 0 17px; background: #e8ebed; }
+.grade-strip span { display: block; height: 100%; }
+.grade-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 19px; }
+.grade-item { display: flex; align-items: baseline; border-bottom: 1px solid #e7eaec; padding-bottom: 5px; }
+.grade-swatch { width: 9px; height: 9px; margin-right: 8px; display: inline-block; }
+.grade-code { width: 42px; font-weight: 700; font-size: 14px; }
+.grade-count { font-size: 16px; font-weight: 700; }
+.grade-percent { font-size: 12px; color: #858b92; margin-left: auto; }
+.scatter-wrap { height: 185px; position: relative; padding: 5px 16px 18px 28px; }
+.scatter-plot { position: relative; width: 100%; height: 100%; border-left: 1px solid #9fa8b1; border-bottom: 1px solid #9fa8b1; }
+.scatter-dot { position: absolute; width: 5px; height: 5px; border-radius: 50%; transform: translate(-50%, 50%); opacity: .72; }
+.scatter-x { position: absolute; bottom: 0; right: 10px; font-size: 11px; color: #7b8188; }
+.scatter-y { position: absolute; top: 1px; left: 0; font-size: 11px; color: #7b8188; }
+.scatter-summary { margin-top: 1px; font-size: 13px; color: #626a73; }
+.bar-list { padding-top: 2px; }
+.bar-row { display: grid; grid-template-columns: 79px 1fr 74px; gap: 7px; height: 29px; align-items: center; font-size: 13px; }
+.bar-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 700; }
+.bar-track { height: 9px; background: #e9edf1; }
+.bar-fill { height: 100%; background: #6589b8; }
+.bar-row:first-child .bar-fill { background: #205caa; }
+.bar-value { text-align: right; color: #66707b; font-variant-numeric: tabular-nums; }
+.histogram { height: 90px; display: flex; align-items: flex-end; gap: 2px; border-bottom: 1px solid #9fa8b1; padding: 0 2px; margin-top: 6px; }
+.hist-col { position: relative; flex: 1; height: 100%; display: flex; align-items: flex-end; min-width: 0; }
+.hist-bar { width: 100%; min-height: 0; background: #bac8d7; }
+.hist-col.highlight .hist-bar { background: #205caa; }
+.hist-label { position: absolute; left: 50%; bottom: -18px; transform: translateX(-50%); font-size: 10px; color: #7c838a; white-space: nowrap; }
+.empty { color: #9aa0a7; font-size: 14px; padding: 45px 0; text-align: center; }
+.footer { position: absolute; left: 64px; right: 64px; bottom: 25px; display: flex; justify-content: space-between; border-top: 1px solid #d8dce1; padding-top: 8px; color: #999fa5; font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="header">
+    <img class="avatar" src="{{ avatar_data_url }}" alt="" />
+    <div class="identity">
+      <div class="eyebrow">BP ANALYSIS / {{ mode }}</div>
+      <div class="name">{{ username }}</div>
+      <div class="meta">UID {{ user_id }} · 最佳成绩分析 · {{ bp_count }} 张</div>
+    </div>
+    <div class="header-total">
+      <div class="eyebrow">BP 加权 PP</div>
+      <div class="number">{{ weighted_pp }}</div>
+      <div class="sub">单图 PP 合计 {{ raw_pp }}</div>
+    </div>
+  </header>
+
+  <section class="kpis">
+    <div class="kpi"><div class="kpi-label">BP 数量</div><div class="kpi-value">{{ bp_count }}</div></div>
+    <div class="kpi"><div class="kpi-label">平均准确率</div><div class="kpi-value">{{ average_accuracy }}</div></div>
+    <div class="kpi"><div class="kpi-label">平均星数</div><div class="kpi-value">{{ average_stars }}</div></div>
+    <div class="kpi"><div class="kpi-label">平均 BPM</div><div class="kpi-value">{{ average_bpm }}</div></div>
+    <div class="kpi"><div class="kpi-label">平均时长</div><div class="kpi-value">{{ average_length }}</div></div>
+    <div class="kpi"><div class="kpi-label">主力 Mod</div><div class="kpi-value">{{ top_mod }}</div></div>
+  </section>
+  <div class="insights">
+    <span>Top 10 贡献 <strong>{{ top_ten_share }}%</strong> 加权 PP</span>
+    <span>BP 首尾单图 PP 衰减 <strong>{{ pp_decay }}%</strong></span>
+    <span>难度区间 <strong>{{ star_range }}</strong></span>
+    <span>偏好 Mapper <strong>{{ top_mapper }}</strong></span>
+  </div>
+
+  <div class="row main-row">
+    <section class="panel">
+      <div class="panel-heading"><div class="panel-title"><span class="panel-index">01</span>PP 价值曲线</div><div class="panel-note">按单图 PP 排名 · 左侧为 Top 10</div></div>
+      <svg class="curve" viewBox="0 0 930 258" aria-label="BP 单图 PP 曲线">
+        <rect x="62" y="51" width="{{ top_ten_width }}" height="187" fill="#edf3fa" />
+        <line class="chart-grid" x1="62" y1="51" x2="886" y2="51" /><line class="chart-grid" x1="62" y1="145" x2="886" y2="145" /><line class="chart-grid" x1="62" y1="238" x2="886" y2="238" />
+        <text class="axis-text" x="0" y="56">{{ pp_max }}</text><text class="axis-text" x="0" y="243">{{ pp_min }}</text>
+        <polyline class="curve-line" points="{{ pp_curve }}" />
+        <text class="axis-text" x="62" y="255">#1</text><text class="axis-text" x="460" y="255" text-anchor="middle">#{{ pp_mid_rank }}</text><text class="axis-text" x="886" y="255" text-anchor="end">#{{ bp_count }}</text>
+        <text class="chart-label" x="62" y="35">{{ pp_first }} pp</text><text class="chart-label" x="886" y="35" text-anchor="end">{{ pp_last }} pp</text>
+      </svg>
+    </section>
+    <section class="panel">
+      <div class="panel-heading"><div class="panel-title"><span class="panel-index">02</span>评级构成</div><div class="panel-note">按 BP 张数</div></div>
+      <div class="grade-strip">{{ for grade in grades }}<span style="width:{{ grade.width }}%;background:{{ grade.color }}"></span>{{ end }}</div>
+      <div class="grade-list">
+        {{ for grade in grades }}
+        <div class="grade-item"><span class="grade-swatch" style="background:{{ grade.color }}"></span><span class="grade-code">{{ grade.label }}</span><span class="grade-count">{{ grade.count }}</span><span class="grade-percent">{{ grade.percent }}%</span></div>
+        {{ end }}
+      </div>
+    </section>
+  </div>
+
+  <div class="row middle-row">
+    <section class="panel">
+      <div class="panel-heading"><div class="panel-title"><span class="panel-index">03</span>星数 / PP 分布</div><div class="panel-note">每点代表一张 BP</div></div>
+      {{ if has_stars }}
+      <div class="scatter-wrap"><span class="scatter-y">PP ↑</span><div class="scatter-plot">
+        {{ for point in scatter }}<span class="scatter-dot" style="left:{{ point.x }}%;bottom:{{ point.y }}%;background:{{ point.color }}"></span>{{ end }}
+      </div><span class="scatter-x">星数 →</span></div>
+      <div class="scatter-summary">0.5★ 最密集区间：{{ peak_star_bucket }}</div>
+      {{ else }}<div class="empty">暂无星数数据</div>{{ end }}
+    </section>
+    <section class="panel">
+      <div class="panel-heading"><div class="panel-title"><span class="panel-index">04</span>Mod 贡献</div><div class="panel-note">按加权 PP · 每个 Mod 独立计入</div></div>
+      <div class="bar-list">{{ for item in mods }}<div class="bar-row"><span class="bar-name">{{ item.label }}</span><div class="bar-track"><div class="bar-fill" style="width:{{ item.width }}%"></div></div><span class="bar-value">{{ item.value }}</span></div>{{ end }}</div>
+      {{ if mods.size == 0 }}<div class="empty">暂无数据</div>{{ end }}
+    </section>
+    <section class="panel">
+      <div class="panel-heading"><div class="panel-title"><span class="panel-index">05</span>Mapper 偏好</div><div class="panel-note">按加权 PP</div></div>
+      <div class="bar-list">{{ for item in mappers }}<div class="bar-row"><span class="bar-name">{{ item.label }}</span><div class="bar-track"><div class="bar-fill" style="width:{{ item.width }}%"></div></div><span class="bar-value">{{ item.value }}</span></div>{{ end }}</div>
+      {{ if mappers.size == 0 }}<div class="empty">暂无 Mapper 数据</div>{{ end }}
+    </section>
+  </div>
+
+  <div class="row bottom-row">
+    <section class="panel">
+      <div class="panel-heading"><div class="panel-title"><span class="panel-index">06</span>BP 时间分布</div><div class="panel-note">季度</div></div>
+      {{ if time_bars.size == 0 }}<div class="empty">暂无时间数据</div>{{ else }}<div class="histogram">{{ for bar in time_bars }}<div class="hist-col{{ if bar.highlight }} highlight{{ end }}" title="{{ bar.label }} · {{ bar.count }} 张"><div class="hist-bar" style="height:{{ bar.height }}%"></div>{{ if bar.show_label }}<span class="hist-label">{{ bar.label }}</span>{{ end }}</div>{{ end }}</div>{{ end }}
+    </section>
+    <section class="panel">
+      <div class="panel-heading"><div class="panel-title"><span class="panel-index">07</span>ACC 分布</div><div class="panel-note">0.5% 分桶</div></div>
+      {{ if accuracy_bars.size == 0 }}<div class="empty">暂无准确率数据</div>{{ else }}<div class="histogram">{{ for bar in accuracy_bars }}<div class="hist-col{{ if bar.highlight }} highlight{{ end }}" title="{{ bar.label }} · {{ bar.count }} 张"><div class="hist-bar" style="height:{{ bar.height }}%"></div>{{ if bar.show_label }}<span class="hist-label">{{ bar.label }}</span>{{ end }}</div>{{ end }}</div>{{ end }}
+    </section>
+    <section class="panel">
+      <div class="panel-heading"><div class="panel-title"><span class="panel-index">08</span>BPM 分布</div><div class="panel-note">10 BPM 分桶</div></div>
+      {{ if bpm_bars.size == 0 }}<div class="empty">暂无 BPM 数据</div>{{ else }}<div class="histogram">{{ for bar in bpm_bars }}<div class="hist-col{{ if bar.highlight }} highlight{{ end }}" title="{{ bar.label }} · {{ bar.count }} 张"><div class="hist-bar" style="height:{{ bar.height }}%"></div>{{ if bar.show_label }}<span class="hist-label">{{ bar.label }}</span>{{ end }}</div>{{ end }}</div>{{ end }}
+    </section>
+  </div>
+  <footer class="footer"><span>HITCIRCLE / BEST PERFORMANCE ANALYSIS · 加权 PP 仅统计已获取的 BP</span><span>数据时间 {{ generated_at }}</span></footer>
+</div>
+</body>
+</html>

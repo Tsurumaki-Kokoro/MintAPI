@@ -76,6 +76,7 @@ try
 
     builder.Services.AddSingleton<HitCircleAPI.Rendering.ScoreTheme.DefaultScoreTheme>();
     builder.Services.AddSingleton<HitCircleAPI.Rendering.UserInfoTheme.DefaultUserInfoTheme>();
+    builder.Services.AddSingleton<HitCircleAPI.Rendering.PerformanceAnalyzeTheme.PerformanceAnalyzeTheme>();
     builder.Services.AddSingleton<HitCircleAPI.Rendering.BeatmapTheme.DefaultBeatmapTheme>();
 
     // ── 异常处理 ─────────────────────────────────────────────────

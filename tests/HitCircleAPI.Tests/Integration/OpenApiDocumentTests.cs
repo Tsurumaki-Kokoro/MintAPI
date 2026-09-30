@@ -115,6 +115,20 @@ public class OpenApiDocumentTests
         Assert.True(content.TryGetProperty("image/png", out _));
     }
 
+    [Fact]
+    public async Task Performance_routes_keep_their_separate_response_types()
+    {
+        var control = await GetOperationAsync("/user_info/extra/performance_control", "get");
+        var analyze = await GetOperationAsync("/user_info/extra/performance_analyze", "get");
+
+        var controlResponse = control.GetProperty("responses").GetProperty("200");
+        var analyzeContent = analyze.GetProperty("responses").GetProperty("200").GetProperty("content");
+        Assert.Contains("JSON", controlResponse.GetProperty("description").GetString());
+        Assert.False(controlResponse.TryGetProperty("content", out var controlContent)
+            && controlContent.TryGetProperty("image/png", out _));
+        Assert.True(analyzeContent.TryGetProperty("image/png", out _));
+    }
+
     // 请求体参数的注释要落在 requestBody 上，而不是被当成查询参数丢掉。
     [Fact]
     public async Task Request_body_carries_the_description_of_its_parameter()
