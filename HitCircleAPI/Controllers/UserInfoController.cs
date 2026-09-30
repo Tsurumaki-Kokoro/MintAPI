@@ -14,6 +14,7 @@ namespace HitCircleAPI.Controllers;
 [Route("user_info")]
 public class UserInfoController(
     AppDbContext db,
+    Microsoft.Extensions.Options.IOptions<HistoryOptions> historyOptions,
     IOsuApiService osuApi,
     IImageCacheService imageCache,
     DefaultUserInfoTheme userInfoTheme,
@@ -71,10 +72,10 @@ public class UserInfoController(
         UserOsuInfoHistory? history = null;
         if (compare_with.HasValue)
         {
-            var compareDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-compare_with.Value));
+            var compareDate = historyOptions.Value.Today(DateTimeOffset.UtcNow).AddDays(-compare_with.Value);
             // Try to find the record closest to the target date
             var candidates = await db.UserOsuInfoHistories
-                .Where(h => h.OsuUid == userModel.OsuUid && h.GameMode == gameModeInt)
+                .Where(h => h.OsuUid == userInfo.Id.ToString() && h.GameMode == gameModeInt)
                 .ToListAsync();
             history = candidates
                 .OrderBy(h => Math.Abs(h.Date.DayNumber - compareDate.DayNumber))

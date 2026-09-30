@@ -16,6 +16,7 @@ public class ScoreController(
     IOsuApiService osuApi,
     IBeatmapFileService beatmapFile,
     DefaultScoreTheme scoreTheme,
+    HistoryService history,
     ILogger<ScoreController> logger) : ControllerBase
 {
     /// <summary>渲染最近一次游玩的成绩图。</summary>
@@ -58,7 +59,7 @@ public class ScoreController(
         List<Score> scores;
         try
         {
-            scores = await osuApi.GetUserScoresAsync(userInfo.Id, ScoreType.Recent, mode, limit: 1);
+            scores = await osuApi.GetUserScoresAsync(userInfo.Id, ScoreType.Recent, mode, limit: 1, includeFails: include_fails);
         }
         catch (Exception ex) when (ex is not RetryableException)
         {
@@ -166,7 +167,7 @@ public class ScoreController(
         List<Score> userScores;
         try
         {
-            userScores = await osuApi.GetBeatmapUserScoresAsync(beatmap_id, userInfo.Id, mode);
+            userScores = (await history.GetMapScoresAsync(userInfo.Id, beatmap_id, (int)mode!.Value, HttpContext.RequestAborted)).Scores;
         }
         catch (Exception ex) when (ex is not RetryableException)
         {

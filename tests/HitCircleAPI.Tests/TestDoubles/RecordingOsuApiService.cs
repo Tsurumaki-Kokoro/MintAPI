@@ -8,16 +8,25 @@ namespace HitCircleAPI.Tests.TestDoubles;
 public sealed class RecordingOsuApiService : IOsuApiService
 {
     private int _callCount;
+    public Func<string, GameMode?, User>? UserHandler { get; set; }
+    public Func<int, ScoreType, GameMode?, int, int, bool?, bool?, List<Score>>? ScoresHandler { get; set; }
 
     public Func<long?, MatchResponse>? MatchHandler { get; set; }
 
     public int CallCount => Volatile.Read(ref _callCount);
 
     public Task<User> GetUserAsync(string userId, GameMode? mode = null)
-        => Record<User>();
+    {
+        Interlocked.Increment(ref _callCount);
+        return Task.FromResult(UserHandler?.Invoke(userId, mode) ?? default!);
+    }
 
-    public Task<List<Score>> GetUserScoresAsync(int userId, ScoreType type, GameMode? mode = null, int limit = 100, int offset = 0)
-        => Record<List<Score>>();
+    public Task<List<Score>> GetUserScoresAsync(int userId, ScoreType type, GameMode? mode = null, int limit = 100, int offset = 0, bool? includeFails = null, bool? legacyOnly = null, CancellationToken cancellationToken = default)
+    {
+        Interlocked.Increment(ref _callCount);
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(ScoresHandler?.Invoke(userId, type, mode, limit, offset, includeFails, legacyOnly) ?? default!);
+    }
 
     public Task<Beatmap> GetBeatmapAsync(int beatmapId)
         => Record<Beatmap>();

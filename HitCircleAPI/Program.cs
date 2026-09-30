@@ -45,6 +45,19 @@ try
 
     // ── HttpClient ───────────────────────────────────────────────
     builder.Services.AddHttpClient();
+    builder.Services.AddHttpClient("OsuTrack", client =>
+    {
+        client.BaseAddress = new Uri("https://osutrack-api.ameo.dev/");
+        client.Timeout = TimeSpan.FromSeconds(10);
+    });
+    builder.Services.AddMemoryCache();
+    builder.Services.AddOptions<HistoryOptions>().Bind(config.GetSection("History"))
+        .Validate(options => options.IsValid(), "History requires a valid time zone, HH:mm times, ScoreTime >= InfoTime, and valid limits.")
+        .ValidateOnStart();
+    builder.Services.AddScoped<HistoryService>();
+    builder.Services.AddScoped<HistoryCollector>();
+    builder.Services.AddSingleton<HistoryRenderer>();
+    builder.Services.AddHostedService<HistoryScheduler>();
 
     // ── Services ─────────────────────────────────────────────────
     // osu! API：全局配额闸门。不按调用方区分 —— 被争抢的是这一个 client 的配额。

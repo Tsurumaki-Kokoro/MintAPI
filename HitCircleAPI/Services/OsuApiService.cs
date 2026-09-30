@@ -19,8 +19,8 @@ public class OsuApiService : IOsuApiService, IDisposable
     public Task<User> GetUserAsync(string userId, GameMode? mode = null)
         => _client.GetUserAsync(userId, mode);
 
-    public Task<List<Score>> GetUserScoresAsync(int userId, ScoreType type, GameMode? mode = null, int limit = 100, int offset = 0)
-        => _client.GetUserScoresAsync(userId, type, mode: mode, limit: limit, offset: offset);
+    public Task<List<Score>> GetUserScoresAsync(int userId, ScoreType type, GameMode? mode = null, int limit = 100, int offset = 0, bool? includeFails = null, bool? legacyOnly = null, CancellationToken cancellationToken = default)
+        => _client.GetUserScoresAsync(userId, type, mode: mode, limit: limit, offset: offset, includeFails: includeFails, legacyOnly: legacyOnly, ct: cancellationToken);
 
     public Task<Beatmap> GetBeatmapAsync(int beatmapId)
         => _client.GetBeatmapAsync(beatmapId);

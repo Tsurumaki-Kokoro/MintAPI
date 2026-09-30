@@ -47,6 +47,21 @@ public class OpenApiDocumentTests
         }
     }
 
+    [Fact]
+    public async Task History_routes_replace_external_update_task_and_expose_json_and_png()
+    {
+        using var document = await GetDocumentAsync();
+        var paths = document.RootElement.GetProperty("paths");
+        Assert.False(paths.TryGetProperty("/task/update_user_info", out _));
+        foreach (var path in new[] { "/user_info/history", "/score/history" })
+        {
+            var content = paths.GetProperty(path).GetProperty("get").GetProperty("responses")
+                .GetProperty("200").GetProperty("content");
+            Assert.True(content.TryGetProperty("application/json", out _));
+            Assert.True(content.TryGetProperty("image/png", out _));
+        }
+    }
+
     private static async Task<JsonElement> GetOperationAsync(string path, string method)
     {
         using var document = await GetDocumentAsync();

@@ -23,8 +23,8 @@ public sealed class RateLimitedOsuApiService(
     public Task<User> GetUserAsync(string userId, GameMode? mode = null)
         => ExecuteAsync(() => inner.GetUserAsync(userId, mode));
 
-    public Task<List<Score>> GetUserScoresAsync(int userId, ScoreType type, GameMode? mode = null, int limit = 100, int offset = 0)
-        => ExecuteAsync(() => inner.GetUserScoresAsync(userId, type, mode, limit, offset));
+    public Task<List<Score>> GetUserScoresAsync(int userId, ScoreType type, GameMode? mode = null, int limit = 100, int offset = 0, bool? includeFails = null, bool? legacyOnly = null, CancellationToken cancellationToken = default)
+        => ExecuteAsync(() => inner.GetUserScoresAsync(userId, type, mode, limit, offset, includeFails, legacyOnly, cancellationToken), cancellationToken);
 
     public Task<Beatmap> GetBeatmapAsync(int beatmapId)
         => ExecuteAsync(() => inner.GetBeatmapAsync(beatmapId));
