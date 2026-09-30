@@ -94,10 +94,11 @@ public class OssapiClient : IDisposable
     // -------------------------------------------------------------------------
 
     private async Task<T> GetAsync<T>(string url, Dictionary<string, object?>? queryParams = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default, bool ensureSuccess = false)
     {
         var fullUrl = BuildUrl(url, queryParams);
-        var response = await _http.GetAsync(fullUrl, ct);
+        using var response = await _http.GetAsync(fullUrl, ct);
+        if (ensureSuccess) response.EnsureSuccessStatusCode();
         return await DeserializeAsync<T>(response, ct);
     }
 
@@ -874,8 +875,8 @@ public class OssapiClient : IDisposable
     /// <summary>Get a specific match by id.</summary>
     public Task<MatchResponse> GetMatchAsync(
         int matchId,
-        int? afterId         = null,
-        int? beforeId        = null,
+        long? afterId        = null,
+        long? beforeId       = null,
         int? limit           = null,
         CancellationToken ct = default)
         => GetAsync<MatchResponse>($"matches/{matchId}", new()
@@ -883,7 +884,7 @@ public class OssapiClient : IDisposable
             ["after"]  = afterId,
             ["before"] = beforeId,
             ["limit"]  = limit,
-        }, ct);
+        }, ct, ensureSuccess: true);
 
     // -------------------------------------------------------------------------
     // Me endpoint

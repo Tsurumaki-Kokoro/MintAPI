@@ -626,7 +626,8 @@ public class MatchGame
     [JsonProperty("beatmap")]    public BeatmapCompact? Beatmap    { get; set; }
     [JsonProperty("beatmap_id")] public int             BeatmapId  { get; set; }
     [JsonProperty("match_id")]   public int             MatchId    { get; set; }
-    [JsonProperty("scores")]     public List<Score>     Scores     { get; set; } = [];
+    [JsonProperty("scores", ItemConverterType = typeof(MatchScoreConverter))]
+    public List<LegacyScore> Scores     { get; set; } = [];
 
     [JsonProperty("mode")]
     [JsonConverter(typeof(GameModeConverter))]
@@ -664,7 +665,7 @@ public class MatchEventDetail
 
 public class MatchEvent
 {
-    [JsonProperty("id")]      public int              Id     { get; set; }
+    [JsonProperty("id")]      public long             Id     { get; set; }
     [JsonProperty("detail")]  public MatchEventDetail Detail { get; set; } = new();
     [JsonProperty("user_id")] public int?             UserId { get; set; }
     [JsonProperty("game")]    public MatchGame?        Game   { get; set; }
@@ -679,8 +680,8 @@ public class MatchResponse
     [JsonProperty("match")]           public Match            MatchInfo      { get; set; } = new();
     [JsonProperty("events")]          public List<MatchEvent> EventList      { get; set; } = [];
     [JsonProperty("users")]           public List<UserCompact> Users         { get; set; } = [];
-    [JsonProperty("first_event_id")]  public int              FirstEventId   { get; set; }
-    [JsonProperty("latest_event_id")] public int              LatestEventId  { get; set; }
+    [JsonProperty("first_event_id")]  public long             FirstEventId   { get; set; }
+    [JsonProperty("latest_event_id")] public long             LatestEventId  { get; set; }
     [JsonProperty("current_game_id")] public int?             CurrentGameId  { get; set; }
 }
 
