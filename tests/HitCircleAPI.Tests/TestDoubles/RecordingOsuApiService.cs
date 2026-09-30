@@ -9,6 +9,8 @@ public sealed class RecordingOsuApiService : IOsuApiService
 {
     private int _callCount;
 
+    public Func<long?, MatchResponse>? MatchHandler { get; set; }
+
     public int CallCount => Volatile.Read(ref _callCount);
 
     public Task<User> GetUserAsync(string userId, GameMode? mode = null)
@@ -28,6 +30,13 @@ public sealed class RecordingOsuApiService : IOsuApiService
 
     public Task<SeasonalBackgrounds> GetSeasonalBackgroundsAsync()
         => Record<SeasonalBackgrounds>();
+
+    public Task<MatchResponse> GetMatchAsync(int matchId, long? beforeId = null, CancellationToken cancellationToken = default)
+    {
+        Interlocked.Increment(ref _callCount);
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(MatchHandler?.Invoke(beforeId) ?? new MatchResponse());
+    }
 
     private Task<T> Record<T>()
     {

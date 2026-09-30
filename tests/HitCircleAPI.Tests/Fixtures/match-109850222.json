@@ -1,0 +1,1043 @@
+{
+  "match": {
+    "id": 109850222,
+    "start_time": "2023-08-05T13:52:56+00:00",
+    "end_time": "2023-08-05T14:44:12+00:00",
+    "name": "Match 109850222 regression"
+  },
+  "events": [
+    {
+      "id": 2272628263,
+      "detail": {
+        "type": "other",
+        "text": "OCLC S11: (we play) vs (睡覺擺爛隊)"
+      },
+      "game": {
+        "beatmap_id": 2730772,
+        "id": 566516404,
+        "start_time": "2023-08-05T14:04:31Z",
+        "end_time": "2023-08-05T14:07:20Z",
+        "match_id": 109850222,
+        "mode": "osu",
+        "mode_int": 0,
+        "scoring_type": "scorev2",
+        "team_type": "team-vs",
+        "mods": [
+          "NF",
+          "DT"
+        ],
+        "scores": [
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              },
+              {
+                "acronym": "DT"
+              }
+            ],
+            "user_id": 8762031,
+            "accuracy": 0.9562908496732027,
+            "legacy_total_score": 618016,
+            "max_combo": 753,
+            "passed": true,
+            "total_score": 618016,
+            "match": {
+              "slot": 0,
+              "team": "red",
+              "pass": true
+            }
+          },
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              },
+              {
+                "acronym": "DT"
+              }
+            ],
+            "user_id": 6338477,
+            "accuracy": 0.9824346405228758,
+            "legacy_total_score": 945579,
+            "max_combo": 1102,
+            "passed": true,
+            "total_score": 945579,
+            "match": {
+              "slot": 1,
+              "team": "red",
+              "pass": true
+            }
+          },
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              },
+              {
+                "acronym": "DT"
+              }
+            ],
+            "user_id": 452514,
+            "accuracy": 0.9225898692810458,
+            "legacy_total_score": 346184,
+            "max_combo": 448,
+            "passed": true,
+            "total_score": 346184,
+            "match": {
+              "slot": 2,
+              "team": "red",
+              "pass": true
+            }
+          },
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              },
+              {
+                "acronym": "DT"
+              }
+            ],
+            "user_id": 14817468,
+            "accuracy": 0.9618055555555556,
+            "legacy_total_score": 957948,
+            "max_combo": 1205,
+            "passed": true,
+            "total_score": 957948,
+            "match": {
+              "slot": 3,
+              "team": "blue",
+              "pass": true
+            }
+          },
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              },
+              {
+                "acronym": "DT"
+              }
+            ],
+            "user_id": 15184992,
+            "accuracy": 0.9591503267973857,
+            "legacy_total_score": 580372,
+            "max_combo": 615,
+            "passed": true,
+            "total_score": 580372,
+            "match": {
+              "slot": 4,
+              "team": "blue",
+              "pass": true
+            }
+          },
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              },
+              {
+                "acronym": "DT"
+              }
+            ],
+            "user_id": 11987530,
+            "accuracy": 0.9185049019607843,
+            "legacy_total_score": 353920,
+            "max_combo": 455,
+            "passed": true,
+            "total_score": 353920,
+            "match": {
+              "slot": 5,
+              "team": "blue",
+              "pass": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 2272630338,
+      "detail": {
+        "type": "other",
+        "text": "OCLC S11: (we play) vs (睡覺擺爛隊)"
+      },
+      "game": {
+        "beatmap_id": 1901149,
+        "id": 566517059,
+        "start_time": "2023-08-05T14:11:14Z",
+        "end_time": "2023-08-05T14:13:50Z",
+        "match_id": 109850222,
+        "mode": "osu",
+        "mode_int": 0,
+        "scoring_type": "scorev2",
+        "team_type": "team-vs",
+        "mods": [
+          "NF"
+        ],
+        "scores": [
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              }
+            ],
+            "user_id": 8762031,
+            "accuracy": 0.9489891866478608,
+            "legacy_total_score": 376083,
+            "max_combo": 485,
+            "passed": true,
+            "total_score": 376083,
+            "match": {
+              "slot": 0,
+              "team": "red",
+              "pass": true
+            }
+          },
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              }
+            ],
+            "user_id": 6338477,
+            "accuracy": 0.9696755994358252,
+            "legacy_total_score": 325524,
+            "max_combo": 265,
+            "passed": true,
+            "total_score": 325524,
+            "match": {
+              "slot": 1,
+              "team": "red",
+              "pass": true
+            }
+          },
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              }
+            ],
+            "user_id": 452514,
+            "accuracy": 0.9087917254348848,
+            "legacy_total_score": 197340,
+            "max_combo": 275,
+            "passed": true,
+            "total_score": 197340,
+            "match": {
+              "slot": 2,
+              "team": "red",
+              "pass": true
+            }
+          },
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              }
+            ],
+            "user_id": 14817468,
+            "accuracy": 0.9903620122237894,
+            "legacy_total_score": 553901,
+            "max_combo": 497,
+            "passed": true,
+            "total_score": 553901,
+            "match": {
+              "slot": 3,
+              "team": "blue",
+              "pass": true
+            }
+          },
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              }
+            ],
+            "user_id": 15868788,
+            "accuracy": 0.9755524212505877,
+            "legacy_total_score": 489239,
+            "max_combo": 548,
+            "passed": true,
+            "total_score": 489239,
+            "match": {
+              "slot": 4,
+              "team": "blue",
+              "pass": true
+            }
+          },
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              }
+            ],
+            "user_id": 11987530,
+            "accuracy": 0.9478138222849083,
+            "legacy_total_score": 346804,
+            "max_combo": 311,
+            "passed": true,
+            "total_score": 346804,
+            "match": {
+              "slot": 5,
+              "team": "blue",
+              "pass": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 2272632083,
+      "detail": {
+        "type": "other",
+        "text": "OCLC S11: (we play) vs (睡覺擺爛隊)"
+      },
+      "game": {
+        "beatmap_id": 3902727,
+        "id": 566517589,
+        "start_time": "2023-08-05T14:17:05Z",
+        "end_time": "2023-08-05T14:19:32Z",
+        "match_id": 109850222,
+        "mode": "osu",
+        "mode_int": 0,
+        "scoring_type": "scorev2",
+        "team_type": "team-vs",
+        "mods": [
+          "NF",
+          "DT"
+        ],
+        "scores": [
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              },
+              {
+                "acronym": "DT"
+              }
+            ],
+            "user_id": 8762031,
+            "accuracy": 0.917184265010352,
+            "legacy_total_score": 659236,
+            "max_combo": 864,
+            "passed": true,
+            "total_score": 659236,
+            "match": {
+              "slot": 0,
+              "team": "red",
+              "pass": true
+            }
+          },
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              },
+              {
+                "acronym": "DT"
+              }
+            ],
+            "user_id": 6338477,
+            "accuracy": 0.9556935817805383,
+            "legacy_total_score": 509961,
+            "max_combo": 592,
+            "passed": true,
+            "total_score": 509961,
+            "match": {
+              "slot": 1,
+              "team": "red",
+              "pass": true
+            }
+          },
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              },
+              {
+                "acronym": "DT"
+              }
+            ],
+            "user_id": 452514,
+            "accuracy": 0.8645962732919255,
+            "legacy_total_score": 425980,
+            "max_combo": 709,
+            "passed": true,
+            "total_score": 425980,
+            "match": {
+              "slot": 2,
+              "team": "red",
+              "pass": true
+            }
+          },
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              },
+              {
+                "acronym": "DT"
+              }
+            ],
+            "user_id": 14817468,
+            "accuracy": 0.9426501035196687,
+            "legacy_total_score": 990403,
+            "max_combo": 1100,
+            "passed": true,
+            "total_score": 990403,
+            "match": {
+              "slot": 3,
+              "team": "blue",
+              "pass": true
+            }
+          },
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              },
+              {
+                "acronym": "DT"
+              }
+            ],
+            "user_id": 15868788,
+            "accuracy": 0.9043478260869565,
+            "legacy_total_score": 333780,
+            "max_combo": 438,
+            "passed": true,
+            "total_score": 333780,
+            "match": {
+              "slot": 4,
+              "team": "blue",
+              "pass": true
+            }
+          },
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              },
+              {
+                "acronym": "DT"
+              }
+            ],
+            "user_id": 11987530,
+            "accuracy": 0.8908902691511387,
+            "legacy_total_score": 338805,
+            "max_combo": 483,
+            "passed": true,
+            "total_score": 338805,
+            "match": {
+              "slot": 5,
+              "team": "blue",
+              "pass": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 2272633809,
+      "detail": {
+        "type": "other",
+        "text": "OCLC S11: (we play) vs (睡覺擺爛隊)"
+      },
+      "game": {
+        "beatmap_id": 3833544,
+        "id": 566518121,
+        "start_time": "2023-08-05T14:22:30Z",
+        "end_time": "2023-08-05T14:25:07Z",
+        "match_id": 109850222,
+        "mode": "osu",
+        "mode_int": 0,
+        "scoring_type": "scorev2",
+        "team_type": "team-vs",
+        "mods": [
+          "NF"
+        ],
+        "scores": [
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              }
+            ],
+            "user_id": 8762031,
+            "accuracy": 0.9258347016967706,
+            "legacy_total_score": 725535,
+            "max_combo": 982,
+            "passed": true,
+            "total_score": 725535,
+            "match": {
+              "slot": 0,
+              "team": "red",
+              "pass": true
+            }
+          },
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              }
+            ],
+            "user_id": 6338477,
+            "accuracy": 0.9370552818828681,
+            "legacy_total_score": 275948,
+            "max_combo": 224,
+            "passed": true,
+            "total_score": 275948,
+            "match": {
+              "slot": 1,
+              "team": "red",
+              "pass": true
+            }
+          },
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              }
+            ],
+            "user_id": 452514,
+            "accuracy": 0.9376026272577996,
+            "legacy_total_score": 355441,
+            "max_combo": 458,
+            "passed": true,
+            "total_score": 355441,
+            "match": {
+              "slot": 2,
+              "team": "red",
+              "pass": true
+            }
+          },
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              }
+            ],
+            "user_id": 14817468,
+            "accuracy": 0.9668856048166393,
+            "legacy_total_score": 687619,
+            "max_combo": 845,
+            "passed": true,
+            "total_score": 687619,
+            "match": {
+              "slot": 3,
+              "team": "blue",
+              "pass": true
+            }
+          },
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              }
+            ],
+            "user_id": 15868788,
+            "accuracy": 0.9365079365079365,
+            "legacy_total_score": 490641,
+            "max_combo": 647,
+            "passed": true,
+            "total_score": 490641,
+            "match": {
+              "slot": 4,
+              "team": "blue",
+              "pass": true
+            }
+          },
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              }
+            ],
+            "user_id": 11987530,
+            "accuracy": 0.9340448823207443,
+            "legacy_total_score": 322313,
+            "max_combo": 358,
+            "passed": true,
+            "total_score": 322313,
+            "match": {
+              "slot": 5,
+              "team": "blue",
+              "pass": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 2272635750,
+      "detail": {
+        "type": "other",
+        "text": "OCLC S11: (we play) vs (睡覺擺爛隊)"
+      },
+      "game": {
+        "beatmap_id": 3559941,
+        "id": 566518720,
+        "start_time": "2023-08-05T14:28:47Z",
+        "end_time": "2023-08-05T14:31:58Z",
+        "match_id": 109850222,
+        "mode": "osu",
+        "mode_int": 0,
+        "scoring_type": "scorev2",
+        "team_type": "team-vs",
+        "mods": [
+          "NF",
+          "DT"
+        ],
+        "scores": [
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              },
+              {
+                "acronym": "DT"
+              }
+            ],
+            "user_id": 8762031,
+            "accuracy": 0.92995966263293,
+            "legacy_total_score": 524928,
+            "max_combo": 720,
+            "passed": true,
+            "total_score": 524928,
+            "match": {
+              "slot": 0,
+              "team": "red",
+              "pass": true
+            }
+          },
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              },
+              {
+                "acronym": "DT"
+              }
+            ],
+            "user_id": 6338477,
+            "accuracy": 0.971947194719472,
+            "legacy_total_score": 744383,
+            "max_combo": 961,
+            "passed": true,
+            "total_score": 744383,
+            "match": {
+              "slot": 1,
+              "team": "red",
+              "pass": true
+            }
+          },
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              },
+              {
+                "acronym": "DT"
+              }
+            ],
+            "user_id": 452514,
+            "accuracy": 0.8579024569123579,
+            "legacy_total_score": 195769,
+            "max_combo": 313,
+            "passed": true,
+            "total_score": 195769,
+            "match": {
+              "slot": 2,
+              "team": "red",
+              "pass": true
+            }
+          },
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              },
+              {
+                "acronym": "DT"
+              }
+            ],
+            "user_id": 14817468,
+            "accuracy": 0.9699303263659699,
+            "legacy_total_score": 849999,
+            "max_combo": 1067,
+            "passed": true,
+            "total_score": 849999,
+            "match": {
+              "slot": 3,
+              "team": "blue",
+              "pass": true
+            }
+          },
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              },
+              {
+                "acronym": "DT"
+              }
+            ],
+            "user_id": 15184992,
+            "accuracy": 0.9404107077374404,
+            "legacy_total_score": 434274,
+            "max_combo": 484,
+            "passed": true,
+            "total_score": 434274,
+            "match": {
+              "slot": 4,
+              "team": "blue",
+              "pass": true
+            }
+          },
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              },
+              {
+                "acronym": "DT"
+              }
+            ],
+            "user_id": 11987530,
+            "accuracy": 0.9273927392739274,
+            "legacy_total_score": 556154,
+            "max_combo": 757,
+            "passed": true,
+            "total_score": 556154,
+            "match": {
+              "slot": 5,
+              "team": "blue",
+              "pass": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 2272637504,
+      "detail": {
+        "type": "other",
+        "text": "OCLC S11: (we play) vs (睡覺擺爛隊)"
+      },
+      "game": {
+        "beatmap_id": 1411573,
+        "id": 566519274,
+        "start_time": "2023-08-05T14:34:33Z",
+        "end_time": "2023-08-05T14:38:12Z",
+        "match_id": 109850222,
+        "mode": "osu",
+        "mode_int": 0,
+        "scoring_type": "scorev2",
+        "team_type": "team-vs",
+        "mods": [
+          "NF"
+        ],
+        "scores": [
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              }
+            ],
+            "user_id": 8762031,
+            "accuracy": 0.9806477093206951,
+            "legacy_total_score": 597329,
+            "max_combo": 683,
+            "passed": true,
+            "total_score": 597329,
+            "match": {
+              "slot": 0,
+              "team": "red",
+              "pass": true
+            }
+          },
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              }
+            ],
+            "user_id": 6338477,
+            "accuracy": 0.9899289099526066,
+            "legacy_total_score": 793244,
+            "max_combo": 1033,
+            "passed": true,
+            "total_score": 793244,
+            "match": {
+              "slot": 1,
+              "team": "red",
+              "pass": true
+            }
+          },
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              }
+            ],
+            "user_id": 452514,
+            "accuracy": 0.9842022116903634,
+            "legacy_total_score": 556764,
+            "max_combo": 650,
+            "passed": true,
+            "total_score": 556764,
+            "match": {
+              "slot": 2,
+              "team": "red",
+              "pass": true
+            }
+          },
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              }
+            ],
+            "user_id": 14817468,
+            "accuracy": 0.9786729857819905,
+            "legacy_total_score": 542358,
+            "max_combo": 656,
+            "passed": true,
+            "total_score": 542358,
+            "match": {
+              "slot": 3,
+              "team": "blue",
+              "pass": true
+            }
+          },
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              }
+            ],
+            "user_id": 15868788,
+            "accuracy": 0.9800552922590837,
+            "legacy_total_score": 408062,
+            "max_combo": 361,
+            "passed": true,
+            "total_score": 408062,
+            "match": {
+              "slot": 4,
+              "team": "blue",
+              "pass": true
+            }
+          },
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              }
+            ],
+            "user_id": 11987530,
+            "accuracy": 0.9579383886255924,
+            "legacy_total_score": 372748,
+            "max_combo": 531,
+            "passed": true,
+            "total_score": 372748,
+            "match": {
+              "slot": 5,
+              "team": "blue",
+              "pass": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 2272639639,
+      "detail": {
+        "type": "other",
+        "text": "OCLC S11: (we play) vs (睡覺擺爛隊)"
+      },
+      "game": {
+        "beatmap_id": 3921929,
+        "id": 566519908,
+        "start_time": "2023-08-05T14:41:04Z",
+        "end_time": "2023-08-05T14:43:17Z",
+        "match_id": 109850222,
+        "mode": "osu",
+        "mode_int": 0,
+        "scoring_type": "scorev2",
+        "team_type": "team-vs",
+        "mods": [
+          "NF",
+          "HR"
+        ],
+        "scores": [
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              },
+              {
+                "acronym": "HR"
+              }
+            ],
+            "user_id": 8762031,
+            "accuracy": 0.9227941176470589,
+            "legacy_total_score": 554857,
+            "max_combo": 626,
+            "passed": true,
+            "total_score": 554857,
+            "match": {
+              "slot": 0,
+              "team": "red",
+              "pass": true
+            }
+          },
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              },
+              {
+                "acronym": "HR"
+              }
+            ],
+            "user_id": 6338477,
+            "accuracy": 0.9421977124183006,
+            "legacy_total_score": 346725,
+            "max_combo": 246,
+            "passed": true,
+            "total_score": 346725,
+            "match": {
+              "slot": 1,
+              "team": "red",
+              "pass": true
+            }
+          },
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              },
+              {
+                "acronym": "HR"
+              }
+            ],
+            "user_id": 452514,
+            "accuracy": 0.9309640522875817,
+            "legacy_total_score": 313200,
+            "max_combo": 265,
+            "passed": true,
+            "total_score": 313200,
+            "match": {
+              "slot": 2,
+              "team": "red",
+              "pass": true
+            }
+          },
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              },
+              {
+                "acronym": "HR"
+              }
+            ],
+            "user_id": 14817468,
+            "accuracy": 0.9603758169934641,
+            "legacy_total_score": 827761,
+            "max_combo": 846,
+            "passed": true,
+            "total_score": 827761,
+            "match": {
+              "slot": 3,
+              "team": "blue",
+              "pass": true
+            }
+          },
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              },
+              {
+                "acronym": "HR"
+              }
+            ],
+            "user_id": 15868788,
+            "accuracy": 0.8925653594771242,
+            "legacy_total_score": 257732,
+            "max_combo": 275,
+            "passed": true,
+            "total_score": 257732,
+            "match": {
+              "slot": 4,
+              "team": "blue",
+              "pass": true
+            }
+          },
+          {
+            "mods": [
+              {
+                "acronym": "NF"
+              },
+              {
+                "acronym": "HR"
+              }
+            ],
+            "user_id": 11987530,
+            "accuracy": 0.8956290849673203,
+            "legacy_total_score": 200155,
+            "max_combo": 168,
+            "passed": true,
+            "total_score": 200155,
+            "match": {
+              "slot": 5,
+              "team": "blue",
+              "pass": true
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "users": [
+    {
+      "id": 452514,
+      "username": "Player 452514"
+    },
+    {
+      "id": 1766764,
+      "username": "Player 1766764"
+    },
+    {
+      "id": 6338477,
+      "username": "Player 6338477"
+    },
+    {
+      "id": 7183040,
+      "username": "Player 7183040"
+    },
+    {
+      "id": 8762031,
+      "username": "Player 8762031"
+    },
+    {
+      "id": 11987530,
+      "username": "Player 11987530"
+    },
+    {
+      "id": 14817468,
+      "username": "Player 14817468"
+    },
+    {
+      "id": 15184992,
+      "username": "Player 15184992"
+    },
+    {
+      "id": 15868788,
+      "username": "Player 15868788"
+    }
+  ],
+  "first_event_id": 2272624580,
+  "latest_event_id": 2272640602
+}

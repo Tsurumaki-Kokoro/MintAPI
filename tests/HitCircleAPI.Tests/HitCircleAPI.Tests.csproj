@@ -22,4 +22,8 @@
     <ProjectReference Include="..\..\HitCircleAPI\HitCircleAPI.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Fixtures/match-109850222.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

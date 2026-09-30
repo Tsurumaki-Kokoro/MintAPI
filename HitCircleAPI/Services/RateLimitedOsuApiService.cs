@@ -38,9 +38,12 @@ public sealed class RateLimitedOsuApiService(
     public Task<SeasonalBackgrounds> GetSeasonalBackgroundsAsync()
         => ExecuteAsync(inner.GetSeasonalBackgroundsAsync);
 
-    private async Task<T> ExecuteAsync<T>(Func<Task<T>> call)
+    public Task<MatchResponse> GetMatchAsync(int matchId, long? beforeId = null, CancellationToken cancellationToken = default)
+        => ExecuteAsync(() => inner.GetMatchAsync(matchId, beforeId, cancellationToken), cancellationToken);
+
+    private async Task<T> ExecuteAsync<T>(Func<Task<T>> call, CancellationToken cancellationToken = default)
     {
-        using var lease = await limiter.AcquireAsync(1);
+        using var lease = await limiter.AcquireAsync(1, cancellationToken);
         if (!lease.IsAcquired)
             throw new OsuQuotaExceededException();
 

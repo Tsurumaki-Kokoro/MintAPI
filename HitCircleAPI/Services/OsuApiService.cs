@@ -34,5 +34,8 @@ public class OsuApiService : IOsuApiService, IDisposable
     public Task<SeasonalBackgrounds> GetSeasonalBackgroundsAsync()
         => _client.GetSeasonalBackgroundsAsync();
 
+    public Task<MatchResponse> GetMatchAsync(int matchId, long? beforeId = null, CancellationToken cancellationToken = default)
+        => _client.GetMatchAsync(matchId, beforeId: beforeId, limit: 100, ct: cancellationToken);
+
     public void Dispose() => _client.Dispose();
 }

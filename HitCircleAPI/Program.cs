@@ -78,6 +78,8 @@ try
     builder.Services.AddSingleton<HitCircleAPI.Rendering.UserInfoTheme.DefaultUserInfoTheme>();
     builder.Services.AddSingleton<HitCircleAPI.Rendering.PerformanceAnalyzeTheme.PerformanceAnalyzeTheme>();
     builder.Services.AddSingleton<HitCircleAPI.Rendering.BeatmapTheme.DefaultBeatmapTheme>();
+    builder.Services.AddSingleton<MultiplayerService>();
+    builder.Services.AddSingleton<HitCircleAPI.Rendering.MultiplayerTheme.MultiplayerTheme>();
 
     // ── 异常处理 ─────────────────────────────────────────────────
     // RetryableException → 503 + Retry-After，其余交回默认 500。
