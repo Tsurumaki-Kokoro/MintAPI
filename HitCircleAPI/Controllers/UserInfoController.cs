@@ -25,8 +25,9 @@ public class UserInfoController(
     /// <param name="game_mode">游戏模式（0=osu!，1=taiko，2=catch，3=mania），默认沿用绑定时的模式。</param>
     /// <param name="user_name">改用这个 osu! 用户名取数据，而不是绑定时的账号。</param>
     /// <param name="compare_with">与 N 天前的数据对比；取历史表里最接近那天的一条。</param>
-    /// <param name="theme">渲染主题，默认 default。</param>
+    /// <param name="theme">渲染主题：default 或 apple，默认 default。</param>
     /// <response code="200">渲染好的 PNG 资料卡。</response>
+    /// <response code="400">不支持的渲染主题。</response>
     /// <response code="404">用户未绑定。</response>
     /// <response code="500">取用户信息或渲染失败。</response>
     [HttpGet]
@@ -39,6 +40,9 @@ public class UserInfoController(
         [FromQuery] int? compare_with = null,
         [FromQuery] string theme = "default")
     {
+        if (theme is not ("default" or "apple"))
+            return BadRequest("Unsupported user info theme. Use default or apple.");
+
         var userModel = await db.Users
             .FirstOrDefaultAsync(u => u.Platform == platform && u.PlatformUid == platform_uid);
         if (userModel is null)
@@ -78,7 +82,7 @@ public class UserInfoController(
         byte[] image;
         try
         {
-            image = await userInfoTheme.RenderAsync(userInfo, history, modeStr.ToUpper());
+            image = await userInfoTheme.RenderAsync(userInfo, history, modeStr.ToUpper(), theme);
         }
         catch (Exception ex) when (ex is not RetryableException)
         {

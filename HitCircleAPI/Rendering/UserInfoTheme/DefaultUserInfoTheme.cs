@@ -8,8 +8,8 @@ namespace HitCircleAPI.Rendering.UserInfoTheme;
 
 public class DefaultUserInfoTheme
 {
-    private static readonly string TemplatePath = Path.Combine(
-        AppContext.BaseDirectory, "Rendering", "UserInfoTheme", "templates", "default", "index.html");
+    private static string GetTemplatePath(string theme) => Path.Combine(
+        AppContext.BaseDirectory, "Rendering", "UserInfoTheme", "templates", theme, "index.html");
 
     private readonly IRenderService _renderer;
     private readonly IImageCacheService _imageCache;
@@ -23,8 +23,11 @@ public class DefaultUserInfoTheme
         _logger = logger;
     }
 
-    public async Task<byte[]> RenderAsync(User user, UserOsuInfoHistory? history, string gameMode)
+    public async Task<byte[]> RenderAsync(User user, UserOsuInfoHistory? history, string gameMode, string theme = "default")
     {
+        if (theme is not ("default" or "apple"))
+            throw new ArgumentOutOfRangeException(nameof(theme), theme, "Unsupported user info theme");
+
         var stats = user.Statistics;
 
         // ── Avatar ──────────────────────────────────────────────────
@@ -166,7 +169,7 @@ public class DefaultUserInfoTheme
         var templateCtx = new TemplateContext();
         templateCtx.PushGlobal(scriptObj);
 
-        var templateSrc = await File.ReadAllTextAsync(TemplatePath);
+        var templateSrc = await File.ReadAllTextAsync(GetTemplatePath(theme));
         var template = Template.Parse(templateSrc);
         var html = await template.RenderAsync(templateCtx);
 
