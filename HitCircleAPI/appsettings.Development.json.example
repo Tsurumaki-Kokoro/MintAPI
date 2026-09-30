@@ -14,5 +14,13 @@
       "Default": "Debug",
       "Microsoft.AspNetCore": "Information"
     }
+  },
+  "BeatmapPreview": {
+    "ExecutablePath": "tools/osu-preview/osu-beatmap-preview-cli",
+    "MaxConcurrency": 1,
+    "ImageTimeoutSeconds": 120,
+    "VideoTimeoutSeconds": 300,
+    "MaxVideoDurationSeconds": 60,
+    "MaxGifDurationSeconds": 6
   }
 }

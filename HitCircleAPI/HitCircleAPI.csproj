@@ -51,6 +51,23 @@
         <ProjectReference Include="..\src\Ossapi\Ossapi.csproj"/>
     </ItemGroup>
 
+    <!-- Install the pinned preview CLI before publishing; preserve executable mode on Unix. -->
+    <ItemGroup>
+        <Content Include="tools/osu-preview/**/*" Exclude="tools/osu-preview/**/*.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+        <Content Update="tools/osu-preview/**/*.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
+
+    <Target Name="RequirePreviewCliForPublish" BeforeTargets="ComputeFilesToPublish">
+        <PropertyGroup>
+            <PreviewCliRid Condition="Exists('$(MSBuildProjectDirectory)/tools/osu-preview/runtime-id.txt')">$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)/tools/osu-preview/runtime-id.txt').Trim())</PreviewCliRid>
+        </PropertyGroup>
+        <Error Condition="'$(PreviewCliRid)' == ''" Text="Preview CLI platform manifest missing. Run scripts/install-preview-cli.py on the target platform." />
+        <Error Condition="'$(RuntimeIdentifier)' != '' And '$(PreviewCliRid)' != '$(RuntimeIdentifier)'"
+               Text="Preview CLI platform $(PreviewCliRid) does not match publish RuntimeIdentifier $(RuntimeIdentifier)." />
+        <Error Condition="!Exists('$(MSBuildProjectDirectory)/tools/osu-preview/osu-beatmap-preview-cli') And !Exists('$(MSBuildProjectDirectory)/tools/osu-preview/osu-beatmap-preview-cli.exe')"
+               Text="Install the pinned preview CLI for the publish platform with scripts/install-preview-cli.py before publishing." />
+    </Target>
+
     <!-- rosu-pp-ffi: 增量 cargo build + 复制原生库 -->
     <ItemGroup>
         <RustSources Include="$(RustCrateDir)src/**/*.rs" />

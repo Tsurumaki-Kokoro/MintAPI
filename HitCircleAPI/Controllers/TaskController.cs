@@ -1,3 +1,4 @@
+using HitCircleAPI.Services.Preview;
 using HitCircleAPI.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,17 +8,19 @@ namespace HitCircleAPI.Controllers;
 [ApiController]
 [Route("task")]
 public class TaskController(
+    IBeatmapPreviewService preview,
     ILogger<TaskController> logger) : ControllerBase
 {
-    /// <summary>清空谱面 osu! 文件缓存与用户头像、背景缓存。</summary>
+    /// <summary>清空谱面 osu! 文件、预览产物、谱包与用户头像、背景缓存。</summary>
     /// <response code="200">清理完成。</response>
     /// <response code="500">清理过程中出错。</response>
     [HttpPost("clear_cache")]
-    public IActionResult ClearCache()
+    public async Task<IActionResult> ClearCache()
     {
         var cacheDir = Path.Combine(AppContext.BaseDirectory, "cache");
         try
         {
+            await preview.ClearCacheAsync(HttpContext.RequestAborted);
             var beatmapCacheDir = Path.Combine(cacheDir, "beatmap", "osu_file");
             if (Directory.Exists(beatmapCacheDir))
             {

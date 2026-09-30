@@ -12,12 +12,27 @@ ENV RUSTUP_HOME=/usr/local/rustup \
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
     | sh -s -- -y --no-modify-path --profile minimal --default-toolchain stable
 
+# Build the pinned preview engine inside the same Debian environment as the API.
+RUN apt-get update && apt-get install -y --no-install-recommends git build-essential \
+    && rm -rf /var/lib/apt/lists/*
+RUN git clone https://github.com/2710165659/osu-beatmap-preview.git /preview-source \
+    && cd /preview-source \
+    && git checkout --detach e3883affa62ae00224a2e16e28755ea712b943bc \
+    && cargo build --release --locked --package osu-beatmap-preview-cli
+
 WORKDIR /src
 COPY ["HitCircleAPI/HitCircleAPI.csproj", "HitCircleAPI/"]
 COPY ["src/Ossapi/Ossapi.csproj", "src/Ossapi/"]
 COPY ["native/", "native/"]
 RUN dotnet restore "HitCircleAPI/HitCircleAPI.csproj"
 COPY . .
+RUN mkdir -p /src/HitCircleAPI/tools/osu-preview \
+    && cp /preview-source/target/release/osu-beatmap-preview-cli /src/HitCircleAPI/tools/osu-preview/ \
+    && cp /preview-source/LICENSE /src/HitCircleAPI/tools/osu-preview/ \
+    && cp /preview-source/docs/THIRD_PARTY_NOTICES.md /src/HitCircleAPI/tools/osu-preview/ \
+    && chmod 755 /src/HitCircleAPI/tools/osu-preview/osu-beatmap-preview-cli \
+    && test "$(uname -m)" = "x86_64" \
+    && echo linux-x64 > /src/HitCircleAPI/tools/osu-preview/runtime-id.txt
 WORKDIR "/src/HitCircleAPI"
 RUN dotnet build "HitCircleAPI.csproj" -c $BUILD_CONFIGURATION -o /app/build
 

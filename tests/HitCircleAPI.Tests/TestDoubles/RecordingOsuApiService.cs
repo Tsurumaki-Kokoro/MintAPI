@@ -11,6 +11,8 @@ public sealed class RecordingOsuApiService : IOsuApiService
     public Func<string, GameMode?, User>? UserHandler { get; set; }
     public Func<int, ScoreType, GameMode?, int, int, bool?, bool?, List<Score>>? ScoresHandler { get; set; }
 
+    public Func<int, Beatmap>? BeatmapHandler { get; set; }
+
     public Func<long?, MatchResponse>? MatchHandler { get; set; }
 
     public int CallCount => Volatile.Read(ref _callCount);
@@ -29,7 +31,10 @@ public sealed class RecordingOsuApiService : IOsuApiService
     }
 
     public Task<Beatmap> GetBeatmapAsync(int beatmapId)
-        => Record<Beatmap>();
+    {
+        Interlocked.Increment(ref _callCount);
+        return Task.FromResult(BeatmapHandler?.Invoke(beatmapId) ?? default!);
+    }
 
     public Task<Beatmapset> GetBeatmapsetAsync(int beatmapsetId)
         => Record<Beatmapset>();

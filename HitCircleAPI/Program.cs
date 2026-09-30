@@ -1,3 +1,4 @@
+using HitCircleAPI.Services.Preview;
 using HitCircleAPI.Data;
 using HitCircleAPI.Middleware;
 using HitCircleAPI.OpenApi;
@@ -65,6 +66,12 @@ try
 
     builder.Services.AddSingleton<IPpCalculatorService, PpCalculatorService>();
     builder.Services.AddSingleton<IBeatmapFileService, BeatmapFileService>();
+    builder.Services.AddOptions<BeatmapPreviewOptions>().Bind(config.GetSection("BeatmapPreview"))
+        .Validate(options => options.IsValid(), "Invalid preview executable, concurrency, timeout or duration limits.")
+        .ValidateOnStart();
+    builder.Services.AddSingleton<IPreviewCliRunner, PreviewCliRunner>();
+    builder.Services.AddSingleton<IBeatmapPreviewService, BeatmapPreviewService>();
+    builder.Services.AddHostedService<PreviewCliWarmupService>();
     builder.Services.AddSingleton<IImageCacheService, ImageCacheService>();
     builder.Services.AddSingleton<ICacheService, RedisCacheService>();
 

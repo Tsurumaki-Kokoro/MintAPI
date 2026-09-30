@@ -25,3 +25,6 @@ HitCircleAPI/appsettings.Development.json
 
 # ── 操作系统 ────────────────────────────────────────────────
 .DS_Store
+
+# Locally installed preview engine and upstream notices
+HitCircleAPI/tools/osu-preview/
