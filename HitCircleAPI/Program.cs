@@ -119,11 +119,11 @@ try
     // ────────────────────────────────────────────────────────────
     var app = builder.Build();
 
-    // ── 确保数据库 schema 存在 ───────────────────────────────────
+    // ── 应用数据库迁移 ───────────────────────────────────────────
     using (var scope = app.Services.CreateScope())
     {
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        await db.Database.EnsureCreatedAsync();
+        await DatabaseMigrationStartup.MigrateAsync(db);
     }
 
     // ── OpenAPI（仅开发环境）─────────────────────────────────────

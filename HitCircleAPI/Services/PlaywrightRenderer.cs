@@ -9,19 +9,23 @@ namespace HitCircleAPI.Services;
 /// </summary>
 public sealed class PlaywrightRenderer(IBrowserProvider browserProvider) : IRenderService
 {
-    public async Task<byte[]> RenderHtmlAsync(string html, int width, int height)
+    public async Task<byte[]> RenderHtmlAsync(string html, int width, int height, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var browser = browserProvider.Browser;
         var tmpFile = Path.Combine(Path.GetTempPath(), $"hcapi_{Guid.NewGuid():N}.html");
 
         try
         {
-            await File.WriteAllTextAsync(tmpFile, html, Encoding.UTF8);
+            await File.WriteAllTextAsync(tmpFile, html, Encoding.UTF8, cancellationToken);
 
             await using var context = await browser.NewContextAsync(new BrowserNewContextOptions
             {
                 ViewportSize = new ViewportSize { Width = width, Height = height },
             });
+            using var cancellationRegistration = cancellationToken.Register(
+                static state => _ = CloseContextOnCancellationAsync((IBrowserContext)state!), context);
+            cancellationToken.ThrowIfCancellationRequested();
             var page = await context.NewPageAsync();
 
             // Load 覆盖 <img>；@font-face 不在 load 事件里，必须单独等 fonts.ready。
@@ -42,6 +46,18 @@ public sealed class PlaywrightRenderer(IBrowserProvider browserProvider) : IRend
         {
             if (File.Exists(tmpFile))
                 File.Delete(tmpFile);
+        }
+    }
+
+    private static async Task CloseContextOnCancellationAsync(IBrowserContext context)
+    {
+        try
+        {
+            await context.CloseAsync();
+        }
+        catch (Exception)
+        {
+            // The render may already have closed or disposed the context.
         }
     }
 }

@@ -62,20 +62,38 @@ public class GuardedRenderServiceTests
 
         await Assert.ThrowsAsync<RenderTimeoutException>(
             () => guard.RenderHtmlAsync("<html/>", 100, 100));
+        await inner.WaitUntilCancelledAsync();
+        inner.Release();
     }
 
     [Fact]
-    public async Task RenderHtmlAsync_after_timeout_releases_the_slot()
+    public async Task RenderHtmlAsync_after_timeout_holds_slot_until_inner_render_stops()
     {
         var inner = new BlockingRenderService();
         var guard = new GuardedRenderService(inner, maxConcurrency: 1, timeout: TimeSpan.FromMilliseconds(100));
 
         await Assert.ThrowsAsync<RenderTimeoutException>(
             () => guard.RenderHtmlAsync("<html/>", 100, 100));
+        await inner.WaitUntilCancelledAsync();
 
-        // 槽位若泄漏，这里会拿到 RenderBusyException 而不是再次超时
-        await Assert.ThrowsAsync<RenderTimeoutException>(
+        await Assert.ThrowsAsync<RenderBusyException>(
             () => guard.RenderHtmlAsync("<html/>", 100, 100));
-    }
 
+        inner.Release();
+        using var wait = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        while (true)
+        {
+            wait.Token.ThrowIfCancellationRequested();
+            try
+            {
+                await guard.RenderHtmlAsync("<html/>", 100, 100);
+                break;
+            }
+            catch (RenderBusyException)
+            {
+                await Task.Delay(10, wait.Token);
+            }
+        }
+        Assert.Equal(1, inner.PeakConcurrency);
+    }
 }

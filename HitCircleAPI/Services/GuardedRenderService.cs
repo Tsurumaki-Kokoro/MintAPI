@@ -17,18 +17,52 @@ public sealed class GuardedRenderService(
 {
     private readonly SemaphoreSlim _slots = new(maxConcurrency, maxConcurrency);
 
-    public async Task<byte[]> RenderHtmlAsync(string html, int width, int height)
+    public async Task<byte[]> RenderHtmlAsync(string html, int width, int height, CancellationToken cancellationToken = default)
     {
         if (!await _slots.WaitAsync(0))
             throw new RenderBusyException();
 
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var detached = false;
         try
         {
-            return await inner.RenderHtmlAsync(html, width, height).WaitAsync(timeout);
+            var renderTask = inner.RenderHtmlAsync(html, width, height, timeoutCts.Token);
+            try
+            {
+                return await renderTask.WaitAsync(timeout, cancellationToken);
+            }
+            catch (TimeoutException)
+            {
+                detached = true;
+                // Playwright will close its context. Until it actually stops, the render
+                // still counts towards the concurrency limit.
+                _ = ReleaseSlotWhenFinishedAsync(renderTask);
+                timeoutCts.Cancel();
+                throw new RenderTimeoutException();
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                detached = true;
+                _ = ReleaseSlotWhenFinishedAsync(renderTask);
+                throw;
+            }
         }
-        catch (TimeoutException)
+        finally
         {
-            throw new RenderTimeoutException();
+            if (!detached)
+                _slots.Release();
+        }
+    }
+
+    private async Task ReleaseSlotWhenFinishedAsync(Task renderTask)
+    {
+        try
+        {
+            await renderTask;
+        }
+        catch
+        {
+            // The timeout response has already been sent. Observe the task's failure.
         }
         finally
         {

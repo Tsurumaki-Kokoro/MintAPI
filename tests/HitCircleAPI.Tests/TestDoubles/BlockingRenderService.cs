@@ -13,6 +13,8 @@ public sealed class BlockingRenderService : IRenderService
     private readonly SemaphoreSlim _entered = new(0);
     private readonly TaskCompletionSource _release =
         new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly TaskCompletionSource _cancelled =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     private int _current;
     private int _peak;
@@ -20,8 +22,9 @@ public sealed class BlockingRenderService : IRenderService
     /// <summary>曾经同时进入渲染的最大数量。</summary>
     public int PeakConcurrency => Volatile.Read(ref _peak);
 
-    public async Task<byte[]> RenderHtmlAsync(string html, int width, int height)
+    public async Task<byte[]> RenderHtmlAsync(string html, int width, int height, CancellationToken cancellationToken = default)
     {
+        using var registration = cancellationToken.Register(() => _cancelled.TrySetResult());
         var current = Interlocked.Increment(ref _current);
         InterlockedMax(ref _peak, current);
         _entered.Release();
@@ -49,6 +52,8 @@ public sealed class BlockingRenderService : IRenderService
     }
 
     public void Release() => _release.TrySetResult();
+
+    public Task WaitUntilCancelledAsync() => _cancelled.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
     private static void InterlockedMax(ref int target, int value)
     {
