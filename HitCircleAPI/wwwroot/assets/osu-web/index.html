@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>osu-web 素材目录</title>
+<style>
+body{margin:0;background:#202029;color:#eee;font:15px system-ui,sans-serif}main{max-width:1400px;margin:auto;padding:28px}h1{font-size:26px}a{color:#ffa6d2}input,select{padding:10px;border:1px solid #777;border-radius:6px;background:#30303b;color:white}input{width:min(65%,600px)}#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}article{background:#30303b;border-radius:8px;padding:12px;overflow:hidden}img{width:100%;height:150px;object-fit:contain;background:repeating-conic-gradient(#444 0% 25%,#555 0% 50%) 0/20px 20px}article a{display:block;overflow-wrap:anywhere;margin-top:10px}small{color:#ccc}#status{margin:18px 0}
+</style>
+<main>
+<h1>osu-web 图片素材</h1>
+<p>保留上游路径，点击文件路径打开原图。<a href="manifest.json">资源清单</a> · <a href="README.md">来源与调用说明</a></p>
+<label for="query">搜索路径</label> <input id="query" type="search" placeholder="例如 mods、rank、logo">
+<label for="format">格式</label> <select id="format"><option value="">全部</option><option>svg</option><option>png</option><option>jpg</option><option>ico</option></select>
+<p id="status" role="status">正在载入资源清单…</p><div id="grid"></div>
+</main>
+<script>
+let assets=[];
+const query=document.getElementById('query'),format=document.getElementById('format'),grid=document.getElementById('grid'),status=document.getElementById('status');
+function render(){
+ const filtered=assets.filter(a=>a.path.toLowerCase().includes(query.value.trim().toLowerCase())&&(!format.value||a.format===format.value));
+ grid.replaceChildren(); status.textContent=`显示 ${filtered.length} / ${assets.length} 个素材`;
+ for(const asset of filtered){
+  const card=document.createElement('article'),img=document.createElement('img'),link=document.createElement('a'),size=document.createElement('small');
+  const url=new URL(asset.path,location.href);
+  img.src=url.href;img.alt=asset.path;img.loading='lazy';link.href=url.href;link.textContent=asset.path;
+  size.textContent=`${asset.format.toUpperCase()} · ${(asset.bytes/1024).toFixed(1)} KiB`;
+  card.append(img,link,size);grid.append(card);
+ }
+}
+query.addEventListener('input',render);format.addEventListener('change',render);
+fetch('manifest.json').then(r=>{if(!r.ok)throw Error(r.status);return r.json()}).then(m=>{assets=m.assets;render()}).catch(()=>{status.textContent='无法载入清单，请通过 API 的 /assets/osu-web/index.html 访问本页。'});
+</script>
+</html>
