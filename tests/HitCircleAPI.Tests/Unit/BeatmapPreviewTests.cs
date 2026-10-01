@@ -103,6 +103,7 @@ public sealed class BeatmapPreviewTests : IDisposable
     {
         public Task<string> GetOsuFilePathAsync(int beatmapSetId, int beatmapId) => Task.FromResult(Path.Combine(directory, "map with spaces.osu"));
         public Task<byte[]> GetMapBgAsync(int setId, int mapId, string? bgName = null) => throw new NotImplementedException();
+        public Task<byte[]?> GetListCoverAsync(int setId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public string GetBgFilename(string osuFilePath) => throw new NotImplementedException();
     }
     private sealed class FakeRunner(Func<IReadOnlyList<string>, CancellationToken, Task<PreviewCliOutput>> handler) : IPreviewCliRunner

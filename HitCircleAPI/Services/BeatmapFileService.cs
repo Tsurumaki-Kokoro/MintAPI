@@ -71,6 +71,40 @@ public partial class BeatmapFileService : IBeatmapFileService
         return content ?? [];
     }
 
+    public async Task<byte[]?> GetListCoverAsync(int setId, CancellationToken cancellationToken = default)
+    {
+        if (setId <= 0) return null;
+        var filePath = Path.Combine(OsuFileDir(setId), "list-cover.jpg");
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(5));
+        try
+        {
+            if (File.Exists(filePath)) return await File.ReadAllBytesAsync(filePath, cancellationToken);
+            using var response = await _httpClientFactory.CreateClient().GetAsync(
+                $"https://assets.ppy.sh/beatmaps/{setId}/covers/cover@2x.jpg",
+                HttpCompletionOption.ResponseHeadersRead, timeout.Token);
+            if (!response.IsSuccessStatusCode || response.Content.Headers.ContentType?.MediaType?.StartsWith("image/") != true)
+                return null;
+            var data = await response.Content.ReadAsByteArrayAsync(timeout.Token);
+            if (data.Length == 0) return null;
+            Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
+            // Publish a complete file so another request never reads a partially written image.
+            var tempFile = filePath + $".{Guid.NewGuid():N}.tmp";
+            try
+            {
+                await File.WriteAllBytesAsync(tempFile, data, timeout.Token);
+                File.Move(tempFile, filePath, overwrite: true);
+            }
+            finally { if (File.Exists(tempFile)) File.Delete(tempFile); }
+            return data;
+        }
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex, "Failed to get list cover for set {SetId}", setId);
+            return null;
+        }
+    }
+
     public string GetBgFilename(string osuFilePath)
     {
         var text = File.ReadAllText(osuFilePath, System.Text.Encoding.UTF8);
