@@ -1,10 +1,10 @@
 # 多人房历史与评分
 
-两个接口返回 1200px 宽 PNG。`theme=apple` 与兼容默认值 `theme=default` 使用相同模板：白底、字体层级、细分隔线、红蓝队色与表格，无渐变或数据卡片注释。系统字体优先，非苹果平台回退到现有 HarmonyOS 字体。
+两个接口返回 1200px 宽 PNG。`theme=default` 使用默认模板：白底、字体层级、细分隔线、红蓝队色与表格，无渐变或数据卡片注释。系统字体优先，非苹果平台回退到现有 HarmonyOS 字体。
 
 ```text
-GET /multiplayer/history?mp_id=12345&theme=apple&page=1
-GET /multiplayer/rating?mp_id=12345&theme=apple&algorithm=osuplus&page=1
+GET /multiplayer/history?mp_id=12345&theme=default&page=1
+GET /multiplayer/rating?mp_id=12345&theme=default&algorithm=osuplus&page=1
 ```
 
 沿用服务现有 ApiKey 鉴权。`mp_id` 必须为正整数。成功响应有 `X-Page`、`X-Page-Count`，调用方逐页请求获取完整图片；PNG 页脚也显示页码。不会修改 nonebot 的调用流程，也不会返回图片数组或合并转发消息。

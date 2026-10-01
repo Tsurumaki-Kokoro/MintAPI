@@ -15,7 +15,7 @@ public sealed class PerformanceAnalyzeTheme(
     ILogger<PerformanceAnalyzeTheme> logger)
 {
     private static readonly string TemplatePath = Path.Combine(
-        AppContext.BaseDirectory, "Rendering", "PerformanceAnalyzeTheme", "templates", "apple", "index.html");
+        AppContext.BaseDirectory, "Rendering", "PerformanceAnalyzeTheme", "templates", "default", "index.html");
 
     private static readonly HashSet<string> StarMods =
         ["DT", "NC", "HT", "HR", "EZ", "DC", "DA"];

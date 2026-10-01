@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+@font-face { font-family: 'HarmonyBold'; src: url('{{ base_url }}/fonts/HarmonyOS_Sans_SC_Bold.ttf'); }
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  width: 1000px;
+  height: 1350px;
+  overflow: hidden;
+  position: relative;
+  background: #1a1a2e;
+}
+
+#bg {
+  position: absolute;
+  width: 1000px;
+  height: 1350px;
+  object-fit: cover;
+  top: 0; left: 0;
+}
+
+#layout {
+  position: absolute;
+  width: 1000px;
+  height: 1350px;
+  top: 0; left: 0;
+}
+
+.abs { position: absolute; }
+.f20  { font-family: 'HarmonyBold', sans-serif; font-size: 20px; color: #fff; }
+.f25  { font-family: 'HarmonyBold', sans-serif; font-size: 25px; color: #fff; }
+.f30  { font-family: 'HarmonyBold', sans-serif; font-size: 30px; color: #fff; }
+.f35  { font-family: 'HarmonyBold', sans-serif; font-size: 35px; color: #fff; }
+.f40  { font-family: 'HarmonyBold', sans-serif; font-size: 40px; color: #fff; }
+.f50  { font-family: 'HarmonyBold', sans-serif; font-size: 50px; color: #fff; }
+
+.delta-up   { color: #72c904; }
+.delta-down { color: #ff5858; }
+</style>
+</head>
+<body>
+
+{{ if bg_data_url != "" }}
+<img id="bg" src="{{ bg_data_url }}" />
+{{ end }}
+
+<img id="layout" src="{{ base_url }}/assets/user_info/default/layout/info_new.png" />
+
+<!-- Game mode -->
+<span class="abs f40" style="right:70px;top:50px;transform:translateY(-50%)">{{ game_mode }}</span>
+
+<!-- Avatar -->
+<img class="abs" src="{{ avatar_data_url }}"
+     style="left:50px;top:148px;width:300px;height:300px;border-radius:25px;object-fit:cover" />
+
+<!-- Username -->
+<span class="abs f50" style="left:400px;top:205px;transform:translateY(-50%)">{{ username }}</span>
+
+<!-- Flag -->
+<img class="abs" src="{{ base_url }}/assets/flags/{{ country_code }}.png"
+     style="left:400px;top:394px;width:80px;height:54px;object-fit:contain"
+     onerror="this.style.display='none'" />
+
+<!-- Supporter -->
+{{ if is_supporter }}
+<img class="abs" src="{{ base_url }}/assets/user_info/default/other/supporter.png"
+     style="left:50px;top:394px;width:60px;height:60px" />
+{{ end }}
+
+<!-- Badges -->
+{{ for badge in badges }}
+<img class="abs" src="{{ badge.data_url }}"
+     style="left:{{ badge.x }}px;top:{{ badge.y }}px;width:86px;height:40px;object-fit:contain"
+     title="{{ badge.desc }}"
+     onerror="this.style.display='none'" />
+{{ end }}
+
+<!-- Country rank -->
+<span class="abs f30" style="left:495px;top:448px;transform:translateY(-100%)">{{ country_rank_text }}</span>
+
+<!-- Level -->
+<span class="abs f25" style="left:900px;top:650px;transform:translate(-50%,-50%)">{{ level }}</span>
+
+<!-- Level progress -->
+<span class="abs f20" style="left:750px;top:655px;transform:translateY(-50%)">{{ level_progress }}%</span>
+
+<!-- Exp bar -->
+{{ if level_progress > 0 }}
+<div class="abs" style="left:54px;top:646px;height:10px;background:#ffcc22;border-radius:3px;width:{{ exp_bar_width }}px"></div>
+{{ end }}
+
+<!-- Global rank -->
+<span class="abs f35" style="left:55px;top:785px">{{ global_rank }}</span>
+{{ if global_rank_delta != "" }}
+<span class="abs f20 {{ global_rank_delta_class }}" style="left:65px;top:820px">{{ global_rank_delta }}</span>
+{{ end }}
+
+<!-- PP -->
+<span class="abs f35" style="left:295px;top:785px">{{ pp }}</span>
+{{ if pp_delta != "" }}
+<span class="abs f20 {{ pp_delta_class }}" style="left:305px;top:820px">{{ pp_delta }}</span>
+{{ end }}
+
+<!-- Grade counts: SSH SS SH S A -->
+<span class="abs f30" style="left:493px;top:788px;transform:translateX(-50%)">{{ grade_ssh }}</span>
+<span class="abs f30" style="left:593px;top:788px;transform:translateX(-50%)">{{ grade_ss }}</span>
+<span class="abs f30" style="left:693px;top:788px;transform:translateX(-50%)">{{ grade_sh }}</span>
+<span class="abs f30" style="left:793px;top:788px;transform:translateX(-50%)">{{ grade_s }}</span>
+<span class="abs f30" style="left:893px;top:788px;transform:translateX(-50%)">{{ grade_a }}</span>
+
+<!-- Ranked Score -->
+<span class="abs f40" style="right:65px;top:895px;transform:translateY(-50%)">{{ ranked_score }}</span>
+
+<!-- Accuracy -->
+<span class="abs f40" style="right:65px;top:965px;transform:translateY(-50%)">{{ accuracy }}</span>
+
+<!-- Play count -->
+<span class="abs f40" style="right:65px;top:1035px;transform:translateY(-50%)">{{ play_count }}</span>
+
+<!-- Total score -->
+<span class="abs f40" style="right:65px;top:1105px;transform:translateY(-50%)">{{ total_score }}</span>
+
+<!-- Total hits -->
+<span class="abs f40" style="right:65px;top:1175px;transform:translateY(-50%)">{{ total_hits }}</span>
+
+<!-- Play time -->
+<span class="abs f40" style="right:65px;top:1245px;transform:translateY(-50%)">{{ play_time }}</span>
+
+<!-- Bottom timestamp / history comparison -->
+<span class="abs f25" style="left:{{ timestamp_x }}px;top:1305px">{{ timestamp_text }}</span>
+{{ if history_text != "" }}
+<span class="abs f25" style="left:515px;top:1305px">{{ history_text }}</span>
+{{ end }}
+
+</body>
+</html>

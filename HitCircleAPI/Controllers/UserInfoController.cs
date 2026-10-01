@@ -28,7 +28,7 @@ public class UserInfoController(
     /// <param name="game_mode">模式 0–3，默认使用绑定模式。</param>
     /// <param name="user_name">指定 osu! 用户名。</param>
     /// <param name="compare_with">对比 N 天前的最近记录。</param>
-    /// <param name="theme">渲染主题：default 或 apple。</param>
+    /// <param name="theme">渲染主题：default 或 yaowan。</param>
     /// <response code="200">PNG 资料卡。</response>
     /// <response code="400">主题无效。</response>
     /// <response code="404">用户未绑定。</response>
@@ -43,8 +43,8 @@ public class UserInfoController(
         [FromQuery] int? compare_with = null,
         [FromQuery] string theme = "default")
     {
-        if (theme is not ("default" or "apple"))
-            return BadRequest("Unsupported user info theme. Use default or apple.");
+        if (theme is not ("default" or "yaowan"))
+            return BadRequest("Unsupported user info theme. Use default or yaowan.");
 
         var userModel = await db.Users
             .FirstOrDefaultAsync(u => u.Platform == platform && u.PlatformUid == platform_uid);
@@ -190,7 +190,7 @@ public class UserInfoController(
     /// <summary>渲染 BP 成绩分析图。</summary>
     /// <param name="platform">平台。</param>
     /// <param name="platform_uid">平台用户 ID。</param>
-    /// <param name="theme">渲染主题：default 或 apple。</param>
+    /// <param name="theme">渲染主题：default。</param>
     /// <response code="200">PNG 分析图。</response>
     /// <response code="400">主题不支持或取成绩失败。</response>
     /// <response code="404">用户未绑定，或没有成绩记录。</response>
@@ -202,8 +202,8 @@ public class UserInfoController(
         [FromQuery] string platform_uid,
         [FromQuery] string theme = "default")
     {
-        if (theme is not ("default" or "apple"))
-            return BadRequest("Unsupported performance analysis theme. Use default or apple.");
+        if (theme != "default")
+            return BadRequest("Unsupported performance analysis theme. Use default.");
 
         var userModel = await db.Users
             .FirstOrDefaultAsync(u => u.Platform == platform && u.PlatformUid == platform_uid);

@@ -12,10 +12,10 @@ namespace HitCircleAPI.Tests.Unit;
 public class MultiplayerControllerTests
 {
     [Theory]
-    [InlineData(null, "apple", 1)]
-    [InlineData(-1, "apple", 1)]
+    [InlineData(null, "default", 1)]
+    [InlineData(-1, "default", 1)]
     [InlineData(1, "unknown", 1)]
-    [InlineData(1, "apple", 0)]
+    [InlineData(1, "default", 0)]
     public async Task Invalid_history_parameters_do_not_call_upstream(int? id, string theme, int page)
     {
         var api = new RecordingOsuApiService();
@@ -36,11 +36,11 @@ public class MultiplayerControllerTests
     {
         var api = new RecordingOsuApiService { MatchHandler = _ => MultiplayerDataTests.Sample(rounds: 20) };
         var controller = Create(api);
-        var result = Assert.IsType<FileContentResult>(await controller.GetMatchHistory(12345, "apple", 2));
+        var result = Assert.IsType<FileContentResult>(await controller.GetMatchHistory(12345, "default", 2));
         Assert.Equal("image/png", result.ContentType);
         Assert.Equal("2", controller.Response.Headers["X-Page-Count"].ToString());
         Assert.Equal("2", controller.Response.Headers["X-Page"].ToString());
-        Assert.IsType<BadRequestObjectResult>(await controller.GetMatchHistory(12345, "apple", 3));
+        Assert.IsType<BadRequestObjectResult>(await controller.GetMatchHistory(12345, "default", 3));
     }
 
     [Fact]

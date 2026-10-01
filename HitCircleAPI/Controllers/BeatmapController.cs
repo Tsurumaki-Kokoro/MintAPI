@@ -83,7 +83,7 @@ public class BeatmapController(
     /// <summary>渲染谱面或谱面集信息图。</summary>
     /// <param name="beatmap_id">谱面 ID，与 beatmapset_id 二选一。</param>
     /// <param name="beatmapset_id">谱面集 ID，与 beatmap_id 二选一。</param>
-    /// <param name="theme">渲染主题，默认 default。</param>
+    /// <param name="theme">渲染主题：yaowan（原 Python 模板）。</param>
     /// <response code="200">PNG 图片。</response>
     /// <response code="400">参数或谱面无效。</response>
     /// <response code="500">读取或渲染失败。</response>
@@ -92,8 +92,9 @@ public class BeatmapController(
     public async Task<IActionResult> GetBeatmapInfo(
         [FromQuery] int? beatmap_id = null,
         [FromQuery] int? beatmapset_id = null,
-        [FromQuery] string theme = "default")
+        [FromQuery] string theme = "yaowan")
     {
+        if (theme != "yaowan") return BadRequest("theme 必须为 yaowan。");
         if (beatmap_id is null && beatmapset_id is null)
             return BadRequest("Either beatmap_id or beatmapset_id is required");
 

@@ -25,7 +25,7 @@ public class DefaultUserInfoTheme
 
     public async Task<byte[]> RenderAsync(User user, UserOsuInfoHistory? history, string gameMode, string theme = "default")
     {
-        if (theme is not ("default" or "apple"))
+        if (theme is not ("default" or "yaowan"))
             throw new ArgumentOutOfRangeException(nameof(theme), theme, "Unsupported user info theme");
 
         var stats = user.Statistics;

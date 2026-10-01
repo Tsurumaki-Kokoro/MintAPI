@@ -104,7 +104,7 @@ public sealed class MultiplayerTheme(IRenderService renderer, IImageCacheService
 
     private async Task<byte[]> RenderAsync(string name, ScriptObject values, int height, CancellationToken cancellationToken)
     {
-        var path = Path.Combine(AppContext.BaseDirectory, "Rendering", "MultiplayerTheme", "templates", "apple", name + ".html");
+        var path = Path.Combine(AppContext.BaseDirectory, "Rendering", "MultiplayerTheme", "templates", "default", name + ".html");
         var template = Template.Parse(await File.ReadAllTextAsync(path, cancellationToken));
         if (template.HasErrors) throw new InvalidOperationException(string.Join("\n", template.Messages));
         var context = new TemplateContext();

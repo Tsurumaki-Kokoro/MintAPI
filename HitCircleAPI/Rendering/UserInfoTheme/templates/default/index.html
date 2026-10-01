@@ -1,140 +1,174 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <style>
-@font-face { font-family: 'HarmonyBold'; src: url('{{ base_url }}/fonts/HarmonyOS_Sans_SC_Bold.ttf'); }
+@font-face { font-family: Harmony; src: url('{{ base_url }}/fonts/HarmonyOS_Sans_SC_Regular.ttf'); }
+@font-face { font-family: Harmony; src: url('{{ base_url }}/fonts/HarmonyOS_Sans_SC_Bold.ttf'); font-weight: 700; }
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
-
+* { box-sizing: border-box; }
+html, body { margin: 0; width: 1000px; height: 1350px; overflow: hidden; }
 body {
-  width: 1000px;
-  height: 1350px;
-  overflow: hidden;
   position: relative;
-  background: #1a1a2e;
+  padding: 46px 48px;
+  background: radial-gradient(circle at 95% -4%, #dceaff 0, transparent 34%), #f5f5f7;
+  color: #1d1d1f;
+  font-family: Harmony, -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-#bg {
-  position: absolute;
-  width: 1000px;
-  height: 1350px;
-  object-fit: cover;
-  top: 0; left: 0;
+.masthead { display: flex; align-items: center; justify-content: space-between; height: 42px; }
+.masthead-title { font-size: 27px; font-weight: 700; letter-spacing: -.035em; }
+.masthead-mode {
+  padding: 8px 17px; border-radius: 100px; background: #fff;
+  box-shadow: 0 2px 10px #182b4b0a; color: #536476;
+  font-size: 15px; font-weight: 700; letter-spacing: .08em;
 }
+.section-label { margin: 0 0 15px 3px; color: #6e6e73; font-size: 17px; font-weight: 700; letter-spacing: .02em; }
+.card { background: #fff; border: 1px solid #e9e9ed; border-radius: 27px; box-shadow: 0 8px 30px #23324a0b; }
 
-#layout {
-  position: absolute;
-  width: 1000px;
-  height: 1350px;
-  top: 0; left: 0;
+.profile {
+  position: relative; height: 340px; margin-top: 29px; overflow: hidden;
+  border-radius: 30px; background: linear-gradient(135deg, #eaf2fc, #f9fbff 57%, #e6edfa);
+  border: 1px solid #e4eaf3; box-shadow: 0 12px 36px #29467013;
 }
+.profile-cover { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .24; filter: blur(18px) saturate(.85); transform: scale(1.08); }
+.profile-wash { position: absolute; inset: 0; background: linear-gradient(90deg, #f7faffb8, #f7faffd9 75%); }
+.avatar {
+  position: absolute; left: 28px; top: 28px; width: 148px; height: 148px;
+  object-fit: cover; border-radius: 35px; border: 5px solid #ffffffd9;
+  box-shadow: 0 12px 28px #24354d2d;
+}
+.identity { position: absolute; left: 200px; right: 28px; top: 35px; }
+.eyebrow { color: #66788e; font-size: 15px; font-weight: 700; letter-spacing: .08em; }
+.username { margin-top: 8px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 44px; line-height: 1.18; font-weight: 700; letter-spacing: -.045em; }
+.identity-meta { display: flex; align-items: center; gap: 12px; margin-top: 14px; min-width: 0; }
+.flag { width: 35px; height: 25px; object-fit: contain; border-radius: 4px; }
+.meta-separator { height: 18px; width: 1px; background: #b7c1ce; }
+.country-rank { color: #435367; font-size: 18px; font-weight: 700; white-space: nowrap; }
+.supporter { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 5px; border-radius: 100px; background: #ffffffb9; color: #41536e; font-size: 14px; font-weight: 700; }
+.supporter img { width: 24px; height: 24px; object-fit: contain; }
+.badge-area { position: absolute; left: 27px; right: 27px; bottom: 24px; min-height: 106px; padding: 15px 17px; border-radius: 22px; background: #ffffffb9; border: 1px solid #ffffffd9; }
+.badge-title { color: #69798e; font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+.badges { display: flex; flex-wrap: wrap; align-content: start; gap: 4px 7px; max-height: 66px; overflow: hidden; }
+.badges img { width: 76px; height: 30px; object-fit: contain; }
+.no-badges { color: #9aa5b2; font-size: 15px; }
 
-.abs { position: absolute; }
-.f20  { font-family: 'HarmonyBold', sans-serif; font-size: 20px; color: #fff; }
-.f25  { font-family: 'HarmonyBold', sans-serif; font-size: 25px; color: #fff; }
-.f30  { font-family: 'HarmonyBold', sans-serif; font-size: 30px; color: #fff; }
-.f35  { font-family: 'HarmonyBold', sans-serif; font-size: 35px; color: #fff; }
-.f40  { font-family: 'HarmonyBold', sans-serif; font-size: 40px; color: #fff; }
-.f50  { font-family: 'HarmonyBold', sans-serif; font-size: 50px; color: #fff; }
+.level-card { height: 104px; margin-top: 20px; padding: 20px 25px; }
+.level-head { display: flex; justify-content: space-between; align-items: baseline; }
+.level-name { color: #6e6e73; font-size: 16px; font-weight: 700; }
+.level-value { font-size: 29px; font-weight: 700; letter-spacing: -.035em; }
+.level-value small { font-size: 15px; color: #6e6e73; font-weight: 400; letter-spacing: 0; }
+.progress-label { color: #6e6e73; font-size: 15px; font-weight: 700; }
+.progress-track { height: 9px; margin-top: 12px; border-radius: 9px; background: #e8eef8; overflow: hidden; }
+.progress-fill { height: 100%; width: {{ level_progress }}%; border-radius: inherit; background: linear-gradient(90deg, #4a9af6, #7274ec); }
 
-.delta-up   { color: #72c904; }
-.delta-down { color: #ff5858; }
+.performance { margin-top: 27px; }
+.performance-grid { display: grid; grid-template-columns: 234px 234px 1fr; gap: 14px; height: 186px; }
+.metric { padding: 22px; overflow: hidden; }
+.metric-label { color: #6e6e73; font-size: 16px; font-weight: 700; }
+.metric-value { margin-top: 12px; font-size: 38px; font-weight: 700; letter-spacing: -.05em; white-space: nowrap; }
+.metric-delta { margin-top: 7px; font-size: 17px; font-weight: 700; }
+.delta-up { color: #21845b; }
+.delta-down { color: #d64b50; }
+.grades { padding: 20px 18px; }
+.grades-list { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-top: 20px; }
+.grade { text-align: center; min-width: 0; }
+.grade-symbol { width: 49px; height: 34px; margin: 0 auto 9px; border-radius: 11px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 16px; font-weight: 700; }
+.grade-symbol.silver { background: linear-gradient(135deg, #bf76e9, #7b69c5); }
+.grade-symbol.gold { background: linear-gradient(135deg, #f1bd58, #eb8e50); }
+.grade-symbol.blue { background: linear-gradient(135deg, #59bde2, #638fe1); }
+.grade-symbol.green { background: linear-gradient(135deg, #8dcf8b, #54b89e); }
+.grade-count { font-size: 20px; font-weight: 700; letter-spacing: -.03em; }
+
+.activity { margin-top: 27px; }
+.activity-card { padding: 5px 26px; height: 396px; }
+.activity-row { height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 1px solid #f0f0f2; }
+.activity-row:last-child { border-bottom: 0; }
+.activity-name { color: #6e6e73; font-size: 18px; white-space: nowrap; }
+.activity-value { text-align: right; font-size: 23px; font-weight: 700; letter-spacing: -.025em; white-space: nowrap; }
+.footer { position: absolute; left: 48px; right: 48px; bottom: 30px; display: flex; justify-content: space-between; gap: 20px; color: #86868b; font-size: 14px; }
 </style>
 </head>
 <body>
+  <header class="masthead">
+    <div class="masthead-title">玩家信息</div>
+    <div class="masthead-mode">{{ game_mode }}</div>
+  </header>
 
-{{ if bg_data_url != "" }}
-<img id="bg" src="{{ bg_data_url }}" />
-{{ end }}
+  <section class="profile">
+    {{ if bg_data_url != "" }}<img class="profile-cover" src="{{ bg_data_url }}" alt="" />{{ end }}
+    <div class="profile-wash"></div>
+    <img class="avatar" src="{{ avatar_data_url }}" alt="" />
+    <div class="identity">
+      <div class="eyebrow">OSU! PLAYER</div>
+      <div class="username">{{ username }}</div>
+      <div class="identity-meta">
+        <img class="flag" src="{{ base_url }}/assets/flags/{{ country_code }}.png" alt="" onerror="this.style.display='none'" />
+        <span class="meta-separator"></span>
+        <span class="country-rank">国家排名 {{ country_rank_text }}</span>
+        {{ if is_supporter }}
+        <span class="supporter"><img src="{{ base_url }}/assets/user_info/default/other/supporter.png" alt="" />Supporter</span>
+        {{ end }}
+      </div>
+    </div>
+    <div class="badge-area">
+      <div class="badge-title">玩家徽章</div>
+      <div class="badges">
+        {{ for badge in badges }}
+        <img src="{{ badge.data_url }}" title="{{ badge.desc }}" alt="{{ badge.desc }}" onerror="this.style.display='none'" />
+        {{ end }}
+        {{ if badges.size == 0 }}<span class="no-badges">暂无徽章</span>{{ end }}
+      </div>
+    </div>
+  </section>
 
-<img id="layout" src="{{ base_url }}/assets/user_info/default/layout/info_new.png" />
+  <section class="card level-card">
+    <div class="level-head">
+      <div><span class="level-name">等级</span> <span class="level-value">{{ level }}</span></div>
+      <div class="progress-label">{{ level_progress }}% 至下一级</div>
+    </div>
+    <div class="progress-track"><div class="progress-fill"></div></div>
+  </section>
 
-<!-- Game mode -->
-<span class="abs f40" style="right:70px;top:50px;transform:translateY(-50%)">{{ game_mode }}</span>
+  <section class="performance">
+    <h2 class="section-label">表现</h2>
+    <div class="performance-grid">
+      <div class="card metric">
+        <div class="metric-label">世界排名</div>
+        <div class="metric-value">{{ global_rank }}</div>
+        {{ if global_rank_delta != "" }}<div class="metric-delta {{ global_rank_delta_class }}">{{ global_rank_delta }}</div>{{ end }}
+      </div>
+      <div class="card metric">
+        <div class="metric-label">PP</div>
+        <div class="metric-value">{{ pp }}</div>
+        {{ if pp_delta != "" }}<div class="metric-delta {{ pp_delta_class }}">{{ pp_delta }}</div>{{ end }}
+      </div>
+      <div class="card grades">
+        <div class="metric-label">评级分布</div>
+        <div class="grades-list">
+          <div class="grade"><div class="grade-symbol silver">SSH</div><div class="grade-count">{{ grade_ssh }}</div></div>
+          <div class="grade"><div class="grade-symbol gold">SS</div><div class="grade-count">{{ grade_ss }}</div></div>
+          <div class="grade"><div class="grade-symbol blue">SH</div><div class="grade-count">{{ grade_sh }}</div></div>
+          <div class="grade"><div class="grade-symbol blue">S</div><div class="grade-count">{{ grade_s }}</div></div>
+          <div class="grade"><div class="grade-symbol green">A</div><div class="grade-count">{{ grade_a }}</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-<!-- Avatar -->
-<img class="abs" src="{{ avatar_data_url }}"
-     style="left:50px;top:148px;width:300px;height:300px;border-radius:25px;object-fit:cover" />
+  <section class="activity">
+    <h2 class="section-label">游玩数据</h2>
+    <div class="card activity-card">
+      <div class="activity-row"><span class="activity-name">Ranked 谱面总分</span><span class="activity-value">{{ ranked_score }}</span></div>
+      <div class="activity-row"><span class="activity-name">准确率</span><span class="activity-value">{{ accuracy }}</span></div>
+      <div class="activity-row"><span class="activity-name">游戏次数</span><span class="activity-value">{{ play_count }}</span></div>
+      <div class="activity-row"><span class="activity-name">总分</span><span class="activity-value">{{ total_score }}</span></div>
+      <div class="activity-row"><span class="activity-name">总命中次数</span><span class="activity-value">{{ total_hits }}</span></div>
+      <div class="activity-row"><span class="activity-name">游玩时间</span><span class="activity-value">{{ play_time }}</span></div>
+    </div>
+  </section>
 
-<!-- Username -->
-<span class="abs f50" style="left:400px;top:205px;transform:translateY(-50%)">{{ username }}</span>
-
-<!-- Flag -->
-<img class="abs" src="{{ base_url }}/assets/flags/{{ country_code }}.png"
-     style="left:400px;top:394px;width:80px;height:54px;object-fit:contain"
-     onerror="this.style.display='none'" />
-
-<!-- Supporter -->
-{{ if is_supporter }}
-<img class="abs" src="{{ base_url }}/assets/user_info/default/other/supporter.png"
-     style="left:50px;top:394px;width:60px;height:60px" />
-{{ end }}
-
-<!-- Badges -->
-{{ for badge in badges }}
-<img class="abs" src="{{ badge.data_url }}"
-     style="left:{{ badge.x }}px;top:{{ badge.y }}px;width:86px;height:40px;object-fit:contain"
-     title="{{ badge.desc }}"
-     onerror="this.style.display='none'" />
-{{ end }}
-
-<!-- Country rank -->
-<span class="abs f30" style="left:495px;top:448px;transform:translateY(-100%)">{{ country_rank_text }}</span>
-
-<!-- Level -->
-<span class="abs f25" style="left:900px;top:650px;transform:translate(-50%,-50%)">{{ level }}</span>
-
-<!-- Level progress -->
-<span class="abs f20" style="left:750px;top:655px;transform:translateY(-50%)">{{ level_progress }}%</span>
-
-<!-- Exp bar -->
-{{ if level_progress > 0 }}
-<div class="abs" style="left:54px;top:646px;height:10px;background:#ffcc22;border-radius:3px;width:{{ exp_bar_width }}px"></div>
-{{ end }}
-
-<!-- Global rank -->
-<span class="abs f35" style="left:55px;top:785px">{{ global_rank }}</span>
-{{ if global_rank_delta != "" }}
-<span class="abs f20 {{ global_rank_delta_class }}" style="left:65px;top:820px">{{ global_rank_delta }}</span>
-{{ end }}
-
-<!-- PP -->
-<span class="abs f35" style="left:295px;top:785px">{{ pp }}</span>
-{{ if pp_delta != "" }}
-<span class="abs f20 {{ pp_delta_class }}" style="left:305px;top:820px">{{ pp_delta }}</span>
-{{ end }}
-
-<!-- Grade counts: SSH SS SH S A -->
-<span class="abs f30" style="left:493px;top:788px;transform:translateX(-50%)">{{ grade_ssh }}</span>
-<span class="abs f30" style="left:593px;top:788px;transform:translateX(-50%)">{{ grade_ss }}</span>
-<span class="abs f30" style="left:693px;top:788px;transform:translateX(-50%)">{{ grade_sh }}</span>
-<span class="abs f30" style="left:793px;top:788px;transform:translateX(-50%)">{{ grade_s }}</span>
-<span class="abs f30" style="left:893px;top:788px;transform:translateX(-50%)">{{ grade_a }}</span>
-
-<!-- Ranked Score -->
-<span class="abs f40" style="right:65px;top:895px;transform:translateY(-50%)">{{ ranked_score }}</span>
-
-<!-- Accuracy -->
-<span class="abs f40" style="right:65px;top:965px;transform:translateY(-50%)">{{ accuracy }}</span>
-
-<!-- Play count -->
-<span class="abs f40" style="right:65px;top:1035px;transform:translateY(-50%)">{{ play_count }}</span>
-
-<!-- Total score -->
-<span class="abs f40" style="right:65px;top:1105px;transform:translateY(-50%)">{{ total_score }}</span>
-
-<!-- Total hits -->
-<span class="abs f40" style="right:65px;top:1175px;transform:translateY(-50%)">{{ total_hits }}</span>
-
-<!-- Play time -->
-<span class="abs f40" style="right:65px;top:1245px;transform:translateY(-50%)">{{ play_time }}</span>
-
-<!-- Bottom timestamp / history comparison -->
-<span class="abs f25" style="left:{{ timestamp_x }}px;top:1305px">{{ timestamp_text }}</span>
-{{ if history_text != "" }}
-<span class="abs f25" style="left:515px;top:1305px">{{ history_text }}</span>
-{{ end }}
-
+  <footer class="footer"><span>数据更新于 {{ timestamp_text }}</span><span>{{ history_text }}</span></footer>
 </body>
 </html>

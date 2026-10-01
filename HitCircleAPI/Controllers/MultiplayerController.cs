@@ -12,7 +12,7 @@ public class MultiplayerController(MultiplayerService multiplayer, MultiplayerTh
 {
     /// <summary>渲染多人房已结束对局。</summary>
     /// <param name="mp_id">多人房 ID。</param>
-    /// <param name="theme">渲染主题：apple 或 default。</param>
+    /// <param name="theme">渲染主题：default。</param>
     /// <param name="page">页码，从 1 开始。</param>
     /// <param name="team_type">可选：head-to-head、team-vs、tag-coop 或 tag-team-vs。</param>
     /// <response code="200">PNG 图片，X-Page-Count 表示总页数。</response>
@@ -28,7 +28,7 @@ public class MultiplayerController(MultiplayerService multiplayer, MultiplayerTh
     /// <summary>渲染玩家评分排名。</summary>
     /// <param name="mp_id">多人房 ID。</param>
     /// <param name="algorithm">osuplus、bathbot 或 flashlight，默认 osuplus。</param>
-    /// <param name="theme">渲染主题：apple 或 default。</param>
+    /// <param name="theme">渲染主题：default。</param>
     /// <param name="page">页码，从 1 开始。</param>
     /// <param name="team_type">可选：head-to-head 或 team-vs；混合模式必须选择。</param>
     /// <response code="200">PNG 图片，X-Page-Count 表示总页数。</response>
@@ -44,7 +44,7 @@ public class MultiplayerController(MultiplayerService multiplayer, MultiplayerTh
     private async Task<IActionResult> RenderAsync(int? id, string theme, int page, string? teamType, string? algorithm)
     {
         if (id is null or <= 0) return BadRequest("mp_id 必须为正整数。");
-        if (theme is not ("default" or "apple")) return BadRequest("theme 必须为 apple 或 default。");
+        if (theme != "default") return BadRequest("theme 必须为 default。");
         if (page < 1) return BadRequest("page 必须为正整数。");
         if (algorithm != null && algorithm is not ("osuplus" or "bathbot" or "flashlight"))
             return BadRequest("algorithm 必须为 osuplus、bathbot 或 flashlight。");

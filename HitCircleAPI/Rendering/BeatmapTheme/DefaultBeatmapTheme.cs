@@ -8,10 +8,10 @@ namespace HitCircleAPI.Rendering.BeatmapTheme;
 public class DefaultBeatmapTheme
 {
     private static readonly string BeatmapTemplatePath = Path.Combine(
-        AppContext.BaseDirectory, "Rendering", "BeatmapTheme", "templates", "default", "beatmap.html");
+        AppContext.BaseDirectory, "Rendering", "BeatmapTheme", "templates", "yaowan", "beatmap.html");
 
     private static readonly string BeatmapsetTemplatePath = Path.Combine(
-        AppContext.BaseDirectory, "Rendering", "BeatmapTheme", "templates", "default", "beatmapset.html");
+        AppContext.BaseDirectory, "Rendering", "BeatmapTheme", "templates", "yaowan", "beatmapset.html");
 
     private readonly IRenderService _renderer;
     private readonly IImageCacheService _imageCache;
