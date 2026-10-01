@@ -1,4 +1,5 @@
 using System.Text;
+using System.Collections.Concurrent;
 using HitCircleAPI.Services;
 using Ossapi.Models;
 using Scriban;
@@ -8,26 +9,55 @@ namespace HitCircleAPI.Rendering.ScoreTheme;
 
 public class DefaultScoreTheme
 {
-    private static readonly string TemplatePath = Path.Combine(
-        AppContext.BaseDirectory, "Rendering", "ScoreTheme", "templates", "default", "index.html");
+    private static readonly ConcurrentDictionary<string, string> AssetDataUrls = new();
+
+    private static string AssetDataUrl(string relativePath) => AssetDataUrls.GetOrAdd(relativePath, path =>
+    {
+        var fullPath = Path.Combine(AppContext.BaseDirectory, "wwwroot", "assets", path);
+        if (!File.Exists(fullPath)) return "";
+        var mime = Path.GetExtension(path) == ".svg" ? "image/svg+xml" : "image/png";
+        return $"data:{mime};base64,{Convert.ToBase64String(File.ReadAllBytes(fullPath))}";
+    });
+
+    private static string FlagDataUrl(string? countryCode)
+    {
+        var country = countryCode?.ToUpperInvariant() ?? "";
+        return country.Length == 2 && country.All(char.IsAsciiLetter)
+            ? AssetDataUrl(Path.Combine("flags", country + ".png")) : "";
+    }
+
+    private static string ModDataUrl(string name) => name.Length <= 4 && name.All(char.IsAsciiLetterOrDigit)
+        ? AssetDataUrl(Path.Combine("score", "default", "mods", name + ".png")) : "";
+
+    private static readonly Lazy<Dictionary<string, string>> IconDataUrls = new(() =>
+        Directory.EnumerateFiles(Path.Combine(AppContext.BaseDirectory, "wwwroot", "assets", "score", "default", "icons"), "*.svg")
+            .ToDictionary(path => "icon_" + Path.GetFileNameWithoutExtension(path).Replace('-', '_'),
+                path => "data:image/svg+xml;base64," + Convert.ToBase64String(File.ReadAllBytes(path))));
+
+    private static string TemplatePath(string theme) => Path.Combine(
+        AppContext.BaseDirectory, "Rendering", "ScoreTheme", "templates", theme, "index.html");
 
     private readonly IRenderService _renderer;
     private readonly IImageCacheService _imageCache;
     private readonly IPpCalculatorService _ppCalc;
     private readonly ILogger<DefaultScoreTheme> _logger;
+    private readonly IBeatmapFileService? _beatmapFiles;
 
     public DefaultScoreTheme(IRenderService renderer, IImageCacheService imageCache,
-        IPpCalculatorService ppCalc, ILogger<DefaultScoreTheme> logger)
+        IPpCalculatorService ppCalc, ILogger<DefaultScoreTheme> logger, IBeatmapFileService? beatmapFiles = null)
     {
         _renderer = renderer;
         _imageCache = imageCache;
         _ppCalc = ppCalc;
         _logger = logger;
+        _beatmapFiles = beatmapFiles;
     }
 
     public async Task<byte[]> RenderAsync(Score score, User user, byte[] mapBg,
-        string osuFilePath, BeatmapDifficultyAttributes? diffAttrs)
+        string osuFilePath, BeatmapDifficultyAttributes? diffAttrs, string theme = "default", string heading = "成绩")
     {
+        if (theme is not ("default" or "yaowan"))
+            throw new ArgumentOutOfRangeException(nameof(theme));
         var beatmap = score.Beatmap;
         var beatmapset = score.Beatmapset ?? beatmap?.Beatmapset;
         var mods = score.Mods ?? [];
@@ -36,7 +66,9 @@ public class DefaultScoreTheme
         var (ifPp, ssPp) = _ppCalc.CalculateIfFcAndSs(score, osuFilePath);
 
         var avatarBytes = await _imageCache.GetAvatarAsync(user.AvatarUrl, user.Id);
-        var avatarDataUrl = $"data:image/png;base64,{Convert.ToBase64String(avatarBytes)}";
+        var avatarDataUrl = avatarBytes.Length > 0
+            ? $"data:image/png;base64,{Convert.ToBase64String(avatarBytes)}"
+            : AssetDataUrl(Path.Combine("osu-web", "public", "images", "layout", "avatar-guest.png"));
         var bgDataUrl = $"data:image/jpeg;base64,{Convert.ToBase64String(mapBg)}";
 
         var baseUrl = $"file://{Path.Combine(AppContext.BaseDirectory, "wwwroot")}";
@@ -48,7 +80,7 @@ public class DefaultScoreTheme
         var starsColor = GetStarsColor(stars);
         var starsTextClass = stars >= 6.5 ? "gold" : "black";
 
-        var modNames = mods.Select(m => m.Acronym).ToList();
+        var modNames = mods.Where(m => m.Acronym != "CL" && !(m.Acronym == "DT" && mods.Any(n => n.Acronym == "NC"))).Select(m => m.Acronym).ToList();
 
         bool hasHidden = mods.Any(m => m.Acronym is "HD" or "FL" or "FI");
         var rankingList = hasHidden
@@ -73,8 +105,8 @@ public class DefaultScoreTheme
             [
                 ApplyModsToCs(beatmap?.Cs ?? 0, mods),
                 ApplyModsToHp(beatmap?.Drain ?? 0, mods),
-                diffAttrs?.OverallDifficulty ?? beatmap?.Accuracy ?? 0,
-                diffAttrs?.ApproachRate ?? beatmap?.Ar ?? 0,
+                diffAttrs?.OverallDifficulty ?? ApplyModsToOd(beatmap?.Accuracy ?? 0, mods),
+                diffAttrs?.ApproachRate ?? ApplyModsToAr(beatmap?.Ar ?? 0, mods),
             ];
         }
         else
@@ -112,6 +144,52 @@ public class DefaultScoreTheme
         var statsHtml = BuildStatsHtml(score, ppResult, ifPp, ssPp, diffAttrs);
 
         var scriptObj = new ScriptObject();
+        // Embedded library icons also work when Chromium loads a temporary file without a web origin.
+        if (theme == "default")
+            foreach (var (key, dataUrl) in IconDataUrls.Value) scriptObj[key] = dataUrl;
+        if (theme == "default")
+        {
+            scriptObj["country_flag"] = FlagDataUrl(user.CountryCode);
+            scriptObj["mod_badges"] = modNames.Select(name => new
+            {
+                name = System.Net.WebUtility.HtmlEncode(name), image = ModDataUrl(name)
+            }).ToArray();
+            foreach (var name in new[] { "count_circles", "count_sliders" })
+                scriptObj[name + "_image"] = AssetDataUrl(Path.Combine("osu-web", "public", "images", "layout", "beatmapset-page", name + ".svg"));
+        }
+        scriptObj["heading"] = heading;
+        scriptObj["mode_name"] = modeLayout == "std" ? "osu!" : modeLayout == "ctb" ? "osu!catch" : "osu!" + modeLayout;
+        scriptObj["accuracy"] = $"{score.Accuracy * 100:0.00}%";
+        var showComponents = modeLayout == "std" && ppResult.AimPp.HasValue && ppResult.SpeedPp.HasValue && ppResult.AccuracyPp.HasValue;
+        scriptObj["show_components"] = showComponents;
+        scriptObj["aim_pp"] = $"{ppResult.AimPp:0.00}";
+        scriptObj["speed_pp"] = $"{ppResult.SpeedPp:0.00}";
+        scriptObj["accuracy_pp"] = $"{ppResult.AccuracyPp:0.00}";
+        // Reserve two character widths for CJK text so long localized titles can wrap without clipping.
+        static int TextWidth(string? value) => value?.Sum(c => c > 255 ? 2 : 1) ?? 0;
+        var longIdentity = TextWidth(beatmapset?.Title) > 45 || TextWidth(beatmap?.Version) > 45;
+        var identityHeight = longIdentity ? 210 : 170;
+        identityHeight = Math.Max(identityHeight, 44 + (int)Math.Ceiling(TextWidth(beatmapset?.Title) / 37d) * 46
+            + (int)Math.Ceiling(TextWidth(string.IsNullOrEmpty(beatmapset?.ArtistUnicode) ? beatmapset?.Artist : beatmapset.ArtistUnicode) / 48d) * 36
+            + (int)Math.Ceiling((TextWidth(beatmap?.Version) + TextWidth(beatmapset?.Creator)
+                + modNames.Sum(name => TextWidth(name) + 5) + 20) / 50d) * 38);
+        identityHeight = Math.Max(identityHeight, 112 + (int)Math.Ceiling(TextWidth(user.Username) / 18d) * 52);
+        scriptObj["identity_height"] = identityHeight;
+        scriptObj["title_size"] = longIdentity ? 42 : 58;
+        scriptObj["image_height"] = theme == "default" ? identityHeight + 1070 : 720;
+        var ppText = $"{score.Pp ?? ppResult.Pp:0.00}";
+        scriptObj["pp"] = ppText;
+        scriptObj["pp_size"] = ppText.Length <= 6 ? 124 : ppText.Length == 7 ? 96 : 82;
+        scriptObj["fc_pp"] = $"{ifPp:0.00}";
+        scriptObj["ss_pp"] = $"{ssPp:0.00}";
+        scriptObj["combo"] = $"{score.MaxCombo:N0} / {ppResult.MaxCombo:N0}";
+        scriptObj["combo_actual"] = $"{score.MaxCombo:N0}";
+        scriptObj["combo_max"] = $"{ppResult.MaxCombo:N0}";
+        scriptObj["miss_count"] = score.Statistics?.Miss is int miss ? $"{miss:N0}" : "—";
+        scriptObj["has_miss"] = score.Statistics?.Miss > 0;
+        scriptObj["mania_ratio"] = modeLayout == "mania" && score.Statistics?.Great > 0 && score.Statistics.Perfect.HasValue
+            ? $"{(double)score.Statistics.Perfect.Value / score.Statistics.Great.Value:0.00}" : "—";
+        scriptObj["judgements"] = BuildJudgements(score);
         scriptObj["base_url"] = baseUrl;
         scriptObj["bg_data_url"] = bgDataUrl;
         scriptObj["mode_layout"] = modeLayout;
@@ -130,26 +208,153 @@ public class DefaultScoreTheme
         scriptObj["beatmap_status"] = beatmap?.Status.ToString() ?? "";
         scriptObj["beatmap_id"] = beatmap?.Id ?? 0;
         scriptObj["title"] = beatmapset?.Title ?? "";
-        scriptObj["artist"] = beatmapset?.ArtistUnicode.Length > 0 ? beatmapset.ArtistUnicode : beatmapset?.Artist ?? "";
+        scriptObj["artist"] = !string.IsNullOrEmpty(beatmapset?.ArtistUnicode) ? beatmapset.ArtistUnicode : beatmapset?.Artist ?? "";
         scriptObj["version"] = beatmap?.Version ?? "";
         scriptObj["creator"] = beatmapset?.Creator ?? "";
         scriptObj["rank"] = scoreRankName;
         scriptObj["score_formatted"] = scoreFormatted;
-        scriptObj["ended_at"] = score.EndedAt.ToString("yyyy-MM-dd HH:mm:ss");
+        scriptObj["ended_at"] = score.EndedAt.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss");
         scriptObj["rank_global"] = score.RankGlobal?.ToString() ?? "-";
+        scriptObj["rank_global_label"] = score.RankGlobal.HasValue ? $"#{score.RankGlobal:N0}" : "—";
         scriptObj["username"] = user.Username;
         scriptObj["country_rank"] = $"{user.Statistics?.CountryRank:N0}";
+        scriptObj["country_rank_label"] = user.Statistics?.CountryRank is int countryRank ? $"#{countryRank:N0}" : "—";
+        scriptObj["grade_display"] = scoreRankName switch { "X" => "SS", "XH" => "SSH", _ => scoreRankName };
+        scriptObj["grade_tone"] = scoreRankName switch { "A" => "green", "B" => "blue", "C" => "purple", "D" or "F" => "red", _ => "gold" };
         scriptObj["stats_html"] = statsHtml;
         scriptObj["avatar_data_url"] = avatarDataUrl;
 
         var templateCtx = new TemplateContext();
         templateCtx.PushGlobal(scriptObj);
 
-        var templateSrc = await File.ReadAllTextAsync(TemplatePath);
+        var templateSrc = await File.ReadAllTextAsync(TemplatePath(theme));
         var template = Template.Parse(templateSrc);
+        if (template.HasErrors) throw new InvalidOperationException(template.Messages.ToString());
+        // Escape API text before inserting it into HTML; generated SVG/stats remain markup.
+        foreach (var key in new[] { "title", "artist", "version", "creator", "username", "heading", "country_code" })
+            scriptObj[key] = System.Net.WebUtility.HtmlEncode(scriptObj[key]?.ToString());
+        scriptObj["mods"] = modNames.Select(System.Net.WebUtility.HtmlEncode).ToArray();
         var html = await template.RenderAsync(templateCtx);
 
-        return await _renderer.RenderHtmlAsync(html, 1500, 720);
+        return await _renderer.RenderHtmlAsync(html, 1500, (int)scriptObj["image_height"]);
+    }
+
+    public Task<byte[]> RenderBestListAsync(List<Score> scores, User user, int firstIndex,
+        CancellationToken cancellationToken = default)
+        => RenderListAsync(scores, user, firstIndex, recent: false, cancellationToken);
+
+    public Task<byte[]> RenderRecentListAsync(List<Score> scores, User user, int firstIndex,
+        CancellationToken cancellationToken = default)
+        => RenderListAsync(scores, user, firstIndex, recent: true, cancellationToken);
+
+    private async Task<byte[]> RenderListAsync(List<Score> scores, User user, int firstIndex, bool recent,
+        CancellationToken cancellationToken)
+    {
+        if (scores.Count is < 1 or > 20) throw new ArgumentOutOfRangeException(nameof(scores));
+        cancellationToken.ThrowIfCancellationRequested();
+        static string Escape(string? text) => System.Net.WebUtility.HtmlEncode(text ?? "");
+        static int TextWidth(string? text) => text?.Sum(c => c > 255 ? 2 : 1) ?? 0;
+        var avatar = await _imageCache.GetAvatarAsync(user.AvatarUrl, user.Id);
+        static int SetId(Score score)
+        {
+            var id = (score.Beatmapset ?? score.Beatmap?.Beatmapset)?.Id ?? 0;
+            return id > 0 ? id : score.Beatmap?.BeatmapsetId ?? 0;
+        }
+        var covers = new Dictionary<int, string>();
+        if (_beatmapFiles is not null)
+        {
+            using var concurrency = new SemaphoreSlim(4);
+            var images = await Task.WhenAll(scores.Select(SetId).Where(id => id > 0).Distinct().Select(async id =>
+            {
+                await concurrency.WaitAsync(cancellationToken);
+                try
+                {
+                    var bytes = await _beatmapFiles.GetListCoverAsync(id, cancellationToken);
+                    var mime = bytes is { Length: > 4 } && bytes[0] == 0x89 && bytes[1] == 0x50 ? "image/png" : "image/jpeg";
+                    return (id, url: bytes is { Length: > 0 } ? $"data:{mime};base64,{Convert.ToBase64String(bytes)}" : "");
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    _logger.LogWarning(ex, "Failed to load list cover for set {SetId}", id);
+                    return (id, url: "");
+                }
+                finally { concurrency.Release(); }
+            }));
+            covers = images.ToDictionary(image => image.id, image => image.url);
+        }
+        var rows = scores.Select((score, index) =>
+        {
+            var map = score.Beatmap;
+            var set = score.Beatmapset ?? map?.Beatmapset;
+            var modNames = (score.Mods ?? []).Where(m => m.Acronym != "CL" &&
+                !(m.Acronym == "DT" && score.Mods!.Any(n => n.Acronym == "NC"))).Select(m => m.Acronym).ToList();
+            if (modNames.Count == 0) modNames.Add("NM");
+            var mods = modNames.Select(name => new
+            {
+                name = Escape(name),
+                image = ModDataUrl(name)
+            }).ToArray();
+            var rank = score.Rank.ToString().ToUpperInvariant();
+            var artist = string.IsNullOrEmpty(set?.ArtistUnicode) ? set?.Artist : set.ArtistUnicode;
+            var height = Math.Max(200, 60 + (int)Math.Ceiling(TextWidth(set?.Title) / 29d) * 48
+                + (int)Math.Ceiling((TextWidth(map?.Version) + modNames.Sum(name => TextWidth(name) + 5) + 6) / 43d) * 34
+                + (int)Math.Ceiling(TextWidth(artist) / 42d) * 30);
+            return new
+            {
+                position = firstIndex + index, height,
+                title = Escape(set?.Title), artist = Escape(artist), version = Escape(map?.Version),
+                mods,
+                background = covers.GetValueOrDefault(SetId(score), ""),
+                rank = rank switch { "X" => "SS", "XH" => "SSH", _ => rank },
+                grade_tone = rank switch { "A" => "green", "B" => "blue", "C" => "purple", "D" or "F" => "red", _ => "gold" },
+                pp = score.Pp.HasValue ? $"{score.Pp:0.00}" : "—",
+                pp_size = score.Pp >= 10000 ? 60 : score.Pp >= 1000 ? 72 : 80,
+                accuracy = $"{score.Accuracy * 100:0.00}%",
+                failed = recent && !score.Passed,
+                weight = !recent && score.Weight is not null ? $"{score.Weight.Percentage:0.0}% · {score.Weight.Pp:0.00} pp" : ""
+            };
+        }).ToArray();
+        var headerHeight = Math.Max(132, 64 + (int)Math.Ceiling(TextWidth(user.Username) / 32d) * 52);
+        var imageHeight = 112 + headerHeight + rows.Sum(row => row.height);
+        var globals = new ScriptObject
+        {
+            ["base_url"] = $"file://{Path.Combine(AppContext.BaseDirectory, "wwwroot")}",
+            ["username"] = Escape(user.Username), ["country_code"] = Escape(user.CountryCode),
+            ["mode_name"] = string.Join(" / ", scores.Select(score => score.RulesetId switch
+                { 1 or 5 => "osu!taiko", 2 or 6 => "osu!catch", 3 => "osu!mania", _ => "osu!" }).Distinct()),
+            ["is_supporter"] = user.IsSupporter, ["recent"] = recent,
+            ["heading"] = recent ? "RECENT PLAYS" : "BEST PLAYS",
+            ["first"] = firstIndex, ["last"] = firstIndex + scores.Count - 1,
+            ["image_height"] = imageHeight, ["header_height"] = headerHeight,
+            ["avatar"] = avatar.Length > 0 ? $"data:image/png;base64,{Convert.ToBase64String(avatar)}"
+                : AssetDataUrl(Path.Combine("osu-web", "public", "images", "layout", "avatar-guest.png")),
+            ["rows"] = rows,
+            ["background_fallback"] = AssetDataUrl(Path.Combine("osu-web", "public", "images", "icons", "beatmapsets.svg"))
+        };
+        globals["flag"] = FlagDataUrl(user.CountryCode);
+        foreach (var (key, dataUrl) in IconDataUrls.Value) globals[key] = dataUrl;
+        var context = new TemplateContext(); context.PushGlobal(globals);
+        var path = Path.Combine(AppContext.BaseDirectory, "Rendering", "ScoreTheme", "templates", "default", "list.html");
+        var template = Template.Parse(await File.ReadAllTextAsync(path, cancellationToken));
+        if (template.HasErrors) throw new InvalidOperationException(template.Messages.ToString());
+        return await _renderer.RenderHtmlAsync(await template.RenderAsync(context), 1500, imageHeight, cancellationToken);
+    }
+
+    private static object[] BuildJudgements(Score score)
+    {
+        var s = score.Statistics ?? new Statistics();
+        (string Label, int? Value)[] values = score.RulesetId switch
+        {
+            1 or 5 => [("300", s.Great), ("100", s.Ok), ("MISS", s.Miss)],
+            2 or 6 => [("FRUIT", s.Great), ("DROPLET", s.LargeTickHit), ("TINY", s.SmallTickHit), ("TINY MISS", s.SmallTickMiss), ("MISS", s.Miss)],
+            3 => [("MAX", s.Perfect), ("300", s.Great), ("200", s.Good), ("100", s.Ok), ("50", s.Meh), ("MISS", s.Miss)],
+            _ => [("300", s.Great), ("100", s.Ok), ("50", s.Meh), ("MISS", s.Miss)]
+        };
+        return values.Select(v => (object)new
+        {
+            label = v.Label, value = v.Value.HasValue ? $"{v.Value:N0}" : "—",
+            tone = v.Label switch { "MISS" or "TINY MISS" => "red", "100" => "green", "50" => "gold", "MAX" => "purple", "200" => "teal", _ => "blue" }
+        }).ToArray();
     }
 
     private static string GetStarsColor(double stars)
@@ -181,17 +386,32 @@ public class DefaultScoreTheme
         return hp;
     }
 
-    private static double ApplyModsToBpm(double bpm, List<NonLegacyMod> mods)
+    private static double ClockRate(List<NonLegacyMod> mods)
     {
-        if (mods.Any(m => m.Acronym == "DT" || m.Acronym == "NC")) return bpm * 1.5;
-        if (mods.Any(m => m.Acronym == "HT")) return bpm * 0.75;
-        return bpm;
+        var speed = mods.FirstOrDefault(m => m.Acronym is "DT" or "NC" or "HT" or "DC");
+        if (speed?.Settings?.TryGetValue("speed_change", out var setting) == true &&
+            double.TryParse(Convert.ToString(setting, System.Globalization.CultureInfo.InvariantCulture),
+                System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var rate) && rate > 0)
+            return rate;
+        return speed?.Acronym is "DT" or "NC" ? 1.5 : speed?.Acronym is "HT" or "DC" ? .75 : 1;
     }
+
+    private static double ApplyModsToAr(double ar, List<NonLegacyMod> mods)
+    {
+        ar = ApplyModsToHp(ar, mods);
+        var window = ar < 5 ? 1800 - 120 * ar : 1200 - 150 * (ar - 5);
+        window /= ClockRate(mods);
+        return window > 1200 ? (1800 - window) / 120 : 5 + (1200 - window) / 150;
+    }
+
+    private static double ApplyModsToOd(double od, List<NonLegacyMod> mods)
+        => (80 - (80 - 6 * ApplyModsToHp(od, mods)) / ClockRate(mods)) / 6;
+
+    private static double ApplyModsToBpm(double bpm, List<NonLegacyMod> mods) => bpm * ClockRate(mods);
 
     private static string ApplyModsToLength(int seconds, List<NonLegacyMod> mods)
     {
-        if (mods.Any(m => m.Acronym == "DT" || m.Acronym == "NC")) seconds = (int)(seconds / 1.5);
-        else if (mods.Any(m => m.Acronym == "HT")) seconds = (int)(seconds / 0.75);
+        seconds = (int)(seconds / ClockRate(mods));
         return $"{seconds / 60}:{seconds % 60:00}";
     }
 
@@ -266,7 +486,7 @@ public class DefaultScoreTheme
         var sb = new StringBuilder();
         var rulesetId = score.RulesetId;
         var stats = score.Statistics;
-        var maxCombo = diffAttrs?.MaxCombo ?? 0;
+        var maxCombo = diffAttrs?.MaxCombo ?? (int)ppResult.MaxCombo;
 
         static string Span(double x, double y, string cls, string text, string? extra = null) =>
             $"<span class='abs {cls}' style='left:{x}px;top:{y}px;transform:translate(-50%,-50%){(extra != null ? ";" + extra : "")}'>{System.Net.WebUtility.HtmlEncode(text)}</span>\n";

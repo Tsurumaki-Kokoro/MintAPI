@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+@font-face { font-family: 'HarmonyBold'; src: url('{{ base_url }}/fonts/HarmonyOS_Sans_SC_Bold.ttf'); }
+@font-face { font-family: 'Venera'; src: url('{{ base_url }}/fonts/Venera.otf'); }
+@font-face { font-family: 'Extra'; src: url('{{ base_url }}/fonts/Extra.otf'); }
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  width: 1500px;
+  height: 720px;
+  overflow: hidden;
+  position: relative;
+  background: #000;
+}
+
+#bg {
+  position: absolute;
+  width: 1500px;
+  height: 720px;
+  object-fit: cover;
+  filter: blur(4px) brightness(0.55);
+  transform: scale(1.05);
+}
+
+#layout {
+  position: absolute;
+  width: 1500px;
+  height: 720px;
+}
+
+.abs { position: absolute; }
+
+/* ── Fonts ── */
+.f20  { font-family: 'HarmonyBold', sans-serif; font-size: 20px; color: #fff; }
+.f25  { font-family: 'HarmonyBold', sans-serif; font-size: 25px; color: #fff; }
+.f30  { font-family: 'HarmonyBold', sans-serif; font-size: 30px; color: #fff; }
+.f75  { font-family: 'HarmonyBold', sans-serif; font-size: 75px; color: #fff; }
+.venera75 { font-family: 'Venera', sans-serif; font-size: 75px; color: #fff; }
+.extra30  { font-family: 'Extra', sans-serif; font-size: 30px; color: #fff; }
+.gold { color: #ffcc22; }
+.black { color: #000; }
+
+/* ── Diff bars ── */
+.diff-bar-track {
+  position: absolute;
+  height: 8px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 4px;
+}
+.diff-bar-fill {
+  height: 8px;
+  background: #fff;
+  border-radius: 4px;
+  max-width: 250px;
+}
+.diff-bar-fill.gold-bar { background: #ffcc22; }
+
+/* ── Rank icons ── */
+.rank-row { display: flex; flex-direction: column; gap: 15px; }
+.rank-icon { width: 48px; height: 24px; object-fit: contain; }
+
+/* ── Mod icons ── */
+.mod-icon { width: 50px; height: 34px; object-fit: contain; }
+
+/* ── Avatar ── */
+#avatar {
+  position: absolute;
+  left: 60px; top: 510px;
+  width: 170px; height: 170px;
+  border-radius: 15px;
+  object-fit: cover;
+}
+
+/* ── Stars badge ── */
+#stars-badge {
+  position: absolute;
+  left: 122px; top: 72px;
+  width: 85px; height: 37px;
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+}
+</style>
+</head>
+<body>
+
+<img id="bg" src="{{ bg_data_url }}" />
+<img id="layout" src="{{ base_url }}/assets/score/default/layout/{{ mode_layout }}.png" />
+
+<!-- Mode icon (Extra font) -->
+<span class="abs extra30" style="left:75px;top:75px;line-height:1">{{ mode_icon }}</span>
+
+<!-- Stars badge -->
+<div id="stars-badge" style="background:{{ stars_bg_color }}">
+  <span class="{{ stars_text_class }} f20" style="font-size:20px">★{{ stars | math.round 2 }}</span>
+</div>
+
+<!-- Mods -->
+{{ for mod in mods }}
+<img class="abs mod-icon" style="left:{{ 500 + for.index * 50 }}px;top:160px"
+     src="{{ base_url }}/assets/score/default/mods/{{ mod }}.png"
+     onerror="this.style.display='none'" />
+{{ end }}
+
+<!-- Rank icons (7 ranks) -->
+{{ for r in rank_list }}
+<img class="abs rank-icon"
+     style="left:75px;top:{{ 163 + for.index * 39 }}px;opacity:{{ r.opacity }}"
+     src="{{ base_url }}/assets/score/default/rank/ranking-{{ r.name }}.png" />
+{{ end }}
+
+<!-- ACC bar -->
+<div class="abs" style="left:130px;top:163px;width:340px;height:290px">
+  {{ acc_svg }}
+</div>
+
+<!-- Region flag -->
+<img class="abs" style="left:250px;top:577px;width:66px;height:45px"
+     src="{{ base_url }}/assets/flags/{{ country_code }}.png"
+     onerror="this.style.display='none'" />
+
+<!-- Supporter badge -->
+{{ if is_supporter }}
+<img class="abs" style="left:250px;top:640px;width:40px;height:40px"
+     src="{{ base_url }}/assets/score/default/other/supporter.png" />
+{{ end }}
+
+<!-- Diff bars: CS, HP, OD, AR -->
+{{ for d in diff_bars }}
+<div class="abs diff-bar-track" style="left:1190px;top:{{ 306 + for.index * 35 }}px;width:250px">
+  <div class="diff-bar-fill" style="width:{{ d.width }}px"></div>
+</div>
+<span class="abs f20" style="left:1470px;top:{{ 310 + for.index * 35 }}px;transform:translateX(-50%)">{{ d.label }}</span>
+{{ end }}
+
+<!-- Star rating bar -->
+<div class="abs diff-bar-track" style="left:1190px;top:446px;width:250px">
+  <div class="diff-bar-fill gold-bar" style="width:{{ star_bar_width }}px"></div>
+</div>
+<span class="abs f20 gold" style="left:1470px;top:450px;transform:translateX(-50%)">{{ stars | math.round 2 }}</span>
+
+<!-- Diff info: length, bpm, circles, sliders -->
+{{ for info in diff_info }}
+<span class="abs f20 gold" style="left:{{ 1070 + for.index * 120 }}px;top:245px;transform:translateY(-50%)">{{ info }}</span>
+{{ end }}
+
+<!-- Beatmap status -->
+<span class="abs f20" style="left:1400px;top:184px;transform:translate(-50%,-50%)">{{ beatmap_status }}</span>
+
+<!-- Map ID -->
+<span class="abs f25" style="right:15px;top:90px;transform:translateY(-50%)">MAP ID: {{ beatmap_id }}</span>
+
+<!-- Title -->
+<span class="abs f30" style="left:75px;top:38px;transform:translateY(-50%);white-space:nowrap;overflow:hidden;max-width:1380px">
+  {{ title }} | by {{ artist }}
+</span>
+
+<!-- Version / mapper -->
+<span class="abs f20" style="left:225px;top:90px;transform:translateY(-50%)">
+  {{ version }} | 谱师: {{ creator }}
+</span>
+
+<!-- Rank letter -->
+<span class="abs venera75" style="left:316px;top:307px;transform:translate(-50%,-50%)">{{ rank }}</span>
+
+<!-- Score -->
+<span class="abs f75" style="left:498px;top:251px;transform:translateY(-50%)">{{ score_formatted }}</span>
+
+<!-- Time -->
+<span class="abs f20" style="left:498px;top:341px;transform:translateY(-50%)">达成时间:</span>
+<span class="abs f20" style="left:630px;top:341px;transform:translateY(-50%)">{{ ended_at }}</span>
+
+<!-- Global rank -->
+<span class="abs f25" style="left:583px;top:410px;transform:translate(-50%,-50%)">{{ rank_global }}</span>
+
+<!-- Username -->
+<span class="abs f30" style="left:250px;top:530px;transform:translateY(-50%)">{{ username }}</span>
+
+<!-- Country rank -->
+<span class="abs f25" style="left:325px;top:610px;transform:translateY(-50%)">#{{ country_rank }}</span>
+
+<!-- Mode-specific stats -->
+{{ stats_html }}
+
+<img id="avatar" src="{{ avatar_data_url }}" />
+
+</body>
+</html>
