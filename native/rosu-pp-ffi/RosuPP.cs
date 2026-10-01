@@ -128,6 +128,9 @@ public struct PerformanceResult
 {
     public double Pp;
     public double Stars;
+    public double PpAim;
+    public double PpSpeed;
+    public double PpAcc;
     public uint MaxCombo;
     /// <summary>0=osu, 1=taiko, 2=catch, 3=mania</summary>
     public byte Mode;
@@ -173,5 +176,5 @@ internal static unsafe class Native
     [DllImport(Lib)] internal static extern void              performance_passed_objects(IntPtr h, uint n);
     [DllImport(Lib)] internal static extern void              performance_clock_rate(IntPtr h, double rate);
     [DllImport(Lib)] internal static extern void              performance_lazer(IntPtr h, bool lazer);
-    [DllImport(Lib)] internal static extern PerformanceResult performance_calculate(IntPtr h);
+    [DllImport(Lib, EntryPoint = "performance_calculate_v2")] internal static extern PerformanceResult performance_calculate(IntPtr h);
 }

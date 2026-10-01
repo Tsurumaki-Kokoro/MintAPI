@@ -26,6 +26,17 @@
 
   <ItemGroup>
     <None Update="Fixtures/match-109850222.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Fixtures/3881559.osu" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <PropertyGroup>
+    <PpNativeName Condition="$([MSBuild]::IsOSPlatform('OSX'))">librosu_pp_ffi.dylib</PpNativeName>
+    <PpNativeName Condition="$([MSBuild]::IsOSPlatform('Linux'))">librosu_pp_ffi.so</PpNativeName>
+    <PpNativeName Condition="$([MSBuild]::IsOSPlatform('Windows'))">rosu_pp_ffi.dll</PpNativeName>
+  </PropertyGroup>
+
+  <Target Name="CopyPpNativeForTests" AfterTargets="Build">
+    <Copy SourceFiles="../../native/rosu-pp-ffi/target/release/$(PpNativeName)"
+          DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+  </Target>
 </Project>

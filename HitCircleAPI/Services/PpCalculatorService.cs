@@ -70,7 +70,10 @@ public class PpCalculatorService : IPpCalculatorService
             .NKatu((uint)(stats?.Good ?? 0))
             .Calculate();
 
-        return new PpResult(result.Pp, result.Stars, result.MaxCombo);
+        return new PpResult(result.Pp, result.Stars, result.MaxCombo,
+            result.Mode == 0 ? result.PpAim : null,
+            result.Mode == 0 ? result.PpSpeed : null,
+            result.Mode == 0 ? result.PpAcc : null);
     }
 
     public (double IfPp, double SsPp) CalculateIfFcAndSs(Score score, string osuFilePath)
@@ -113,7 +116,10 @@ public class PpCalculatorService : IPpCalculatorService
             .Accuracy(100)
             .Calculate();
 
-        return new PpResult(result.Pp, result.Stars, result.MaxCombo);
+        return new PpResult(result.Pp, result.Stars, result.MaxCombo,
+            result.Mode == 0 ? result.PpAim : null,
+            result.Mode == 0 ? result.PpSpeed : null,
+            result.Mode == 0 ? result.PpAcc : null);
     }
 
     public (double NewPp, int Position) FindOptimalNewPp(List<double> ppList, double desiredIncrease)

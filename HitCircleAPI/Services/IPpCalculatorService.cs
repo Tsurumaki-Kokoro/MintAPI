@@ -2,7 +2,7 @@ using Ossapi.Models;
 
 namespace HitCircleAPI.Services;
 
-public record PpResult(double Pp, double Stars, uint MaxCombo);
+public record PpResult(double Pp, double Stars, uint MaxCombo, double? AimPp = null, double? SpeedPp = null, double? AccuracyPp = null);
 
 public interface IPpCalculatorService
 {

@@ -202,6 +202,9 @@ pub extern "C" fn performance_lazer(handle: *mut PerformanceHandle, lazer: bool)
 pub struct PerformanceResult {
     pub pp: f64,
     pub stars: f64,
+    pub pp_aim: f64,
+    pub pp_speed: f64,
+    pub pp_acc: f64,
     pub max_combo: u32,
     /// 0=osu, 1=taiko, 2=catch, 3=mania
     pub mode: u8,
@@ -209,14 +212,34 @@ pub struct PerformanceResult {
 
 /// Consume the performance handle and calculate. The handle is freed.
 #[unsafe(no_mangle)]
-pub extern "C" fn performance_calculate(handle: *mut PerformanceHandle) -> PerformanceResult {
+pub extern "C" fn performance_calculate_v2(handle: *mut PerformanceHandle) -> PerformanceResult {
     let owned = unsafe { Box::from_raw(handle) };
     let attrs = owned.0.calculate();
-    let mode = match attrs {
+    let (pp_aim, pp_speed, pp_acc) = match &attrs {
+        rosu_pp::any::PerformanceAttributes::Osu(osu) => (osu.pp_aim, osu.pp_speed, osu.pp_acc),
+        _ => (f64::NAN, f64::NAN, f64::NAN),
+    };
+    let mode = match &attrs {
         rosu_pp::any::PerformanceAttributes::Osu(_) => 0,
         rosu_pp::any::PerformanceAttributes::Taiko(_) => 1,
         rosu_pp::any::PerformanceAttributes::Catch(_) => 2,
         rosu_pp::any::PerformanceAttributes::Mania(_) => 3,
     };
-    PerformanceResult { pp: attrs.pp(), stars: attrs.stars(), max_combo: attrs.max_combo(), mode }
+    PerformanceResult { pp: attrs.pp(), stars: attrs.stars(), pp_aim, pp_speed, pp_acc, max_combo: attrs.max_combo(), mode }
+}
+
+// Keep the original ABI for already-running managed clients.
+#[repr(C)]
+pub struct LegacyPerformanceResult {
+    pub pp: f64,
+    pub stars: f64,
+    pub max_combo: u32,
+    pub mode: u8,
+}
+
+/// Consume the handle and return the original, component-free result layout.
+#[unsafe(no_mangle)]
+pub extern "C" fn performance_calculate(handle: *mut PerformanceHandle) -> LegacyPerformanceResult {
+    let result = performance_calculate_v2(handle);
+    LegacyPerformanceResult { pp: result.pp, stars: result.stars, max_combo: result.max_combo, mode: result.mode }
 }
