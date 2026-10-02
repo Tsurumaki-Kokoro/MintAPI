@@ -31,7 +31,8 @@ public sealed class PerformanceAnalyzeData
     public IReadOnlyList<AnalysisGrade> Grades { get; init; } = [];
     public IReadOnlyList<AnalysisShare> Mods { get; init; } = [];
     public IReadOnlyList<AnalysisShare> Mappers { get; init; } = [];
-    public IReadOnlyList<AnalysisBar> TimeBars { get; init; } = [];
+    public int ComboBucketSize { get; init; }
+    public IReadOnlyList<AnalysisBar> ComboBars { get; init; } = [];
     public IReadOnlyList<AnalysisBar> AccuracyBars { get; init; } = [];
     public IReadOnlyList<AnalysisBar> BpmBars { get; init; } = [];
     public IReadOnlyList<AnalysisPoint> Scatter { get; init; } = [];
@@ -93,6 +94,11 @@ public sealed class PerformanceAnalyzeData
                 Math.Clamp((item.score.Pp ?? 0) / scatterPp * 100, 0, 100),
                 GradeOrder.FirstOrDefault(grade => grade.Label == item.score.Rank.ToString()).Color ?? "#aaa"))
             .ToArray();
+        var combos = ordered.Select(item => item.score.MaxCombo).Where(value => value >= 0).ToArray();
+        var comboBucketSize = combos.Length == 0 ? 250
+            : Math.Max(250, (int)(Math.Ceiling((combos.Max() + 1L) / 16.0 / 250) * 250));
+        var comboCounts = combos.GroupBy(value => value / comboBucketSize)
+            .ToDictionary(group => group.Key, group => group.Count());
 
         return new PerformanceAnalyzeData
         {
@@ -118,11 +124,9 @@ public sealed class PerformanceAnalyzeData
             Grades = grades,
             Mods = MakeShares(modContributions),
             Mappers = MakeShares(mapperContributions),
-            TimeBars = BuildHistogram(FillNumericGaps(ordered.Where(item => item.score.EndedAt != default)
-                .GroupBy(item => (item.score.EndedAt.Year, Quarter: (item.score.EndedAt.Month - 1) / 3 + 1))
-                .OrderBy(group => group.Key.Year).ThenBy(group => group.Key.Quarter)
-                .Select(group => (group.Key.Year * 4 + group.Key.Quarter - 1, group.Count())).ToList(),
-                index => $"{index / 4}Q{index % 4 + 1}")),
+            ComboBucketSize = comboBucketSize,
+            ComboBars = BuildHistogram(combos.Length == 0 ? [] : Enumerable.Range(0, combos.Max() / comboBucketSize + 1)
+                .Select(index => ($"{(long)index * comboBucketSize:N0}", comboCounts.GetValueOrDefault(index))).ToArray()),
             AccuracyBars = BuildAccuracyHistogram(accuracies),
             BpmBars = BuildHistogram(FillNumericGaps(bpms.GroupBy(value => (int)Math.Floor(value / 10))
                 .OrderBy(group => group.Key).Select(group => (group.Key, group.Count())).ToList(),

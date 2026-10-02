@@ -22,7 +22,7 @@ public class PerformanceAnalyzeDataTests
         Assert.Equal(120, report.AverageLength, 5);
         Assert.Equal("DT", report.TopMod);
         Assert.Equal("Mapper A", report.TopMapper);
-        Assert.Equal(2, report.TimeBars.Count);
+        Assert.Equal(2, report.ComboBars.Sum(bar => bar.Count));
         Assert.Equal(2, report.Grades.Sum(grade => grade.Count));
     }
 
@@ -36,5 +36,30 @@ public class PerformanceAnalyzeDataTests
         Assert.False(report.HasLength);
         Assert.Empty(report.BpmBars);
         Assert.Empty(report.Scatter);
+    }
+
+    [Fact]
+    public void Build_groups_achieved_combo_with_empty_buckets_and_exact_boundaries()
+    {
+        var combos = new[] { 0, 249, 250, 499, 500, 1000, -1 };
+        var scores = combos.Select(combo => new Score { MaxCombo = combo, Pp = 100 }).ToArray();
+
+        var report = PerformanceAnalyzeData.Build(scores, new double[scores.Length]);
+
+        Assert.Equal(250, report.ComboBucketSize);
+        Assert.Equal(new[] { 2, 2, 1, 0, 1 }, report.ComboBars.Select(bar => bar.Count));
+        Assert.Equal(new[] { "0", "250", "500", "750", "1,000" }, report.ComboBars.Select(bar => bar.Label));
+        Assert.Equal(6, report.ComboBars.Sum(bar => bar.Count));
+    }
+
+    [Fact]
+    public void Build_keeps_combo_histogram_bounded_for_long_maps_and_empty_reports()
+    {
+        var report = PerformanceAnalyzeData.Build([new Score { MaxCombo = int.MaxValue }], [0]);
+
+        Assert.InRange(report.ComboBars.Count, 1, 16);
+        Assert.Equal(1, report.ComboBars.Sum(bar => bar.Count));
+        Assert.True(report.ComboBucketSize > 250);
+        Assert.Empty(PerformanceAnalyzeData.Build([], []).ComboBars);
     }
 }
