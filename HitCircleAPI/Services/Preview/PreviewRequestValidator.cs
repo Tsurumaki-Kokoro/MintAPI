@@ -8,6 +8,12 @@ public static partial class PreviewRequestValidator
     public static BeatmapPreviewRequest Normalize(BeatmapPreviewRequest request, BeatmapPreviewOptions options)
     {
         var format = request.Format.ToLowerInvariant();
+        var selection = request.Selection.ToLowerInvariant();
+        if (selection is not ("auto" or "hardest"))
+            throw new PreviewValidationException("selection must be auto or hardest.");
+        if (request.TimePoints.Length > 0) selection = "auto";
+        if (selection == "hardest" && format != "gif")
+            throw new PreviewValidationException("hardest supports native GIF only.");
         var convert = request.Convert?.ToLowerInvariant() switch
         {
             null or "" => null,
@@ -61,12 +67,14 @@ public static partial class PreviewRequestValidator
         }
         if (mods.Any(mod => mod.EndsWith('k')) && convert != "mania")
             throw new PreviewValidationException("Key count mods require convert=mania.");
-        return request with { Format = format, Convert = convert, Mods = mods, TimePoints = points, DurationSeconds = duration };
+        return request with { Format = format, Convert = convert, Mods = mods, TimePoints = points, DurationSeconds = duration, Selection = selection };
     }
 
     public static void ValidateMode(BeatmapPreviewRequest request, int sourceMode)
     {
         var targetMode = request.Convert switch { "standard" => 0, "taiko" => 1, "ctb" => 2, "mania" => 3, _ => sourceMode };
+        if (request.Selection == "hardest" && targetMode != sourceMode)
+            throw new PreviewValidationException("hardest does not support converted beatmaps.");
         if (sourceMode != 0 && targetMode != sourceMode)
             throw new PreviewValidationException("Only Standard beatmaps can be converted to another mode.");
         if (request.Format == "png" && targetMode == 0 && request.DurationSeconds.HasValue)

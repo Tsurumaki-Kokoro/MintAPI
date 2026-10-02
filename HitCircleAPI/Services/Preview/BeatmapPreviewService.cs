@@ -56,7 +56,7 @@ public sealed class BeatmapPreviewService : IBeatmapPreviewService
         var cliConfig = JsonSerializer.Serialize(new { paths = new {
             CONFIG_DIR = Path.Combine(_cacheRoot, "config"), CACHE_DIR = Path.Combine(_cacheRoot, "downloads")
         }});
-        var key = Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new { request, _engineHash, cliConfig })));
+        var key = Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new { request, _engineHash, cliConfig, selector = BeatmapHardestSegmentSelector.AlgorithmVersion })));
         var directory = Path.Combine(_cacheRoot, "artifacts", key);
         var outputPath = Path.Combine(directory, $"preview.{request.Format}");
         var contentType = request.Format switch { "gif" => "image/gif", "png" => "image/png", _ => "video/mp4" };
@@ -81,6 +81,33 @@ public sealed class BeatmapPreviewService : IBeatmapPreviewService
                 {
                     var input = await _beatmapFile.GetOsuFilePathAsync(beatmap.BeatmapsetId, request.BeatmapId).WaitAsync(token);
                     arguments.Add($"--input-file={Path.GetFullPath(input)}");
+                    var includePreview = request.Selection == "auto" && request.TimePoints.Length == 0 &&
+                        request.Format == "gif" && (request.Convert is null || request.Convert == ((int)beatmap.Mode switch { 0 => "standard", 1 => "taiko", 2 => "ctb", _ => "mania" }));
+                    if (request.Selection == "hardest" || includePreview)
+                    {
+                        var selection = BeatmapHardestSegmentSelector.Select(input, request.Mods, request.DurationSeconds!.Value, includePreview);
+                        token.ThrowIfCancellationRequested();
+                        if (selection.Segments.Length == 0)
+                            throw new PreviewValidationException("No playable strain windows were found.");
+                        request = request with { TimePoints = selection.Segments.Select(segment => segment.StartSeconds.ToString("R", CultureInfo.InvariantCulture)).ToArray() };
+                        // Exact capacity prevents the upstream selector from adding unrelated auto segments.
+                        var rows = selection.Segments.Length == 4 ? 2 : 1;
+                        cliConfig = JsonSerializer.Serialize(new {
+                            paths = new { CONFIG_DIR = Path.Combine(_cacheRoot, "config"), CACHE_DIR = Path.Combine(_cacheRoot, "downloads") },
+                            render = new Dictionary<string, object> {
+                                [(int)beatmap.Mode switch { 0 => "standard", 1 => "taiko", 2 => "catch", _ => "mania" }] = new { gif = new { structure = (int)beatmap.Mode switch {
+                                    1 => (object)new { ROW_COUNT = selection.Segments.Length },
+                                    3 => new { IMAGES_PER_ROW = selection.Segments.Length },
+                                    _ => new { ROW_COUNT = rows, IMAGES_PER_ROW = selection.Segments.Length / rows }
+                                } } }
+                            }
+                        });
+                        arguments.RemoveAll(argument => argument.StartsWith("--config="));
+                        arguments.Add($"--config={cliConfig}");
+                        await File.WriteAllTextAsync(Path.Combine(directory, "selection.json"), JsonSerializer.Serialize(selection,
+                            new JsonSerializerOptions { WriteIndented = true, IncludeFields = true }), token);
+                        _logger.LogInformation("Native mode selected segments for {BeatmapId}: {Times}", request.BeatmapId, string.Join(", ", request.TimePoints));
+                    }
                 }
                 if (request.Convert != null) arguments.Add($"--convert={request.Convert}");
                 arguments.AddRange(request.Mods.Select(mod => $"--mod={mod}"));

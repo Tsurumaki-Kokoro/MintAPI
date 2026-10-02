@@ -17,11 +17,29 @@ public sealed class BeatmapPreviewTests : IDisposable
 
     [Theory]
     [InlineData("mp4", 61)]
-    [InlineData("gif", 7)]
+    [InlineData("gif", 12.001)]
     [InlineData("gif", 0)]
     [InlineData("gif", double.NaN)]
     public void Invalid_duration_is_rejected(string format, double duration) =>
         Assert.Throws<PreviewValidationException>(() => PreviewRequestValidator.Normalize(new(1, format, null, [], [], duration), new()));
+
+    [Theory]
+    [InlineData(null, 6)]
+    [InlineData(7.0, 7.0)]
+    [InlineData(12.0, 12.0)]
+    public void Gif_duration_defaults_to_six_and_accepts_up_to_twelve(double? requested, double expected)
+    {
+        var normalized = PreviewRequestValidator.Normalize(new(1, "gif", null, [], [], requested), new());
+        Assert.Equal(expected, normalized.DurationSeconds);
+    }
+
+    [Theory]
+    [InlineData(6, true)]
+    [InlineData(12, true)]
+    [InlineData(5, false)]
+    [InlineData(13, false)]
+    public void Gif_limit_configuration_stays_within_supported_range(int limit, bool valid) =>
+        Assert.Equal(valid, new BeatmapPreviewOptions { MaxGifDurationSeconds = limit }.IsValid());
 
     [Fact]
     public void Mode_specific_invalid_requests_are_rejected()
@@ -78,9 +96,70 @@ public sealed class BeatmapPreviewTests : IDisposable
         Assert.DoesNotContain(runner.Arguments, arg => arg.StartsWith("--input-file="));
     }
 
+    [Fact]
+    public async Task Hardest_uses_native_strains_and_passes_exact_four_panels_to_cli()
+    {
+        Directory.CreateDirectory(_directory);
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "Fixtures", "3881559.osu"), Path.Combine(_directory, "map with spaces.osu"));
+        var runner = new FakeRunner((args, _) => Task.FromResult(Artifact(args)));
+        var result = await Create(runner).GenerateAsync(new(1, "gif", null, ["dt1.25"], [], 6, "hardest"), default);
+        var timePoints = runner.Arguments.Where(argument => argument.StartsWith("--time-points=")).ToArray();
+        Assert.Equal(4, timePoints.Length);
+        Assert.DoesNotContain("--time-points=preview", timePoints);
+        using var config = JsonDocument.Parse(runner.Arguments.Single(argument => argument.StartsWith("--config="))[9..]);
+        var structure = config.RootElement.GetProperty("render").GetProperty("standard").GetProperty("gif").GetProperty("structure");
+        Assert.Equal(4, structure.GetProperty("ROW_COUNT").GetInt32() * structure.GetProperty("IMAGES_PER_ROW").GetInt32());
+        using var report = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(Path.GetDirectoryName(result.Path)!, "selection.json")));
+        var segments = report.RootElement.GetProperty("Segments").EnumerateArray().ToArray();
+        Assert.Equal(4, segments.Length);
+        foreach (var segment in segments)
+            Assert.Equal(7.5, segment.GetProperty("EndSeconds").GetDouble() - segment.GetProperty("StartSeconds").GetDouble(), 6);
+    }
+
+    [Fact]
+    public async Task Default_standard_gif_contains_preview_time_and_three_hard_windows()
+    {
+        var runner = new FakeRunner((args, _) => Task.FromResult(Artifact(args)));
+        var result = await Create(runner).GenerateAsync(Request(), default);
+        using var report = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(Path.GetDirectoryName(result.Path)!, "selection.json")));
+        var segments = report.RootElement.GetProperty("Segments").EnumerateArray().ToArray();
+        Assert.Equal(4, segments.Length);
+        var preview = Assert.Single(segments, segment => segment.GetProperty("IsPreview").GetBoolean());
+        Assert.Equal((100652 - 611) / 1000.0, preview.GetProperty("StartSeconds").GetDouble(), 6);
+        Assert.Equal(3, segments.Count(segment => !segment.GetProperty("IsPreview").GetBoolean()));
+    }
+
+
+    [Theory]
+    [InlineData(1, "1028484", "taiko", "auto")]
+    [InlineData(2, "2118524", "catch", "auto")]
+    [InlineData(3, "1638954", "mania", "auto")]
+    [InlineData(1, "1028484", "taiko", "hardest")]
+    [InlineData(2, "2118524", "catch", "hardest")]
+    [InlineData(3, "1638954", "mania", "hardest")]
+    public async Task Native_modes_send_exact_selected_capacity(int mode, string id, string configMode, string strategy)
+    {
+        Directory.CreateDirectory(_directory);
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "Fixtures", id + ".osu"), Path.Combine(_directory, "map with spaces.osu"));
+        _api.BeatmapHandler = bid => new Beatmap { Id = bid, BeatmapsetId = 7, Mode = (GameMode)mode };
+        var runner = new FakeRunner((args, _) => Task.FromResult(Artifact(args)));
+        var result = await Create(runner).GenerateAsync(new(1, "gif", null, [], [], 6, strategy), default);
+        using var report = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(Path.GetDirectoryName(result.Path)!, "selection.json")));
+        var segments = report.RootElement.GetProperty("Segments").EnumerateArray().ToArray();
+        Assert.Equal(4, segments.Length);
+        Assert.Equal(strategy == "auto" ? 1 : 0, segments.Count(s => s.GetProperty("IsPreview").GetBoolean()));
+        Assert.Equal(4, runner.Arguments.Count(a => a.StartsWith("--time-points=")));
+        using var config = JsonDocument.Parse(runner.Arguments.Single(a => a.StartsWith("--config="))[9..]);
+        var structure = config.RootElement.GetProperty("render").GetProperty(configMode).GetProperty("gif").GetProperty("structure");
+        var capacity = mode switch { 1 => structure.GetProperty("ROW_COUNT").GetInt32(), 3 => structure.GetProperty("IMAGES_PER_ROW").GetInt32(), _ => structure.GetProperty("ROW_COUNT").GetInt32() * structure.GetProperty("IMAGES_PER_ROW").GetInt32() };
+        Assert.Equal(segments.Length, capacity);
+    }
+
     private BeatmapPreviewService Create(FakeRunner runner, int timeout = 10)
     {
         Directory.CreateDirectory(_directory);
+        var input = Path.Combine(_directory, "map with spaces.osu");
+        if (!File.Exists(input)) File.Copy(Path.Combine(AppContext.BaseDirectory, "Fixtures", "3881559.osu"), input);
         var executable = Path.Combine(_directory, "engine");
         File.WriteAllText(executable, "test engine");
         return new(Options.Create(new BeatmapPreviewOptions { ExecutablePath = executable, ImageTimeoutSeconds = timeout }),

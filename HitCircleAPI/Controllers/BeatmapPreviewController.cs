@@ -15,7 +15,8 @@ public sealed class BeatmapPreviewController(IBeatmapPreviewService preview,
     /// <param name="mods">Mod 数组；重复 mods 参数，每项一个 token。</param>
     /// <param name="convert">Standard 转谱目标：standard、taiko、ctb 或 mania。</param>
     /// <param name="time_points">起点秒数或 preview；GIF/Standard PNG 最多四项。</param>
-    /// <param name="duration">GIF 每片段时长，默认及最多 6 秒；非 Standard PNG 区间最多 60 秒。</param>
+    /// <param name="duration">GIF 每片段时长，默认 6 秒，最多 12 秒；非 Standard PNG 区间最多 60 秒。</param>
+    /// <param name="selection">auto（默认）：四模式原生 GIF 为预览时间加三个难段；hardest 为四个难段。手动时间点优先。</param>
     /// <response code="200">GIF 或 PNG 文件。</response>
     /// <response code="400">参数组合无效。</response>
     /// <response code="502">预览引擎或依赖失败。</response>
@@ -25,12 +26,12 @@ public sealed class BeatmapPreviewController(IBeatmapPreviewService preview,
     public Task<IActionResult> GetImage([FromQuery] int beatmap_id,
         [FromQuery] string format = "gif", [FromQuery] string[]? mods = null,
         [FromQuery] string? convert = null, [FromQuery] string[]? time_points = null,
-        [FromQuery] double? duration = null)
+        [FromQuery] double? duration = null, [FromQuery] string selection = "auto")
     {
         if (!string.Equals(format, "gif", StringComparison.OrdinalIgnoreCase) &&
             !string.Equals(format, "png", StringComparison.OrdinalIgnoreCase))
             return Task.FromResult<IActionResult>(BadRequest(new { error = "format must be gif or png." }));
-        return GenerateAsync(new(beatmap_id, format, convert, mods ?? [], time_points ?? [], duration));
+        return GenerateAsync(new(beatmap_id, format, convert, mods ?? [], time_points ?? [], duration, selection));
     }
 
     /// <summary>同步生成带谱面音频的 MP4；支持 Range 请求。</summary>

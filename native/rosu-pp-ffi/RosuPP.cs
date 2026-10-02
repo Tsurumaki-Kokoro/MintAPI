@@ -55,6 +55,25 @@ public sealed class Difficulty : IDisposable
         return new DifficultyAttrs(attrs);
     }
 
+    public OsuStrainTimeline GetOsuStrains(Beatmap map) => GetPreviewStrains(map);
+
+    public OsuStrainTimeline GetPreviewStrains(Beatmap map, bool inverse = false, bool holdOff = false)
+    {
+        ObjectDisposedException.ThrowIf(_h == IntPtr.Zero || map.Handle == IntPtr.Zero, this);
+        var handle = Native.difficulty_preview_strains(_h, map.Handle, inverse, holdOff);
+        if (handle == IntPtr.Zero) throw new InvalidOperationException("Strain calculation requires a valid map with at least one object.");
+        try
+        {
+            Native.osu_strains_bounds(handle, out var first, out var last, out var section);
+            var points = new OsuStrainPoint[checked((int)Native.osu_strains_count(handle))];
+            for (var i = 0; i < points.Length; i++)
+                if (!Native.osu_strains_point(handle, (nuint)i, out points[i]))
+                    throw new InvalidOperationException("Invalid strain index.");
+            return new(first, last, section, points);
+        }
+        finally { Native.osu_strains_free(handle); }
+    }
+
     public void Dispose()
     {
         if (_h != IntPtr.Zero) { Native.difficulty_free(_h); _h = IntPtr.Zero; }
@@ -143,7 +162,14 @@ internal static unsafe class Native
     [DllImport(Lib)] internal static extern IntPtr beatmap_from_path([MarshalAs(UnmanagedType.LPUTF8Str)] string path);
     [DllImport(Lib)] internal static extern IntPtr beatmap_from_bytes(byte* data, nuint len);
     [DllImport(Lib)] internal static extern void   beatmap_free(IntPtr h);
+    [DllImport(Lib)] internal static extern IntPtr difficulty_preview_strains(IntPtr difficulty, IntPtr map, [MarshalAs(UnmanagedType.I1)] bool inverse, [MarshalAs(UnmanagedType.I1)] bool holdOff);
 
+    [DllImport(Lib)] internal static extern IntPtr difficulty_osu_strains(IntPtr diff, IntPtr map);
+    [DllImport(Lib)] internal static extern nuint osu_strains_count(IntPtr handle);
+    [DllImport(Lib)] [return: MarshalAs(UnmanagedType.I1)]
+    internal static extern bool osu_strains_point(IntPtr handle, nuint index, out OsuStrainPoint point);
+    [DllImport(Lib)] internal static extern void osu_strains_bounds(IntPtr handle, out double first, out double last, out double section);
+    [DllImport(Lib)] internal static extern void osu_strains_free(IntPtr handle);
     [DllImport(Lib)] internal static extern IntPtr difficulty_new();
     [DllImport(Lib)] internal static extern void   difficulty_free(IntPtr h);
     [DllImport(Lib)] internal static extern void   difficulty_mods(IntPtr h, uint mods);
@@ -178,3 +204,13 @@ internal static unsafe class Native
     [DllImport(Lib)] internal static extern void              performance_lazer(IntPtr h, bool lazer);
     [DllImport(Lib, EntryPoint = "performance_calculate_v2")] internal static extern PerformanceResult performance_calculate(IntPtr h);
 }
+
+[StructLayout(LayoutKind.Sequential)]
+public struct OsuStrainPoint
+{
+    public double EndTimeMs;
+    public double Aim;
+    public double Speed;
+}
+
+public record OsuStrainTimeline(double FirstObjectMs, double LastObjectMs, double SectionMs, OsuStrainPoint[] Points);

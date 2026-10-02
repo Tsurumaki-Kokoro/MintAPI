@@ -8,3 +8,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 rosu-pp = "4"
+rosu-map = "0.2"
