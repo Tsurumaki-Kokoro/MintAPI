@@ -6,6 +6,7 @@ public sealed class AvatarCardImageCache(byte[] avatar) : IImageCacheService
 {
     public Task<byte[]> GetAvatarAsync(string avatarUrl, int userId) => Task.FromResult(avatar);
     public Task<byte[]?> GetUserBackgroundAsync(int userId) => throw new NotSupportedException();
+    public Task<byte[]?> GetUserBannerAsync(string? bannerUrl, int userId) => throw new NotSupportedException();
     public Task SaveUserBackgroundAsync(int userId, byte[] data) => throw new NotSupportedException();
     public Task<byte[]> GetBadgeAsync(string badgeUrl, int userId, int index) => throw new NotSupportedException();
 }

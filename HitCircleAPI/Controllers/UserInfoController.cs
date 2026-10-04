@@ -22,7 +22,7 @@ public class UserInfoController(
     IPpCalculatorService ppCalc,
     ILogger<UserInfoController> logger) : ControllerBase
 {
-    /// <summary>渲染用户资料卡。</summary>
+    /// <summary>渲染用户资料卡。default 主题首区使用 osu! 用户 banner，获取失败时回退到上传的背景。</summary>
     /// <param name="platform">平台，如 qq、discord。</param>
     /// <param name="platform_uid">平台用户 ID。</param>
     /// <param name="game_mode">模式 0–3，默认使用绑定模式。</param>

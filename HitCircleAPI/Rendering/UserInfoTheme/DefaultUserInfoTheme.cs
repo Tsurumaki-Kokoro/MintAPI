@@ -1,4 +1,5 @@
- using HitCircleAPI.Models.Entities;
+using System.Net;
+using HitCircleAPI.Models.Entities;
 using HitCircleAPI.Services;
 using Ossapi.Models;
 using Scriban;
@@ -35,9 +36,12 @@ public class DefaultUserInfoTheme
         var avatarDataUrl = $"data:image/png;base64,{Convert.ToBase64String(avatarBytes)}";
 
         // ── Background ──────────────────────────────────────────────
-        var bgBytes = await _imageCache.GetUserBackgroundAsync(user.Id);
+        var bannerUrl = !string.IsNullOrWhiteSpace(user.Cover?.Url) ? user.Cover.Url : user.Cover?.CustomUrl;
+        var bgBytes = theme == "default" ? await _imageCache.GetUserBannerAsync(bannerUrl, user.Id) : null;
+        if (bgBytes is not { Length: > 0 })
+            bgBytes = await _imageCache.GetUserBackgroundAsync(user.Id);
         var bgDataUrl = bgBytes is { Length: > 0 }
-            ? $"data:image/jpeg;base64,{Convert.ToBase64String(bgBytes)}"
+            ? $"data:{ImageMimeType(bgBytes)};base64,{Convert.ToBase64String(bgBytes)}"
             : "";
 
         // ── Badges ──────────────────────────────────────────────────
@@ -76,7 +80,7 @@ public class DefaultUserInfoTheme
                     by = 534;
                 }
 
-                badges.Add(new { x = bx, y = by, data_url = dataUrl, desc = badge.Description });
+                badges.Add(new { x = bx, y = by, data_url = dataUrl, desc = WebUtility.HtmlEncode(badge.Description) });
             }
         }
 
@@ -136,7 +140,7 @@ public class DefaultUserInfoTheme
             ["bg_data_url"] = bgDataUrl,
             ["game_mode"] = gameMode,
             ["avatar_data_url"] = avatarDataUrl,
-            ["username"] = user.Username,
+            ["username"] = WebUtility.HtmlEncode(user.Username),
             ["country_code"] = user.CountryCode,
             ["is_supporter"] = user.IsSupporter,
             ["badges"] = badges,
@@ -166,6 +170,38 @@ public class DefaultUserInfoTheme
             ["history_text"] = historyText
         };
 
+        if (theme == "default")
+        {
+            scriptObj["history_text"] = historyText.TrimStart('|', ' ');
+            foreach (var key in new[] { "grade_ssh", "grade_ss", "grade_sh", "grade_s", "grade_a" })
+                scriptObj[key] = $"{(int)scriptObj[key]:N0}";
+            scriptObj["country_rank"] = stats?.CountryRank is > 0 ? $"#{stats.CountryRank:N0}" : "—";
+            var (countryDelta, countryDeltaClass) = CalcRankDelta(stats?.CountryRank, history?.CountryRank);
+            scriptObj["country_rank_delta"] = countryDelta;
+            scriptObj["country_rank_delta_class"] = countryDeltaClass;
+            scriptObj["accuracy_value"] = $"{stats?.HitAccuracy ?? 0:0.00}%";
+            scriptObj["accuracy_delta"] = ComparisonSuffix(accuracy);
+            scriptObj["play_count_value"] = $"{stats?.PlayCount ?? 0:N0}";
+            scriptObj["play_count_delta"] = ComparisonSuffix(playCount);
+            scriptObj["total_hits_value"] = $"{stats?.TotalHits ?? 0:N0}";
+            scriptObj["total_hits_delta"] = ComparisonSuffix(totalHits);
+            var time = TimeSpan.FromSeconds(stats?.PlayTime ?? 0);
+            scriptObj["play_time_short"] = $"{(int)time.TotalHours:N0}";
+            scriptObj["country_code"] = WebUtility.HtmlEncode(user.CountryCode);
+            scriptObj["game_mode"] = WebUtility.HtmlEncode(gameMode);
+            foreach (var name in new[] { "world", "trophy", "bolt", "target", "clock", "music", "list-details", "star", "heart" })
+                scriptObj["icon_" + name.Replace('-', '_')] = AssetDataUrl(Path.Combine("score", "default", "icons", name + ".svg"));
+            var flag = user.CountryCode.Length == 2 && user.CountryCode.All(char.IsAsciiLetter)
+                ? AssetDataUrl(Path.Combine("flags", user.CountryCode.ToUpperInvariant() + ".png")) : "";
+            scriptObj["country_flag"] = flag;
+            var badgeRows = (int)Math.Ceiling(badges.Count / 9.0);
+            var badgeSpace = badgeRows > 0 ? 56 + (badgeRows - 1) * 44 : 0;
+            scriptObj["badge_space"] = badgeSpace;
+            var extraHeight = Math.Max(0, badgeRows - 1) * 44;
+            scriptObj["profile_height"] = 280 + extraHeight;
+            scriptObj["canvas_height"] = 1220 + extraHeight;
+        }
+
         var templateCtx = new TemplateContext();
         templateCtx.PushGlobal(scriptObj);
 
@@ -173,7 +209,22 @@ public class DefaultUserInfoTheme
         var template = Template.Parse(templateSrc);
         var html = await template.RenderAsync(templateCtx);
 
-        return await _renderer.RenderHtmlAsync(html, 1000, 1350);
+        var height = theme == "default" ? (int)scriptObj["canvas_height"] : 1350;
+        return await _renderer.RenderHtmlAsync(html, 1000, height);
+    }
+
+    private static string ComparisonSuffix(string value) => value.Contains('(') ? value[(value.IndexOf('(') + 1)..^1] : "";
+
+    private static string ImageMimeType(byte[] data) => data.Length >= 3 && data[0] == 0xff && data[1] == 0xd8
+        ? "image/jpeg" : data.Length >= 4 && data[0] == (byte)'R' && data[1] == (byte)'I'
+            ? "image/webp" : "image/png";
+
+    private static string AssetDataUrl(string relativePath)
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "wwwroot", "assets", relativePath);
+        if (!File.Exists(path)) return "";
+        var type = Path.GetExtension(path) == ".svg" ? "image/svg+xml" : "image/png";
+        return $"data:{type};base64,{Convert.ToBase64String(File.ReadAllBytes(path))}";
     }
 
     // ── Delta helpers ────────────────────────────────────────────────
