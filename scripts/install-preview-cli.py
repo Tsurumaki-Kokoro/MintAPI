@@ -11,13 +11,13 @@ import tempfile
 
 REVISION = "e3883affa62ae00224a2e16e28755ea712b943bc"
 ROOT = Path(__file__).resolve().parents[1]
-DEST = ROOT / "HitCircleAPI/tools/osu-preview"
+DEST = ROOT / "MintAPI/tools/osu-preview"
 architecture = {"x86_64": "x64", "amd64": "x64", "arm64": "arm64", "aarch64": "arm64"}.get(platform.machine().lower())
 os_name = {"darwin": "osx", "linux": "linux", "win32": "win"}.get(sys.platform)
 rid = f"{os_name}-{architecture}"
 if rid not in {"win-x64", "linux-x64", "osx-x64", "osx-arm64"}:
     raise SystemExit(f"Unsupported preview publish platform: {rid}")
-with tempfile.TemporaryDirectory(prefix="hitcircle-preview-build-") as temp:
+with tempfile.TemporaryDirectory(prefix="mintapi-preview-build-") as temp:
     source = Path(temp) / "source"
     subprocess.run(["git", "clone", "--no-checkout", "https://github.com/2710165659/osu-beatmap-preview.git", str(source)], check=True)
     subprocess.run(["git", "checkout", "--detach", REVISION], cwd=source, check=True)

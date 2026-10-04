@@ -1,0 +1,26 @@
+{
+  "ApiKey": "<自拟一个高强度随机串>",
+  "OsuApi": {
+    "ClientId": 24578,
+    "ClientSecret": "<osu! 账号设置 → OAuth 应用 里的 Client Secret>"
+  },
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=localhost;Port=3306;Database=mintapi;User=root;Password=<MySQL 密码>;",
+    "Redis": "localhost:6379,defaultDatabase=1"
+  },
+  "CacheDir": "cache",
+  "Logging": {
+    "LogLevel": {
+      "Default": "Debug",
+      "Microsoft.AspNetCore": "Information"
+    }
+  },
+  "BeatmapPreview": {
+    "ExecutablePath": "tools/osu-preview/osu-beatmap-preview-cli",
+    "MaxConcurrency": 1,
+    "ImageTimeoutSeconds": 120,
+    "VideoTimeoutSeconds": 300,
+    "MaxVideoDurationSeconds": 60,
+    "MaxGifDurationSeconds": 6
+  }
+}

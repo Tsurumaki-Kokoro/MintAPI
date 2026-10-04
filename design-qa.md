@@ -6,7 +6,7 @@ final result: passed
 
 - 用户选择的第三个实际展示结果：`/Users/yang/.codex/generated_images/01a0f20f-979e-7822-bf3b-d0d39a782feb/exec-a29b3f44-e621-42fb-8322-32010412b51a.png`。
 - 补全原有信息后的视觉目标：`/Users/yang/.codex/generated_images/01a0f20f-979e-7822-bf3b-d0d39a782feb/exec-17fa9763-6538-4970-9618-e934ac5e8dd6.png`，1378×1141。
-- 实现：`HitCircleAPI/Rendering/ScoreTheme/templates/default/index.html`，经生产 PlaywrightRenderer 渲染的 1500×1240 PNG。
+- 实现：`MintAPI/Rendering/ScoreTheme/templates/default/index.html`，经生产 PlaywrightRenderer 渲染的 1500×1240 PNG。
 - 截图目录：`/Users/yang/.codex/visualizations/2026/09/30/01a0f20f-979e-7822-bf3b-d0d39a782feb/score-third-final/`。
 - 最终实现截图：该目录 `3881559-combo.png`；完整同图对照 `comparison-full.png`，主要成绩区域对照 `comparison-metrics.png`，判定、PP 分项与页脚对照 `comparison-details.png`。
 - 归一化：源图缩放至1500×1240，与实现并排组成3000像素宽的比较图。实现 CSS viewport=1500×1240，deviceScaleFactor=1。源图比例与实现比例相差不足0.2%。
@@ -76,7 +76,7 @@ final result: passed
 - [x] 返回条目少于请求时显示实际范围，零条返回404。
 - [x] 外部文本转义；隐藏CL，合并NC/DT，无Mods明确显示NM。
 - [x] 新最近列表的失败 / 缺失数据、BP权重保留、20条mania、单条catch、长标题、四位PP、五位连击及四位Miss均有检查。
-- [x] 完整测试238项通过：API测试153项，Ossapi测试85项；git diff --check通过。
+- [x] 完整测试238项通过：API测试153项，MintOsuApi 测试85项；git diff --check通过。
 
 仍未对在线部署的osu!账号重新请求成绩。这次验证涵盖区间控制器、绑定数据库、API测试替身及真实Chromium渲染。长列表在群聊整张缩略图下无法保证所有细节可读，文档建议每张3–5条，原图始终保留全部数据。
 
@@ -100,7 +100,7 @@ final result: passed
 
 - 谱面集官方封面独立缓存为 `list-cover.jpg`，同一次渲染去重并限制4张并发；首次加载超时5秒，失败显示中性占位。原有背景缓存可能包含季节替代图，故列表使用独立缓存，不下载 `.osu` 文件。
 - 覆盖官方请求与缓存命中、非图片响应、404、取消传播、重复谱面去重、单张失败不影响整图、图片加载、长标题边界与缺失 PP。渲染内容断言连击、Miss 和成绩时间全部移除。
-- 完整测试242项通过（API157、Ossapi85），`git diff --check` 通过。
+- 完整测试242项通过（API157、MintOsuApi 85），`git diff --check` 通过。
 
 验证边界：使用生产渲染类和本地真实背景生成样例，网络下载由 HTTP 测试替身验证；未重新调用在线部署服务获取真实账号当前成绩。20条列表保留完整主信息，但整张缩略图的细节可读性仍受图片高度限制。
 
@@ -123,7 +123,7 @@ final result: passed
 - `/Users/yang/.codex/visualizations/2026/09/30/01a0f20f-979e-7822-bf3b-d0d39a782feb/score-single-assets/` 保存当前轮次的修改前图、Best Play / Recent Play原图、350px缩略图、同图对比和四模式边界样例。
 - `best-assets-comparison.png` 在同一谱面、同一成绩、同一1500×1240尺寸下等比例并排，直接比较新增素材。`single-play-assets.png` 对照NM与HD/NC两种展示状态。两个成绩预览仍是人工样例，近期成绩仅用于展示Mods布局，不代表真实账号当前记录。
 - 新增素材都通过内嵌图片加载检查，外部文字转义通过；原生最大连击回归仍为1,623× / 2,900×。
-- 完整测试242项通过（API157、Ossapi85），`git diff --check`通过。未调用在线部署API获取真实账号当前成绩。
+- 完整测试242项通过（API157、MintOsuApi 85），`git diff --check`通过。未调用在线部署API获取真实账号当前成绩。
 - 浏览器预览 `http://127.0.0.1:8767/single-play.html` 已显示两种单条图、缩略图和原图 / 前后对照入口，console error/warn为空。上一轮预览服务停止后已恢复，新预览页验证成功。
 
 首次预览中的模式图标在白底下出现方块，作为P2问题移除；修改后再次检查原图、缩略图与并排图，无剩余P0/P1/P2。

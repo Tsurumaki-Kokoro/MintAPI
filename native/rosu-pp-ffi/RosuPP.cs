@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace HitCircleAPI.rosu_pp;
+namespace MintAPI.rosu_pp;
 
 public sealed class Beatmap : IDisposable
 {

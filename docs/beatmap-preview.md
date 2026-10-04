@@ -18,14 +18,14 @@
 
 ```bash
 python3 scripts/install-preview-cli.py
-dotnet publish HitCircleAPI -c Release
+dotnet publish MintAPI -c Release
 ```
 
-安装脚本编译固定源码，生成 CLI、许可证、第三方声明和二进制 SHA-256 清单，放在忽略的 `HitCircleAPI/tools/osu-preview/`。构建/发布会复制该目录。禁止在 CLI 旁放置 config.yml；当前接口只使用内置渲染配置与服务控制的缓存路径。发布时要求 CLI 和平台清单存在；指定 RuntimeIdentifier 时会检查 CLI 平台是否匹配。
+安装脚本编译固定源码，生成 CLI、许可证、第三方声明和二进制 SHA-256 清单，放在忽略的 `MintAPI/tools/osu-preview/`。构建/发布会复制该目录。禁止在 CLI 旁放置 config.yml；当前接口只使用内置渲染配置与服务控制的缓存路径。发布时要求 CLI 和平台清单存在；指定 RuntimeIdentifier 时会检查 CLI 平台是否匹配。
 
 按平台分别构建和发布：Windows x64、macOS x64/arm64、Linux x64 glibc。不要在 macOS 上携带 macOS CLI 发布为 linux-x64；.NET 的 RuntimeIdentifier 不会交叉编译这个外部程序，也不会交叉编译现有 rosu-pp 原生库。Windows 使用 .exe，Unix 安装脚本设置执行权限，部署时需要保留该权限。
 
-`HitCircleAPI/Dockerfile` 在 Debian 构建环境中编译固定版本并放入发布目录。Linux x64 生产镜像应在 x64 环境构建，或显式指定 `--platform=linux/amd64`（构建机需支持仿真）。Linux ARM64、Windows ARM64、Alpine 不属于本轮验收范围。
+`MintAPI/Dockerfile` 在 Debian 构建环境中编译固定版本并放入发布目录。Linux x64 生产镜像应在 x64 环境构建，或显式指定 `--platform=linux/amd64`（构建机需支持仿真）。Linux ARM64、Windows ARM64、Alpine 不属于本轮验收范围。
 
 运行时无需 Rust、FFmpeg 或 Node.js。保留随包许可证和第三方声明。启动会执行 --version 并记录检查结果；引擎缺失不阻止其他 API 启动，但预览接口返回 502。
 
@@ -40,8 +40,8 @@ dotnet publish HitCircleAPI -c Release
 ## 验证
 
 ```bash
-python3 scripts/smoke-preview-cli.py HitCircleAPI/tools/osu-preview/osu-beatmap-preview-cli /tmp/preview-smoke
-dotnet test HitCircleAPI-dotnet.sln
+python3 scripts/smoke-preview-cli.py MintAPI/tools/osu-preview/osu-beatmap-preview-cli /tmp/preview-smoke
+dotnet test MintAPI.sln
 ```
 
 Windows 将 CLI 路径改为 .exe，输出目录改为本机路径。冒烟脚本生成本地四模式 .osu/.osz 和测试音频，离线导出 PNG/GIF/MP4，检查结果路径、文件签名和大小；不依赖 osu! 网络服务。它不替代真实谱面的视觉、音画同步和公网谱包下载验收。
@@ -75,7 +75,7 @@ EZ/HR/HD、DA、DT/HT 按请求应用；TC 仅影响预览外观，不单独改�
 
 ### 四模式原生谱面验证
 
-2026-10-02：Taiko 1028484、Catch 2118524、Mania 1638954 使用 rosu-pp 4.0.1 自带 resources 谱面（测试副本存放于 tests/HitCircleAPI.Tests/Fixtures）。三个模式各生成 Normal、DT1.25、HT 共九个实际 GIF，均为 180 帧、6 秒；检查正常速度输出的预览标记、四个区间及布局。
+2026-10-02：Taiko 1028484、Catch 2118524、Mania 1638954 使用 rosu-pp 4.0.1 自带 resources 谱面（测试副本存放于 tests/MintAPI.Tests/Fixtures）。三个模式各生成 Normal、DT1.25、HT 共九个实际 GIF，均为 180 帧、6 秒；检查正常速度输出的预览标记、四个区间及布局。
 
 Catch 使用 rosu-map 的曲线和 SliderEventsIter 展开水果/水滴时间，忽略不参与 strain 的香蕉与小水滴，滑条终点计入可用范围。Mania 长按终点计入范围，IN/HO 按预览引擎的物件变换计算曲线；CS、DS、SW 等外观/布局变化不单独改变选段评分。原生 Mania 键数使用谱面本身的 CircleSize，转谱与转谱键数策略留待后续验证。
 

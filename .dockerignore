@@ -24,4 +24,7 @@
 LICENSE
 README.md
 native/rosu-pp-ffi/target/
-HitCircleAPI/tools/osu-preview/
+MintAPI/tools/osu-preview/
+MintAPI/appsettings.Development.json
+MintAPI/cache/
+MintAPI/logs/

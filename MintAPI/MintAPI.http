@@ -1,0 +1,8 @@
+@MintAPI_HostAddress = http://localhost:5251
+
+# Set this to your local API key.
+@apiKey = replace-with-local-api-key
+
+GET {{MintAPI_HostAddress}}/openapi/v1.json
+Accept: application/json
+access_token: {{apiKey}}

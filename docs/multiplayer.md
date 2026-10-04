@@ -37,7 +37,7 @@ GET /multiplayer/rating?mp_id=12345&theme=default&algorithm=osuplus&page=1
 
 事件 ID（`MatchEvent.Id`、`first_event_id`、`latest_event_id`）及 `before`/`after` 分页游标使用 64 位整数，兼容超过 `Int32.MaxValue` 的历史记录。
 
-修正 `Ossapi.MatchGame.Scores` 为 `List<LegacyScore>`，通过专用转换器兼容 matches API 的旧 `score` 与新 `total_score`，新格式优先取 `total_score`；兼容 acronym 数组及带 `acronym`/`settings` 的 Mods 对象数组。直接使用该库的调用方若引用这一属性，需要同步改用 `LegacyScore.Score`，而不是 `Score.TotalScore`。Mods 解析保留整数和字符串格式，同时支持 acronym 数组与 Mods 对象数组。
+修正 `MintOsuApi.MatchGame.Scores` 为 `List<LegacyScore>`，通过专用转换器兼容 matches API 的旧 `score` 与新 `total_score`，新格式优先取 `total_score`；兼容 acronym 数组及带 `acronym`/`settings` 的 Mods 对象数组。直接使用该库的调用方若引用这一属性，需要同步改用 `LegacyScore.Score`，而不是 `Score.TotalScore`。Mods 解析保留整数和字符串格式，同时支持 acronym 数组与 Mods 对象数组。
 
 ## 验证与预览
 

@@ -17,7 +17,7 @@ def main():
     parser.add_argument('checkout', type=Path)
     args = parser.parse_args()
     source = args.checkout.resolve()
-    target = Path(__file__).resolve().parents[1] / 'HitCircleAPI/wwwroot/assets/osu-web'
+    target = Path(__file__).resolve().parents[1] / 'MintAPI/wwwroot/assets/osu-web'
     commit = subprocess.check_output(['git', '-C', str(source), 'rev-parse', 'HEAD'], text=True).strip()
     if subprocess.check_output(['git', '-C', str(source), 'status', '--porcelain'], text=True).strip():
         parser.error('Source checkout must be clean so the recorded commit matches the imported files.')

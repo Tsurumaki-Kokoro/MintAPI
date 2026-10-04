@@ -1,7 +1,7 @@
-# HitCircleAPI Python → .NET 重构详细计划
+# MintAPI Python → .NET 重构详细计划
 
-> 源项目：`/Users/yang/Code/HitCircleAPI`（FastAPI + Pillow）  
-> 目标项目：`/Users/yang/Code/RiderProjects/HitCircleAPI-dotnet`（ASP.NET Core 9）  
+> 源项目：`/Users/yang/Code/MintAPI`（FastAPI + Pillow）
+> 目标项目：`/Users/yang/Code/RiderProjects/MintAPI`（ASP.NET Core 9）
 > 制定日期：2026-04-22
 
 ---
@@ -10,8 +10,8 @@
 
 | 组件 | 状态 | 位置 |
 |------|------|------|
-| Ossapi C# 客户端库 | ✅ 完成 | `src/Ossapi/` |
-| RosuPP P/Invoke 绑定 | ✅ 完成 | `HitCircleAPI/rosu_pp/RosuPP.cs` |
+| MintOsuApi C# 客户端库 | ✅ 完成 | `../mint-osuapi/src/MintOsuApi/` |
+| RosuPP P/Invoke 绑定 | ✅ 完成 | `MintAPI/rosu_pp/RosuPP.cs` |
 | librosu_pp_ffi.dylib | ✅ 已编译 | `/Users/yang/Code/Rust/rosu-pp-ffi/target/release/` |
 
 ---
@@ -25,7 +25,7 @@
 | 缓存 | redis-py | StackExchange.Redis |
 | 图片渲染 | Pillow + pyppeteer | Microsoft.Playwright + Scriban 模板引擎 |
 | PP 计算 | rosu_pp_py | librosu_pp_ffi.dylib（FFI，已有 RosuPP.cs） |
-| osu! API | ossapi | src/Ossapi（已迁移） |
+| osu! API | ossapi | ../mint-osuapi/src/MintOsuApi（已迁移） |
 | 限流 | slowapi | ASP.NET Core RateLimiter |
 | 日志 | loguru | Serilog |
 | HTTP 客户端 | httpx | HttpClient + IHttpClientFactory |
@@ -109,10 +109,10 @@ index: (id, osu_uid, date)
 ## 目标项目目录结构
 
 ```
-HitCircleAPI-dotnet/
+MintAPI/
 ├── MIGRATION_PLAN.md                          ← 本文件
-├── HitCircleAPI/
-│   ├── HitCircleAPI.csproj                    # Phase 1：添加所有 NuGet 包
+├── MintAPI/
+│   ├── MintAPI.csproj                    # Phase 1：添加所有 NuGet 包
 │   ├── Program.cs                             # Phase 1：完整服务注册
 │   ├── appsettings.json                       # Phase 1：完整配置结构
 │   ├── appsettings.Development.json           # Phase 1：开发环境配置
@@ -131,7 +131,7 @@ HitCircleAPI-dotnet/
 │   ├── Data/
 │   │   └── AppDbContext.cs                    # Phase 1
 │   ├── Services/
-│   │   ├── OsuApiService.cs                   # Phase 2：封装 Ossapi 调用
+│   │   ├── OsuApiService.cs                   # Phase 2：封装 MintOsuApi 调用
 │   │   ├── PpCalculatorService.cs             # Phase 2：封装 RosuPP FFI
 │   │   ├── BeatmapFileService.cs              # Phase 2：.osu 文件下载/缓存
 │   │   ├── ImageCacheService.cs               # Phase 2：头像/背景/徽章缓存
@@ -168,15 +168,15 @@ HitCircleAPI-dotnet/
 │       ├── fonts/                             # Phase 3：从 Python draw/fonts/ 复制
 │       ├── flags/                             # Phase 3：从 Python draw/flags/ 复制
 │       └── assets/                            # Phase 3：从 Python themes/*/assets/ 整合
-├── src/Ossapi/                                # ✅ 已有
-└── tests/Ossapi.Tests/                        # ✅ 已有
+├── ../mint-osuapi/src/MintOsuApi/                                # ✅ 已有
+└── ../mint-osuapi/tests/MintOsuApi.Tests/                        # ✅ 已有
 ```
 
 ---
 
 ## Phase 1：基础设施
 
-### 1.1 NuGet 包（HitCircleAPI.csproj）
+### 1.1 NuGet 包（MintAPI.csproj）
 
 ```xml
 <!-- ORM -->
@@ -208,8 +208,8 @@ HitCircleAPI-dotnet/
 <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.0" />
 <PackageReference Include="Scalar.AspNetCore" Version="2.x" />
 
-<!-- Ossapi 项目引用 -->
-<ProjectReference Include="..\src\Ossapi\Ossapi.csproj" />
+<!-- MintOsuApi 项目引用 -->
+<ProjectReference Include="..\..\mint-osuapi\src\MintOsuApi\MintOsuApi.csproj" />
 ```
 
 ### 1.2 appsettings.json 结构
@@ -222,7 +222,7 @@ HitCircleAPI-dotnet/
     "ClientSecret": ""
   },
   "ConnectionStrings": {
-    "DefaultConnection": "Server=localhost;Port=3306;Database=hitcircleapi;User=root;Password=;",
+    "DefaultConnection": "Server=localhost;Port=3306;Database=mintapi;User=root;Password=;",
     "Redis": "localhost:6379,db=1"
   },
   "CacheDir": "cache",
@@ -242,7 +242,7 @@ HitCircleAPI-dotnet/
 ### 1.3 dylib 配置
 
 ```xml
-<!-- HitCircleAPI.csproj 中 -->
+<!-- MintAPI.csproj 中 -->
 <ItemGroup>
   <None Include="/Users/yang/Code/Rust/rosu-pp-ffi/target/release/librosu_pp_ffi.dylib"
         CopyToOutputDirectory="PreserveNewest"
@@ -263,13 +263,13 @@ public interface IPpCalculatorService
 {
     // 对应 PPCalculator.pp_info()
     PerformanceResult CalculatePp(ScoreData score, string osuFilePath);
-    
+
     // 对应 PPCalculator.if_pp_ss_pp_info()
     (double IfPp, double SsPp) CalculateIfFcAndSsPp(ScoreData score, string osuFilePath);
-    
+
     // 对应 get_ss_pp_info()
     PerformanceResult GetSsPpInfo(string osuFilePath, int rulesetId, uint mods);
-    
+
     // 对应 find_optimal_new_pp()
     (double OptimalPp, int Position) FindOptimalNewPp(List<double> currentPpList, double desiredIncrease);
 }
@@ -340,7 +340,7 @@ public interface IImageCacheService
 public abstract class ThemeRenderer<TData>
 {
     protected readonly IPlaywrightRenderer _renderer;
-    
+
     public async Task<byte[]> RenderAsync(TData data, string theme = "default")
     {
         var templatePath = GetTemplatePath(theme);
@@ -348,7 +348,7 @@ public abstract class ThemeRenderer<TData>
         var html = template.Render(data);
         return await _renderer.RenderHtmlAsync(html, Width, Height);
     }
-    
+
     protected abstract string GetTemplatePath(string theme);
     protected abstract int Width { get; }
     protected abstract int Height { get; }
@@ -398,13 +398,13 @@ public class ScoreController(IScoreService scoreService) : ControllerBase
         string platform, string platform_uid,
         int? game_mode, bool include_fails = false,
         string theme = "default");
-    
+
     [HttpGet("best_play")]
     public Task<IActionResult> GetBestPlay(
         string platform, string platform_uid,
         int? game_mode, int best_index = 1,
         string theme = "default");
-    
+
     [HttpGet("user_score")]
     public Task<IActionResult> GetUserScore(
         string platform, string platform_uid,
@@ -425,16 +425,16 @@ public class UserInfoController : ControllerBase
         string platform, string platform_uid,
         int? game_mode, string? user_name,
         int? compare_with, string theme = "default");
-    
+
     [HttpPost("update_background")]
     public Task<IActionResult> UpdateBackground(
         string platform, string platform_uid,
         IFormFile background_file);
-    
+
     [HttpGet("extra/performance_control")]
     public Task<IActionResult> GetPerformanceControl(
         string platform, string platform_uid, double pp);
-    
+
     [HttpGet("extra/performance_analyze")]
     public Task<IActionResult> GetPerformanceAnalyze(
         string platform, string platform_uid,
@@ -466,7 +466,7 @@ COPY --from=build /app/publish .
 RUN dotnet tool install --global Microsoft.Playwright.CLI
 RUN playwright install chromium
 EXPOSE 8080
-ENTRYPOINT ["dotnet", "HitCircleAPI-dotnet.dll"]
+ENTRYPOINT ["dotnet", "MintAPI.dll"]
 ```
 
 ### 环境变量映射
@@ -488,8 +488,8 @@ ENTRYPOINT ["dotnet", "HitCircleAPI-dotnet.dll"]
 3. **dylib 线程安全**：Rust `rosu-pp` 是线程安全的，可以多线程并发调用
 4. **EF Core 迁移命令**：
    ```bash
-   dotnet ef migrations add InitialCreate --project HitCircleAPI
-   dotnet ef database update --project HitCircleAPI
+   dotnet ef migrations add InitialCreate --project MintAPI
+   dotnet ef database update --project MintAPI
    ```
 5. **Playwright 初始化**：使用 `IHostedService` 在应用启动时预热浏览器
 6. **PP 计算 Mods**：Python 使用字符串数组 `["HD", "DT"]`，RosuPP FFI 接受 `uint` bitfield，需实现转换

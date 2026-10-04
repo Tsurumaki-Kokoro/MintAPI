@@ -29,7 +29,7 @@ PreviewTime: 1000
 Mode: {mode}
 
 [Metadata]
-Title:HitCircle preview smoke
+Title:MintAPI preview smoke
 Artist:Test
 Creator:Codex
 Version:Mode {mode}

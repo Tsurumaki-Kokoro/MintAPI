@@ -1,6 +1,0 @@
-@HitCircleAPI_dotnet_HostAddress = http://localhost:5251
-
-GET {{HitCircleAPI_dotnet_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><style>
+@font-face{font-family:Harmony;src:url('{{ base_url }}/fonts/HarmonyOS_Sans_SC_Regular.ttf')}@font-face{font-family:Harmony;src:url('{{ base_url }}/fonts/HarmonyOS_Sans_SC_Bold.ttf');font-weight:700}
+:root{--paper:#fafaf9;--ink:#1d1d1f;--muted:#6e6e78;--blue:#0066ed;--line:#d2d2d8}*{box-sizing:border-box}html,body{width:2000px;height:1800px;margin:0}body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Harmony,sans-serif;background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}h1,h2,p{margin:0}.blue{color:var(--blue)}.icon{width:38px;height:38px;object-fit:contain;flex-shrink:0}
+.page{height:100%;padding:48px 64px 30px;display:grid;grid-template-rows:116px 206px 98px minmax(0,1fr) 58px}
+.header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid var(--line)}.identity{display:flex;gap:24px;align-items:center;min-width:0}.avatar{width:96px;height:96px;object-fit:cover;border-radius:50%}.name{font-size:46px;line-height:1.15;font-weight:700;max-width:1160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.meta{display:flex;align-items:center;gap:14px;font-size:26px;color:var(--muted);margin-top:12px}.flag{width:38px;height:27px;object-fit:contain}.heading{text-align:right;font-size:38px;font-weight:700;white-space:nowrap}.date{font-size:25px;font-weight:400;color:var(--muted);margin-top:9px}
+.hero{display:grid;grid-template-columns:50% 25% 25%;align-items:center;border-bottom:1px solid var(--line)}.metric{display:flex;align-items:center;gap:22px;padding-left:38px;border-left:1px solid var(--line)}.metric .icon{width:64px;height:64px}.metric-label{font-size:28px;color:var(--muted);margin-bottom:10px}.metric-value{font-size:64px;line-height:1.05;font-weight:700;letter-spacing:-1.5px}.pp-label{font-size:30px;font-weight:700;margin-bottom:8px}.pp-number{display:flex;align-items:baseline;gap:14px;color:var(--blue);font-size:{{ pp_font_size }}px;line-height:1.08;font-weight:700;letter-spacing:-4px}.pp-number small{font-size:40px;letter-spacing:0;color:var(--muted)}
+.secondary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));align-items:center;border-bottom:1px solid var(--line)}.secondary-item{display:flex;gap:20px;align-items:center;padding:0 28px;border-right:1px solid var(--line);min-width:0}.secondary-item:first-child{padding-left:0}.secondary-item:last-child{border-right:0}.secondary-item .label{font-size:25px;color:var(--muted);margin-bottom:5px}.secondary-item strong{display:block;font-size:34px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.report-layout{padding-top:24px;display:grid;grid-template-columns:minmax(0,1fr) 712px;gap:40px;min-height:0}.analysis{display:grid;grid-template-rows:300px 160px 460px minmax(0,1fr);min-width:0}.section{min-width:0;border-bottom:1px solid var(--line);padding-bottom:18px}.section-heading{height:52px;display:flex;align-items:center;justify-content:space-between;gap:16px}.section-heading h2{font-size:32px;font-weight:700;white-space:nowrap}.note{font-size:23px;color:var(--muted);white-space:nowrap}
+.curve-layout{display:grid;grid-template-columns:minmax(0,1fr) 180px;gap:20px}.curve{width:100%;height:244px;display:block}.chart-grid{stroke:#e0e0e6;stroke-width:1}.chart-axis{stroke:#94949d;stroke-width:1.3}.curve-line{fill:none;stroke:var(--blue);stroke-width:4;stroke-linecap:round;stroke-linejoin:round}.axis-text{font-family:inherit;font-size:23px;fill:var(--muted)}.chart-label{font-family:inherit;font-size:27px;fill:var(--blue);font-weight:700}.curve-insights{border-left:1px solid var(--line);padding-left:22px;display:flex;flex-direction:column;justify-content:space-around}.insight-label{font-size:24px;color:var(--muted);line-height:1.4}.insight-value{font-size:45px;font-weight:700;color:var(--blue);line-height:1.15;margin-top:4px}
+.grade-strip{height:25px;display:flex;background:#e8e8ec;margin:5px 0 16px}.grade-strip span{height:100%;display:block}.grade-list{display:grid;grid-template-columns:repeat(8,minmax(0,1fr))}.grade-item{padding:0 10px;border-right:1px solid var(--line);min-width:0}.grade-item:first-child{padding-left:0}.grade-item:last-child{border-right:0}.grade-code{font-size:26px;font-weight:700}.grade-values{font-size:25px;margin-top:4px;white-space:nowrap}.grade-percent{font-size:22px;color:var(--muted)}
+.preferences{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px;padding-top:8px}.scatter-section{padding-right:24px;border-right:1px solid var(--line);min-width:0}.scatter{display:block;width:100%;height:304px}.scatter-summary{font-size:23px;color:var(--muted);margin-top:12px;line-height:1.5}.scatter-summary strong{color:var(--blue)}.contributions{display:grid;grid-template-rows:1fr 1fr;min-width:0}.contribution+.contribution{border-top:1px solid var(--line)}.contribution .section-heading{height:46px}.contribution .section-heading h2{font-size:29px}.bar-row{height:23px;display:grid;grid-template-columns:145px minmax(0,1fr) 88px;gap:12px;align-items:center;font-size:22px;margin:0 0 2px}.bar-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bar-value{text-align:right;font-size:22px}.bar-track{height:16px;background:#e8e8ec}.bar-fill{height:100%;background:#adb0b8}.bar-row:first-child .bar-fill{background:var(--blue)}
+.distributions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px;padding-top:10px}.distribution{min-width:0}.distribution+.distribution{padding-left:18px;border-left:1px solid var(--line)}.distribution h2{font-size:28px;font-weight:700;margin-bottom:6px}.distribution .note{font-size:22px}.histogram{height:134px;display:flex;gap:3px;align-items:flex-end;border-bottom:1px solid #94949d;margin:22px 10px 0 3px}.hist-col{height:100%;position:relative;flex:1;min-width:0;display:flex;align-items:flex-end}.hist-bar{width:100%;background:#b2c9eb;position:relative}.hist-col.highlight .hist-bar{background:var(--blue)}.hist-count{position:absolute;bottom:calc(100% + 4px);width:100%;font-size:20px;text-align:center;color:var(--muted)}.hist-label{position:absolute;left:50%;bottom:-30px;transform:translateX(-50%);font-size:21px;color:var(--muted);white-space:nowrap}.axis-caption{font-size:22px;color:var(--muted);text-align:center;margin-top:40px}.empty{font-size:26px;color:var(--muted);padding:35px 0;text-align:center}
+.ranking{border-left:1px solid var(--line);padding-left:30px;min-width:0}.ranking-heading{height:58px;display:flex;align-items:flex-start;gap:14px}.ranking-heading h2{font-size:34px}.ranking-heading .icon{width:34px;height:34px;margin-top:4px}.play-row{height:116px;display:grid;grid-template-columns:40px 138px minmax(0,1fr) 160px;gap:14px;align-items:center;border-top:1px solid var(--line);padding:10px 0}.position{font-size:26px;color:var(--muted)}.cover{width:138px;height:88px;position:relative;background:#e8e8ec;overflow:hidden}.background{width:100%;height:100%;object-fit:cover;display:block}.background-fallback{position:absolute;left:42px;top:17px;width:54px;height:54px;opacity:.65}.grade{position:absolute;right:5px;bottom:4px;background:var(--paper);font-size:26px;font-weight:700;padding:0 5px;line-height:1.2}.song{min-width:0}.song-title{font-size:28px;font-weight:700;line-height:1.1;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}.song-details{display:flex;gap:12px;align-items:baseline;min-width:0;margin-top:5px}.song-version{min-width:0;flex:1;font-size:22px;color:var(--muted);margin-top:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.play-mods{font-size:23px;color:var(--blue);font-weight:700;max-width:110px;flex-shrink:0;margin-top:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.results{text-align:right;min-width:0}.play-pp{font-size:var(--pp-size);line-height:1.15;color:var(--blue);font-weight:700;letter-spacing:-1px;white-space:nowrap}.play-pp small{font-size:21px;letter-spacing:0}.play-accuracy{font-size:24px;margin-top:8px}.play-row:last-child{border-bottom:1px solid var(--line)}
+.footer{align-self:end;display:flex;justify-content:space-between;gap:30px;border-top:1px solid var(--line);padding-top:13px;color:var(--muted);font-size:22px;line-height:1.3}
+</style></head>
+<body>
+<main class="page">
+<header class="header">
+  <div class="identity"><img class="avatar" src="{{ avatar_data_url }}" alt=""><div><h1 class="name">{{ username }}</h1><div class="meta">{{ if flag != "" }}<img class="flag" src="{{ flag }}" alt="">{{ end }}<span>{{ country_code }} · {{ mode }}</span><span>UID {{ user_id }}</span></div></div></div>
+  <div class="heading">BP ANALYSIS<div class="date">{{ generated_at }}</div></div>
+</header>
+<section class="hero">
+  <div><div class="pp-label">加权 BP PP</div><div class="pp-number">{{ weighted_pp }}<small>pp</small></div></div>
+  <div class="metric"><img class="icon" src="{{ icon_target }}" alt=""><div><div class="metric-label">平均准确率</div><div class="metric-value">{{ average_accuracy }}</div></div></div>
+  <div class="metric"><img class="icon" src="{{ icon_star }}" alt=""><div><div class="metric-label">平均星级</div><div class="metric-value">{{ average_stars }}</div></div></div>
+</section>
+<section class="secondary">
+  <div class="secondary-item"><img class="icon" src="{{ icon_music }}" alt=""><div><div class="label">平均 BPM</div><strong>{{ average_bpm }}</strong></div></div>
+  <div class="secondary-item"><img class="icon" src="{{ icon_clock }}" alt=""><div><div class="label">平均时长</div><strong>{{ average_length }}</strong></div></div>
+  <div class="secondary-item"><img class="icon" src="{{ icon_adjustments_horizontal }}" alt=""><div><div class="label">主要 Mods</div><strong class="blue">{{ top_mod }}</strong></div></div>
+  <div class="secondary-item"><img class="icon" src="{{ icon_list_details }}" alt=""><div style="min-width:0"><div class="label">主要谱师</div><strong>{{ top_mapper }}</strong></div></div>
+</section>
+<div class="report-layout">
+<div class="analysis">
+  <section class="section">
+    <div class="section-heading"><h2>PP 曲线</h2><span class="note">按单图 PP 排序</span></div>
+    <div class="curve-layout">
+      <svg class="curve" viewBox="0 0 930 258" role="img" aria-label="BP 单图 PP 曲线">
+        <rect x="62" y="60" width="{{ top_ten_width }}" height="166" fill="#eaf1fd"/>
+        <line class="chart-grid" x1="62" y1="60" x2="886" y2="60"/><line class="chart-grid" x1="62" y1="143" x2="886" y2="143"/><line class="chart-axis" x1="62" y1="226" x2="886" y2="226"/>
+        <text class="axis-text" x="5" y="66">{{ pp_max }}</text><text class="axis-text" x="5" y="150">{{ pp_middle }}</text><text class="axis-text" x="5" y="233">{{ pp_min }}</text>
+        <polyline class="curve-line" points="{{ pp_curve }}"/>
+        <text class="chart-label" x="62" y="40">{{ pp_first }} pp</text><text class="chart-label" x="886" y="40" text-anchor="end">{{ pp_last }} pp</text>
+        {{ for tick in curve_ticks }}<text class="axis-text" x="{{ tick.x }}" y="253" text-anchor="middle">#{{ tick.rank }}</text>{{ end }}
+      </svg>
+      <div class="curve-insights"><div><div class="insight-label">Top 10 占比</div><div class="insight-value">{{ top_ten_share }}%</div></div><div><div class="insight-label">首尾 PP 降幅</div><div class="insight-value">{{ pp_decay }}%</div></div></div>
+    </div>
+  </section>
+  <section class="section grades">
+    <div class="section-heading"><h2>评级分布</h2></div>
+    <div class="grade-strip">{{ for grade in grades }}<span style="width:{{ grade.width }}%;background:{{ grade.color }}"></span>{{ end }}</div>
+    <div class="grade-list">{{ for grade in grades }}<div class="grade-item"><div class="grade-code" style="color:{{ grade.color }}">{{ grade.label }}</div><div class="grade-values">{{ grade.count }} <span class="grade-percent">({{ grade.percent }}%)</span></div></div>{{ end }}</div>
+  </section>
+  <section class="section preferences">
+    <div class="scatter-section">
+      <div class="section-heading"><h2>星级与 PP</h2></div>
+      {{ if has_stars }}<svg class="scatter" viewBox="0 0 540 315" role="img" aria-label="星级与 PP 散点图">
+        {{ for tick in scatter_pp_ticks }}<line class="chart-grid" x1="62" y1="{{ tick.y }}" x2="506" y2="{{ tick.y }}"/><text class="axis-text" x="4" y="{{ tick.y }}" dominant-baseline="middle">{{ tick.label }}</text>{{ end }}
+        {{ for tick in scatter_star_ticks }}<line class="chart-grid" x1="{{ tick.x }}" y1="40" x2="{{ tick.x }}" y2="260"/><text class="axis-text" x="{{ tick.x }}" y="297" text-anchor="middle">{{ tick.label }}</text>{{ end }}
+        <text class="axis-text" x="4" y="24">PP</text><line class="chart-axis" x1="62" y1="40" x2="62" y2="260"/><line class="chart-axis" x1="62" y1="260" x2="506" y2="260"/>
+        {{ for point in scatter }}<circle cx="{{ point.x }}" cy="{{ point.y }}" r="4.6" fill="{{ point.color }}" opacity=".85"/>{{ end }}
+      </svg><div class="scatter-summary">星级范围 {{ star_range }}<br><strong>{{ peak_star_bucket }}</strong></div>{{ else }}<div class="empty">暂无星级数据</div>{{ end }}
+    </div>
+    <div class="contributions">
+      <section class="contribution"><div class="section-heading"><h2>Mods 贡献</h2><span class="note">加权 PP</span></div><div class="bar-list">{{ for item in mods }}<div class="bar-row"><span class="bar-name">{{ item.label }}</span><div class="bar-track"><div class="bar-fill" style="width:{{ item.width }}%"></div></div><span class="bar-value">{{ item.value }}</span></div>{{ end }}</div>{{ if mods.size == 0 }}<div class="empty">暂无数据</div>{{ end }}</section>
+      <section class="contribution"><div class="section-heading"><h2>谱师贡献</h2><span class="note">加权 PP</span></div><div class="bar-list">{{ for item in mappers }}<div class="bar-row"><span class="bar-name">{{ item.label }}</span><div class="bar-track"><div class="bar-fill" style="width:{{ item.width }}%"></div></div><span class="bar-value">{{ item.value }}</span></div>{{ end }}</div>{{ if mappers.size == 0 }}<div class="empty">暂无数据</div>{{ end }}</section>
+    </div>
+  </section>
+  <section class="distributions">
+    <div class="distribution"><h2>Combo 分布</h2><div class="note">{{ combo_bucket_size }}x 分桶</div>{{ if combo_bars.size == 0 }}<div class="empty">暂无数据</div>{{ else }}<div class="histogram">{{ for bar in combo_bars }}<div class="hist-col{{ if bar.highlight }} highlight{{ end }}" title="{{ bar.label }} · {{ bar.count }} 张"><div class="hist-bar" style="height:{{ bar.height }}%">{{ if bar.count > 0 }}<span class="hist-count">{{ bar.count }}</span>{{ end }}</div>{{ if bar.show_label }}<span class="hist-label">{{ bar.label }}</span>{{ end }}</div>{{ end }}</div><div class="axis-caption">实际最大 Combo</div>{{ end }}</div>
+    <div class="distribution"><h2>准确率分布</h2><div class="note">0.5% 分桶</div>{{ if accuracy_bars.size == 0 }}<div class="empty">暂无数据</div>{{ else }}<div class="histogram">{{ for bar in accuracy_bars }}<div class="hist-col{{ if bar.highlight }} highlight{{ end }}" title="{{ bar.label }} · {{ bar.count }} 张"><div class="hist-bar" style="height:{{ bar.height }}%">{{ if bar.count > 0 }}<span class="hist-count">{{ bar.count }}</span>{{ end }}</div>{{ if bar.show_label }}<span class="hist-label">{{ bar.label }}</span>{{ end }}</div>{{ end }}</div><div class="axis-caption">准确率 (%)</div>{{ end }}</div>
+    <div class="distribution"><h2>BPM 分布</h2><div class="note">10 BPM 分桶</div>{{ if bpm_bars.size == 0 }}<div class="empty">暂无数据</div>{{ else }}<div class="histogram">{{ for bar in bpm_bars }}<div class="hist-col{{ if bar.highlight }} highlight{{ end }}" title="{{ bar.label }} · {{ bar.count }} 张"><div class="hist-bar" style="height:{{ bar.height }}%">{{ if bar.count > 0 }}<span class="hist-count">{{ bar.count }}</span>{{ end }}</div>{{ if bar.show_label }}<span class="hist-label">{{ bar.label }}</span>{{ end }}</div>{{ end }}</div><div class="axis-caption">BPM</div>{{ end }}</div>
+  </section>
+</div>
+<aside class="ranking">
+  <div class="ranking-heading"><img class="icon" src="{{ icon_trophy }}" alt=""><h2>BP 前十</h2></div>
+  {{ for play in top_plays }}
+  <article class="play-row" style="--pp-size:{{ play.pp_size }}px">
+    <div class="position">#{{ play.position }}</div>
+    <div class="cover">{{ if play.background != "" }}<img class="background" src="{{ play.background }}" alt="">{{ else }}<img class="background-fallback" src="{{ background_fallback }}" alt="谱面背景暂不可用">{{ end }}<span class="grade" style="color:{{ play.grade_color }}">{{ play.rank }}</span></div>
+    <div class="song"><div class="song-title" title="{{ play.title }} · {{ play.artist }}">{{ play.title }}</div><div class="song-details"><div class="song-version" title="{{ play.version }}">{{ play.version }}</div><div class="play-mods">{{ play.mods }}</div></div></div>
+    <div class="results"><div class="play-pp">{{ play.pp }}<small> pp</small></div><div class="play-accuracy">{{ play.accuracy }}</div></div>
+  </article>
+  {{ end }}
+  {{ if top_plays.size == 0 }}<div class="empty">暂无 BP 成绩</div>{{ end }}
+</aside>
+</div>
+<footer class="footer"><span>加权 PP 仅统计已获取的 BP · Mods 独立计入</span><span>{{ generated_at }} · MintAPI</span></footer>
+</main>
+</body>
+</html>
