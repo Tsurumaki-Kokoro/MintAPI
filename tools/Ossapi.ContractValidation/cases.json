@@ -1,0 +1,969 @@
+[
+  {
+    "name": "activity",
+    "method": "GetUserRecentActivityAsync",
+    "arguments": {
+      "userId": 1646397,
+      "limit": 5
+    }
+  },
+  {
+    "name": "activity-active-user",
+    "method": "GetUserRecentActivityAsync",
+    "arguments": {
+      "userId": 22315640,
+      "limit": 5
+    }
+  },
+  {
+    "name": "attributes-dt-fruits",
+    "method": "GetBeatmapAttributesAsync",
+    "arguments": {
+      "beatmapId": 3587544,
+      "ruleset": "fruits",
+      "mods": "DT"
+    }
+  },
+  {
+    "name": "attributes-dt-mania",
+    "method": "GetBeatmapAttributesAsync",
+    "arguments": {
+      "beatmapId": 767046,
+      "ruleset": "mania",
+      "mods": "DT"
+    }
+  },
+  {
+    "name": "attributes-dt-osu",
+    "method": "GetBeatmapAttributesAsync",
+    "arguments": {
+      "beatmapId": 2075268,
+      "ruleset": "osu",
+      "mods": "DT"
+    }
+  },
+  {
+    "name": "attributes-dt-taiko",
+    "method": "GetBeatmapAttributesAsync",
+    "arguments": {
+      "beatmapId": 557816,
+      "ruleset": "taiko",
+      "mods": "DT"
+    }
+  },
+  {
+    "name": "attributes-fruits",
+    "method": "GetBeatmapAttributesAsync",
+    "arguments": {
+      "beatmapId": 3587544,
+      "ruleset": "fruits"
+    }
+  },
+  {
+    "name": "attributes-mania",
+    "method": "GetBeatmapAttributesAsync",
+    "arguments": {
+      "beatmapId": 767046,
+      "ruleset": "mania"
+    }
+  },
+  {
+    "name": "attributes-osu",
+    "method": "GetBeatmapAttributesAsync",
+    "arguments": {
+      "beatmapId": 2075268,
+      "ruleset": "osu"
+    }
+  },
+  {
+    "name": "attributes-taiko",
+    "method": "GetBeatmapAttributesAsync",
+    "arguments": {
+      "beatmapId": 557816,
+      "ruleset": "taiko"
+    }
+  },
+  {
+    "name": "beatmap-fruits",
+    "method": "GetBeatmapAsync",
+    "arguments": {
+      "beatmapId": 3587544
+    }
+  },
+  {
+    "name": "beatmap-mania",
+    "method": "GetBeatmapAsync",
+    "arguments": {
+      "beatmapId": 767046
+    }
+  },
+  {
+    "name": "beatmap-osu",
+    "method": "GetBeatmapAsync",
+    "arguments": {
+      "beatmapId": 2075268
+    }
+  },
+  {
+    "name": "beatmap-taiko",
+    "method": "GetBeatmapAsync",
+    "arguments": {
+      "beatmapId": 557816
+    }
+  },
+  {
+    "name": "beatmaps",
+    "method": "GetBeatmapsAsync",
+    "arguments": {
+      "beatmapIds": [
+        2075268,
+        3587544,
+        557816,
+        767046
+      ]
+    },
+    "resultPath": "beatmaps"
+  },
+  {
+    "name": "beatmapset",
+    "method": "GetBeatmapsetAsync",
+    "arguments": {
+      "beatmapsetId": 992349
+    }
+  },
+  {
+    "name": "beatmapset-events",
+    "method": "GetBeatmapsetEventsAsync",
+    "arguments": {
+      "beatmapsetId": 992349,
+      "limit": 5
+    }
+  },
+  {
+    "name": "beatmapset-lookup",
+    "method": "GetBeatmapsetAsync",
+    "arguments": {
+      "beatmapId": 2075268
+    }
+  },
+  {
+    "name": "best-fruits",
+    "method": "GetUserScoresAsync",
+    "arguments": {
+      "userId": 1646397,
+      "type": "Best",
+      "mode": "fruits",
+      "limit": 5
+    }
+  },
+  {
+    "name": "best-mania",
+    "method": "GetUserScoresAsync",
+    "arguments": {
+      "userId": 1646397,
+      "type": "Best",
+      "mode": "mania",
+      "limit": 5
+    }
+  },
+  {
+    "name": "best-osu",
+    "method": "GetUserScoresAsync",
+    "arguments": {
+      "userId": 1646397,
+      "type": "Best",
+      "mode": "osu",
+      "limit": 5
+    }
+  },
+  {
+    "name": "best-taiko",
+    "method": "GetUserScoresAsync",
+    "arguments": {
+      "userId": 1646397,
+      "type": "Best",
+      "mode": "taiko",
+      "limit": 5
+    }
+  },
+  {
+    "name": "changelog",
+    "method": "GetChangelogListingAsync",
+    "arguments": {}
+  },
+  {
+    "name": "changelog-build",
+    "method": "GetChangelogBuildAsync",
+    "arguments": {
+      "stream": "web",
+      "build": "2026.1002.0"
+    }
+  },
+  {
+    "name": "changelog-lookup",
+    "method": "GetChangelogBuildLookupAsync",
+    "arguments": {
+      "changelog": "8955",
+      "key": "id"
+    }
+  },
+  {
+    "name": "comment",
+    "method": "GetCommentAsync",
+    "arguments": {
+      "commentId": 4220344
+    }
+  },
+  {
+    "name": "comments",
+    "method": "GetCommentsAsync",
+    "arguments": {}
+  },
+  {
+    "name": "discussion-posts",
+    "method": "GetBeatmapsetDiscussionPostsAsync",
+    "arguments": {
+      "limit": 5
+    }
+  },
+  {
+    "name": "discussion-votes",
+    "method": "GetBeatmapsetDiscussionVotesAsync",
+    "arguments": {
+      "limit": 5
+    }
+  },
+  {
+    "name": "discussions",
+    "method": "GetBeatmapsetDiscussionsAsync",
+    "arguments": {
+      "beatmapsetId": 992349,
+      "limit": 5
+    }
+  },
+  {
+    "name": "events",
+    "method": "GetEventsAsync",
+    "arguments": {}
+  },
+  {
+    "name": "events-max-date",
+    "method": "GetBeatmapsetEventsAsync",
+    "arguments": {
+      "beatmapsetId": 992349,
+      "types": [
+        "OffsetEdit"
+      ],
+      "maxDate": "2024-11-25T07:57:27+00:00",
+      "limit": 5
+    }
+  },
+  {
+    "name": "events-min-date",
+    "method": "GetBeatmapsetEventsAsync",
+    "arguments": {
+      "beatmapsetId": 992349,
+      "types": [
+        "OffsetEdit"
+      ],
+      "minDate": "2024-11-27T07:57:27+00:00",
+      "limit": 5
+    }
+  },
+  {
+    "name": "events-next",
+    "method": "GetEventsAsync",
+    "arguments": {
+      "cursorString": "eyJldmVudF9pZCI6MTA2NTYxMjE2Nn0"
+    }
+  },
+  {
+    "name": "filtered-discussions",
+    "method": "GetBeatmapsetDiscussionsAsync",
+    "arguments": {
+      "beatmapsetId": 992349,
+      "messageTypes": [
+        "Problem"
+      ],
+      "limit": 5
+    }
+  },
+  {
+    "name": "filtered-events",
+    "method": "GetBeatmapsetEventsAsync",
+    "arguments": {
+      "beatmapsetId": 992349,
+      "types": [
+        "OffsetEdit"
+      ],
+      "minDate": "2010-01-01T00:00:00Z",
+      "maxDate": "2027-01-01T00:00:00Z",
+      "limit": 5
+    }
+  },
+  {
+    "name": "firsts-mania",
+    "method": "GetUserScoresAsync",
+    "arguments": {
+      "userId": 1646397,
+      "type": "Firsts",
+      "mode": "mania",
+      "limit": 3
+    }
+  },
+  {
+    "name": "firsts-osu",
+    "method": "GetUserScoresAsync",
+    "arguments": {
+      "userId": 1646397,
+      "type": "Firsts",
+      "mode": "osu",
+      "limit": 3
+    }
+  },
+  {
+    "name": "firsts-taiko",
+    "method": "GetUserScoresAsync",
+    "arguments": {
+      "userId": 1646397,
+      "type": "Firsts",
+      "mode": "taiko",
+      "limit": 3
+    }
+  },
+  {
+    "name": "forum",
+    "method": "GetForumTopicsAsync",
+    "arguments": {
+      "forumId": 1
+    }
+  },
+  {
+    "name": "forum-active",
+    "method": "GetForumTopicsAsync",
+    "arguments": {
+      "forumId": 2
+    }
+  },
+  {
+    "name": "forum-topic",
+    "method": "GetForumTopicAsync",
+    "arguments": {
+      "topicId": 2246147,
+      "limit": 5
+    }
+  },
+  {
+    "name": "forums",
+    "method": "GetForumListingAsync",
+    "arguments": {},
+    "resultPath": "forums"
+  },
+  {
+    "name": "kudosu",
+    "method": "GetUserKudosuAsync",
+    "arguments": {
+      "userId": 12190421,
+      "limit": 5
+    }
+  },
+  {
+    "name": "lazer",
+    "method": "GetScoreAsync",
+    "arguments": {
+      "scoreId": 6645131974
+    }
+  },
+  {
+    "name": "legacy-score",
+    "method": "GetScoreModeAsync",
+    "arguments": {
+      "mode": "osu",
+      "scoreId": 4343465566
+    }
+  },
+  {
+    "name": "lookup-checksum",
+    "method": "GetBeatmapAsync",
+    "arguments": {
+      "checksum": "e5cfd3a6f8294a4ca01008b5afed8c79"
+    }
+  },
+  {
+    "name": "lookup-filename",
+    "method": "GetBeatmapAsync",
+    "arguments": {
+      "filename": "F-777 - Space Battle (DeRandom Otaku) [Intense].osu"
+    }
+  },
+  {
+    "name": "mapper",
+    "method": "GetUserAsync",
+    "arguments": {
+      "user": "12190421",
+      "key": "id"
+    }
+  },
+  {
+    "name": "mapper-graveyard",
+    "method": "GetUserBeatmapsAsync",
+    "arguments": {
+      "userId": 12190421,
+      "type": "Graveyard",
+      "limit": 3
+    }
+  },
+  {
+    "name": "mapper-guest",
+    "method": "GetUserBeatmapsAsync",
+    "arguments": {
+      "userId": 12190421,
+      "type": "Guest",
+      "limit": 3
+    }
+  },
+  {
+    "name": "mapper-loved",
+    "method": "GetUserBeatmapsAsync",
+    "arguments": {
+      "userId": 12190421,
+      "type": "Loved",
+      "limit": 3
+    }
+  },
+  {
+    "name": "mapper-nominated",
+    "method": "GetUserBeatmapsAsync",
+    "arguments": {
+      "userId": 12190421,
+      "type": "Nominated",
+      "limit": 3
+    }
+  },
+  {
+    "name": "mapper-pending",
+    "method": "GetUserBeatmapsAsync",
+    "arguments": {
+      "userId": 12190421,
+      "type": "Pending",
+      "limit": 3
+    }
+  },
+  {
+    "name": "mapper-ranked",
+    "method": "GetUserBeatmapsAsync",
+    "arguments": {
+      "userId": 12190421,
+      "type": "Ranked",
+      "limit": 3
+    }
+  },
+  {
+    "name": "match",
+    "method": "GetMatchAsync",
+    "arguments": {
+      "matchId": 109975520,
+      "limit": 5
+    }
+  },
+  {
+    "name": "match-after",
+    "method": "GetMatchAsync",
+    "arguments": {
+      "matchId": 109975520,
+      "afterId": 2275164202,
+      "limit": 5
+    }
+  },
+  {
+    "name": "match-before",
+    "method": "GetMatchAsync",
+    "arguments": {
+      "matchId": 109975520,
+      "beforeId": 2275183057,
+      "limit": 5
+    }
+  },
+  {
+    "name": "matches",
+    "method": "GetMatchesAsync",
+    "arguments": {}
+  },
+  {
+    "name": "most-played",
+    "method": "GetUserMostPlayedAsync",
+    "arguments": {
+      "userId": 1646397,
+      "limit": 5
+    }
+  },
+  {
+    "name": "news",
+    "method": "GetNewsListingAsync",
+    "arguments": {}
+  },
+  {
+    "name": "news-id",
+    "method": "GetNewsPostAsync",
+    "arguments": {
+      "news": "1958",
+      "key": "Id"
+    }
+  },
+  {
+    "name": "news-next",
+    "method": "GetNewsListingAsync",
+    "arguments": {
+      "cursorString": "eyJwdWJsaXNoZWRfYXQiOiIyMDI2LTA5LTA1VDIyOjAwOjAwLjAwMDAwMFoiLCJpZCI6MTk0N30"
+    }
+  },
+  {
+    "name": "news-slug",
+    "method": "GetNewsPostAsync",
+    "arguments": {
+      "news": "2026-10-03-new-featured-artist-adamyes"
+    }
+  },
+  {
+    "name": "pack",
+    "method": "GetBeatmapPackAsync",
+    "arguments": {
+      "pack": "ST437"
+    }
+  },
+  {
+    "name": "packs",
+    "method": "GetBeatmapPacksAsync",
+    "arguments": {}
+  },
+  {
+    "name": "packs-next",
+    "method": "GetBeatmapPacksAsync",
+    "arguments": {
+      "cursorString": "eyJwYWNrX2lkIjo0NDk3fQ"
+    }
+  },
+  {
+    "name": "passed",
+    "method": "SearchBeatmapsPassedAsync",
+    "arguments": {
+      "userId": 1646397,
+      "beatmapsetIds": [
+        1872054,
+        992349
+      ],
+      "rulesetId": 0
+    },
+    "resultPath": "beatmaps_passed"
+  },
+  {
+    "name": "ranking-charts",
+    "method": "GetRankingAsync",
+    "arguments": {
+      "mode": "osu",
+      "type": "Charts",
+      "spotlight": 276
+    }
+  },
+  {
+    "name": "ranking-country",
+    "method": "GetRankingAsync",
+    "arguments": {
+      "mode": "osu",
+      "type": "Country"
+    }
+  },
+  {
+    "name": "ranking-fruits",
+    "method": "GetRankingAsync",
+    "arguments": {
+      "mode": "fruits",
+      "type": "Performance"
+    }
+  },
+  {
+    "name": "ranking-mania",
+    "method": "GetRankingAsync",
+    "arguments": {
+      "mode": "mania",
+      "type": "Performance",
+      "country": "CN"
+    }
+  },
+  {
+    "name": "ranking-mania-4k",
+    "method": "GetRankingAsync",
+    "arguments": {
+      "mode": "mania",
+      "type": "Performance",
+      "variant": "4k"
+    }
+  },
+  {
+    "name": "ranking-mania-7k",
+    "method": "GetRankingAsync",
+    "arguments": {
+      "mode": "mania",
+      "type": "Performance",
+      "variant": "7k"
+    }
+  },
+  {
+    "name": "ranking-next",
+    "method": "GetRankingAsync",
+    "arguments": {
+      "mode": "osu",
+      "type": "Performance",
+      "cursor": {
+        "page": 2
+      }
+    }
+  },
+  {
+    "name": "ranking-osu",
+    "method": "GetRankingAsync",
+    "arguments": {
+      "mode": "osu",
+      "type": "Performance",
+      "country": "CN"
+    }
+  },
+  {
+    "name": "ranking-performance",
+    "method": "GetRankingAsync",
+    "arguments": {
+      "mode": "osu",
+      "type": "Performance"
+    }
+  },
+  {
+    "name": "ranking-score",
+    "method": "GetRankingAsync",
+    "arguments": {
+      "mode": "osu",
+      "type": "Score"
+    }
+  },
+  {
+    "name": "ranking-taiko",
+    "method": "GetRankingAsync",
+    "arguments": {
+      "mode": "taiko",
+      "type": "Performance",
+      "country": "CN"
+    }
+  },
+  {
+    "name": "recent-active-user",
+    "method": "GetUserScoresAsync",
+    "arguments": {
+      "userId": 9947186,
+      "mode": "osu",
+      "type": "Recent",
+      "includeFails": true,
+      "limit": 5
+    }
+  },
+  {
+    "name": "recent-mania",
+    "method": "GetUserScoresAsync",
+    "arguments": {
+      "userId": 1646397,
+      "type": "Recent",
+      "mode": "mania",
+      "includeFails": true,
+      "limit": 5
+    }
+  },
+  {
+    "name": "recent-osu",
+    "method": "GetUserScoresAsync",
+    "arguments": {
+      "userId": 1646397,
+      "type": "Recent",
+      "mode": "osu",
+      "includeFails": true,
+      "limit": 5
+    }
+  },
+  {
+    "name": "recent-taiko",
+    "method": "GetUserScoresAsync",
+    "arguments": {
+      "userId": 1646397,
+      "type": "Recent",
+      "mode": "taiko",
+      "includeFails": true,
+      "limit": 5
+    }
+  },
+  {
+    "name": "rooms",
+    "method": "GetRoomsAsync",
+    "arguments": {}
+  },
+  {
+    "name": "scores",
+    "method": "GetScoresAsync",
+    "arguments": {
+      "mode": "osu"
+    }
+  },
+  {
+    "name": "search-beatmaps",
+    "method": "SearchBeatmapsetsAsync",
+    "arguments": {
+      "query": "Space Battle"
+    }
+  },
+  {
+    "name": "search-user",
+    "method": "SearchAsync",
+    "arguments": {
+      "query": "Crystal",
+      "mode": "Users"
+    }
+  },
+  {
+    "name": "search-wiki",
+    "method": "SearchAsync",
+    "arguments": {
+      "query": "osu",
+      "mode": "Wiki"
+    }
+  },
+  {
+    "name": "seasonal",
+    "method": "GetSeasonalBackgroundsAsync",
+    "arguments": {}
+  },
+  {
+    "name": "spotlights",
+    "method": "GetSpotlightsAsync",
+    "arguments": {},
+    "resultPath": "spotlights"
+  },
+  {
+    "name": "stable",
+    "method": "GetScoreAsync",
+    "arguments": {
+      "scoreId": 1659863772
+    }
+  },
+  {
+    "name": "tags",
+    "method": "GetTagsAsync",
+    "arguments": {},
+    "resultPath": "tags"
+  },
+  {
+    "name": "top-fruits",
+    "method": "GetBeatmapScoresAsync",
+    "arguments": {
+      "beatmapId": 3587544,
+      "mode": "fruits"
+    }
+  },
+  {
+    "name": "top-global",
+    "method": "GetBeatmapScoresAsync",
+    "arguments": {
+      "beatmapId": 2075268,
+      "type": "Global",
+      "mods": "HD"
+    }
+  },
+  {
+    "name": "top-mania",
+    "method": "GetBeatmapScoresAsync",
+    "arguments": {
+      "beatmapId": 767046,
+      "mode": "mania"
+    }
+  },
+  {
+    "name": "top-osu",
+    "method": "GetBeatmapScoresAsync",
+    "arguments": {
+      "beatmapId": 2075268,
+      "mode": "osu"
+    }
+  },
+  {
+    "name": "top-taiko",
+    "method": "GetBeatmapScoresAsync",
+    "arguments": {
+      "beatmapId": 557816,
+      "mode": "taiko"
+    }
+  },
+  {
+    "name": "user-beatmap-all-fruits",
+    "method": "GetBeatmapUserScoresAsync",
+    "arguments": {
+      "beatmapId": 2160014,
+      "userId": 1646397,
+      "mode": "fruits"
+    },
+    "resultPath": "scores"
+  },
+  {
+    "name": "user-beatmap-all-mania",
+    "method": "GetBeatmapUserScoresAsync",
+    "arguments": {
+      "beatmapId": 5540799,
+      "userId": 1646397,
+      "mode": "mania"
+    },
+    "resultPath": "scores"
+  },
+  {
+    "name": "user-beatmap-all-osu",
+    "method": "GetBeatmapUserScoresAsync",
+    "arguments": {
+      "beatmapId": 3851850,
+      "userId": 1646397,
+      "mode": "osu"
+    },
+    "resultPath": "scores"
+  },
+  {
+    "name": "user-beatmap-all-taiko",
+    "method": "GetBeatmapUserScoresAsync",
+    "arguments": {
+      "beatmapId": 3859913,
+      "userId": 1646397,
+      "mode": "taiko"
+    },
+    "resultPath": "scores"
+  },
+  {
+    "name": "user-beatmap-fruits",
+    "method": "GetBeatmapUserScoreAsync",
+    "arguments": {
+      "beatmapId": 2160014,
+      "userId": 1646397,
+      "mode": "fruits"
+    }
+  },
+  {
+    "name": "user-beatmap-mania",
+    "method": "GetBeatmapUserScoreAsync",
+    "arguments": {
+      "beatmapId": 5540799,
+      "userId": 1646397,
+      "mode": "mania"
+    }
+  },
+  {
+    "name": "user-beatmap-osu",
+    "method": "GetBeatmapUserScoreAsync",
+    "arguments": {
+      "beatmapId": 3851850,
+      "userId": 1646397,
+      "mode": "osu"
+    }
+  },
+  {
+    "name": "user-beatmap-taiko",
+    "method": "GetBeatmapUserScoreAsync",
+    "arguments": {
+      "beatmapId": 3859913,
+      "userId": 1646397,
+      "mode": "taiko"
+    }
+  },
+  {
+    "name": "user-fruits",
+    "method": "GetUserAsync",
+    "arguments": {
+      "user": "1646397",
+      "mode": "fruits",
+      "key": "id"
+    }
+  },
+  {
+    "name": "user-mania",
+    "method": "GetUserAsync",
+    "arguments": {
+      "user": "1646397",
+      "mode": "mania",
+      "key": "id"
+    }
+  },
+  {
+    "name": "user-osu",
+    "method": "GetUserAsync",
+    "arguments": {
+      "user": "1646397",
+      "mode": "osu",
+      "key": "id"
+    }
+  },
+  {
+    "name": "user-taiko",
+    "method": "GetUserAsync",
+    "arguments": {
+      "user": "1646397",
+      "mode": "taiko",
+      "key": "id"
+    }
+  },
+  {
+    "name": "user-username",
+    "method": "GetUserAsync",
+    "arguments": {
+      "user": "@Crystal",
+      "mode": "osu"
+    }
+  },
+  {
+    "name": "users",
+    "method": "GetUsersAsync",
+    "arguments": {
+      "userIds": [
+        1646397,
+        12190421
+      ]
+    },
+    "resultPath": "users"
+  },
+  {
+    "name": "users-lookup",
+    "method": "GetUsersLookupAsync",
+    "arguments": {
+      "users": [
+        1646397,
+        "Crystal"
+      ]
+    },
+    "resultPath": "users"
+  },
+  {
+    "name": "users-variants",
+    "method": "GetUsersAsync",
+    "arguments": {
+      "userIds": [
+        1646397
+      ],
+      "includeVariantStatistics": true
+    },
+    "resultPath": "users"
+  },
+  {
+    "name": "wiki",
+    "method": "GetWikiPageAsync",
+    "arguments": {
+      "locale": "en",
+      "path": "Main_Page"
+    }
+  },
+  {
+    "name": "wiki-nested",
+    "method": "GetWikiPageAsync",
+    "arguments": {
+      "locale": "en",
+      "path": "Gameplay/Accuracy"
+    }
+  }
+]
