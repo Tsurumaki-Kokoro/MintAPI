@@ -247,6 +247,8 @@ public class EventBeatmapset
 
 public class EventAchievement
 {
+    [JsonProperty("instructions")] public string? Instructions { get; set; }
+    [JsonProperty("mode")] public string? Mode { get; set; }
     [JsonProperty("icon_url")]        public string  IconUrl       { get; set; } = "";
     [JsonProperty("id")]              public int     Id            { get; set; }
     [JsonProperty("name")]            public string  Name          { get; set; } = "";
@@ -260,6 +262,9 @@ public class EventAchievement
 
 public class Event
 {
+    [JsonProperty("createdAt")]
+    [JsonConverter(typeof(DateTimeOffsetConverter))]
+    public DateTimeOffset? CreatedAtLegacy { get; set; }
     [JsonProperty("id")]   public int       Id   { get; set; }
     [JsonProperty("type")]
     [JsonConverter(typeof(EventTypeConverter))]
@@ -502,7 +507,7 @@ public class WikiPage
     [JsonProperty("markdown")]          public string       Markdown         { get; set; } = "";
     [JsonProperty("path")]              public string       Path             { get; set; } = "";
     [JsonProperty("subtitle")]          public string?      Subtitle         { get; set; }
-    [JsonProperty("tags")]              public List<string> Tags             { get; set; } = [];
+    [JsonProperty("tags")]              public List<Newtonsoft.Json.Linq.JToken> Tags { get; set; } = [];
     [JsonProperty("title")]             public string       Title            { get; set; } = "";
     [JsonProperty("available_locales")] public List<string> AvailableLocales { get; set; } = [];
 }
@@ -578,14 +583,17 @@ public class CountryStatistics
 {
     [JsonProperty("code")]         public string  Code        { get; set; } = "";
     [JsonProperty("active_users")] public int     ActiveUsers { get; set; }
-    [JsonProperty("play_count")]   public int     PlayCount   { get; set; }
+    [JsonProperty("play_count")]   public long    PlayCount   { get; set; }
     [JsonProperty("ranked_score")] public long    RankedScore { get; set; }
     [JsonProperty("performance")]  public int     Performance { get; set; }
     [JsonProperty("country")]      public Country Country     { get; set; } = new();
 }
 
+[JsonConverter(typeof(RankingsConverter))]
 public class Rankings
 {
+    /// <summary>Country leaderboard entries; Ranking contains player entries only.</summary>
+    [JsonIgnore] public List<CountryStatistics> CountryRanking { get; set; } = [];
     [JsonProperty("beatmapsets")]   public List<Beatmapset>?    Beatmapsets  { get; set; }
     [JsonProperty("cursor")]        public Cursor?               Cursor       { get; set; }
     [JsonProperty("cursor_string")] public string?               CursorString { get; set; }
@@ -614,6 +622,7 @@ public class Match
 
 public class Matches
 {
+    [JsonProperty("params")] public Newtonsoft.Json.Linq.JObject? Params { get; set; }
     [JsonProperty("matches")]       public List<Match> MatchList    { get; set; } = [];
     [JsonProperty("cursor")]        public Cursor?     Cursor       { get; set; }
     [JsonProperty("cursor_string")] public string?     CursorString { get; set; }
@@ -641,9 +650,30 @@ public class MatchGame
     [JsonConverter(typeof(TeamTypeConverter))]
     public TeamType TeamType { get; set; }
 
+    private Mods.Mod _mods;
+    private Newtonsoft.Json.Linq.JToken? _serializedMods;
+
+    /// <summary>Legacy bitset view used by existing match calculations.</summary>
+    [JsonIgnore]
+    public Mods.Mod Mods
+    {
+        get => _mods;
+        set { _mods = value; _serializedMods = null; }
+    }
+
+    /// <summary>Original API mods, including settings that cannot fit in a legacy bitset.</summary>
+    [JsonIgnore] public Newtonsoft.Json.Linq.JToken? RawMods => _serializedMods?.DeepClone();
+
     [JsonProperty("mods")]
-    [JsonConverter(typeof(ModConverter))]
-    public Mods.Mod Mods { get; set; }
+    private Newtonsoft.Json.Linq.JToken SerializedMods
+    {
+        get => _serializedMods ?? new Newtonsoft.Json.Linq.JValue(_mods.Value);
+        set
+        {
+            _serializedMods = value;
+            _mods = value.ToObject<Mods.Mod>(Newtonsoft.Json.JsonSerializer.Create(OssapiClient.BuildJsonSettings()))!;
+        }
+    }
 
     [JsonProperty("start_time")]
     [JsonConverter(typeof(DateTimeOffsetRequiredConverter))]
@@ -733,6 +763,7 @@ public class RoomDifficultyRange
 
 public class Room
 {
+    [JsonProperty("max_participants")] public int? MaxParticipants { get; set; }
     [JsonProperty("id")]                public int                   Id                { get; set; }
     [JsonProperty("name")]              public string                Name              { get; set; } = "";
     [JsonProperty("user_id")]           public int                   UserId            { get; set; }
@@ -799,34 +830,34 @@ public class RoomLeaderboard
 
 public class MultiplayerScore
 {
-    [JsonProperty("id")]                  public int         Id                { get; set; }
+    [JsonProperty("id")]                  public long         Id                { get; set; }
     [JsonProperty("user_id")]             public int         UserId            { get; set; }
     [JsonProperty("room_id")]             public int         RoomId            { get; set; }
     [JsonProperty("playlist_item_id")]    public int         PlaylistItemId    { get; set; }
     [JsonProperty("beatmap_id")]          public int         BeatmapId         { get; set; }
-    [JsonProperty("total_score")]         public int         TotalScore        { get; set; }
+    [JsonProperty("total_score")]         public long         TotalScore        { get; set; }
     [JsonProperty("max_combo")]           public int         MaxCombo          { get; set; }
     [JsonProperty("passed")]              public bool        Passed            { get; set; }
     [JsonProperty("position")]            public int?        Position          { get; set; }
     [JsonProperty("user")]                public User        User              { get; set; } = new();
-    [JsonProperty("solo_score_id")]       public int         SoloScoreId       { get; set; }
-    [JsonProperty("classic_total_score")] public int         ClassicTotalScore { get; set; }
+    [JsonProperty("solo_score_id")]       public long         SoloScoreId       { get; set; }
+    [JsonProperty("classic_total_score")] public long         ClassicTotalScore { get; set; }
     [JsonProperty("preserve")]            public bool        Preserve          { get; set; }
     [JsonProperty("processed")]           public bool        Processed         { get; set; }
     [JsonProperty("ranked")]              public bool        Ranked            { get; set; }
-    [JsonProperty("total_score_without_mods")] public int   TotalScoreWithoutMods { get; set; }
-    [JsonProperty("best_id")]             public int?        BestId            { get; set; }
+    [JsonProperty("total_score_without_mods")] public long   TotalScoreWithoutMods { get; set; }
+    [JsonProperty("best_id")]             public long?        BestId            { get; set; }
     [JsonProperty("type")]                public string      Type              { get; set; } = "";
     [JsonProperty("accuracy")]            public double      Accuracy          { get; set; }
-    [JsonProperty("build_id")]            public int         BuildId           { get; set; }
+    [JsonProperty("build_id")]            public int?         BuildId           { get; set; }
     [JsonProperty("is_perfect_combo")]    public bool        IsPerfectCombo    { get; set; }
     [JsonProperty("replay")]              public bool        Replay            { get; set; }
-    [JsonProperty("pp")]                  public double      Pp                { get; set; }
+    [JsonProperty("pp")]                  public double?      Pp                { get; set; }
     [JsonProperty("ruleset_id")]          public int         RulesetId         { get; set; }
     [JsonProperty("has_replay")]          public bool        HasReplay         { get; set; }
     [JsonProperty("legacy_perfect")]      public bool        LegacyPerfect     { get; set; }
-    [JsonProperty("legacy_score_id")]     public int?        LegacyScoreId     { get; set; }
-    [JsonProperty("legacy_total_score")]  public int         LegacyTotalScore  { get; set; }
+    [JsonProperty("legacy_score_id")]     public long?        LegacyScoreId     { get; set; }
+    [JsonProperty("legacy_total_score")]  public long         LegacyTotalScore  { get; set; }
 
     [JsonProperty("rank")]
     [JsonConverter(typeof(GradeConverter))]
@@ -842,8 +873,8 @@ public class MultiplayerScore
     public DateTimeOffset EndedAt { get; set; }
 
     [JsonProperty("started_at")]
-    [JsonConverter(typeof(DateTimeOffsetRequiredConverter))]
-    public DateTimeOffset StartedAt { get; set; }
+    [JsonConverter(typeof(DateTimeOffsetConverter))]
+    public DateTimeOffset? StartedAt { get; set; }
 }
 
 public class MultiplayerScoresAround
@@ -1004,6 +1035,7 @@ public class KudosuVote
 
 public class KudosuHistory
 {
+    [JsonProperty("details")] public Newtonsoft.Json.Linq.JObject? Details { get; set; }
     [JsonProperty("id")]         public int         Id      { get; set; }
     [JsonProperty("amount")]     public int         Amount  { get; set; }
     [JsonProperty("model")]      public string      Model   { get; set; } = "";
@@ -1071,6 +1103,10 @@ public class CreatePMResponse
 
 public class BeatmapDifficultyAttributes
 {
+    [JsonProperty("aim_difficult_slider_count")] public double? AimDifficultSliderCount { get; set; }
+    [JsonProperty("aim_difficult_strain_count")] public double? AimDifficultStrainCount { get; set; }
+    [JsonProperty("speed_difficult_strain_count")] public double? SpeedDifficultStrainCount { get; set; }
+    [JsonProperty("mono_stamina_factor")] public double? MonoStaminaFactor { get; set; }
     [JsonProperty("max_combo")]                   public int    MaxCombo                  { get; set; }
     [JsonProperty("star_rating")]                 public double StarRating                { get; set; }
     [JsonProperty("aim_difficulty")]              public double? AimDifficulty            { get; set; }
@@ -1136,6 +1172,7 @@ public class Beatmaps
 
 public class BeatmapsetSearchResult
 {
+    [JsonProperty("search")] public Newtonsoft.Json.Linq.JObject? Search { get; set; }
     [JsonProperty("beatmapsets")]            public List<Beatmapset> Beatmapsets           { get; set; } = [];
     [JsonProperty("cursor")]                 public Cursor?          Cursor                { get; set; }
     [JsonProperty("cursor_string")]          public string?          CursorString          { get; set; }
@@ -1174,9 +1211,21 @@ public class BeatmapsetEvent
     [JsonProperty("discussion")] public BeatmapsetDiscussion? Discussion { get; set; }
     [JsonProperty("comment")]    public object?            Comment     { get; set; }
 
+    [JsonIgnore] public BeatmapsetEventType Type { get; set; }
+    [JsonIgnore] public string? RawType { get; set; }
+
     [JsonProperty("type")]
-    [JsonConverter(typeof(BeatmapsetEventTypeConverter))]
-    public BeatmapsetEventType Type { get; set; }
+    public string ApiType
+    {
+        get => Type == BeatmapsetEventType.Unknown && RawType != null
+            ? RawType : new BeatmapsetEventTypeConverter().Format(Type);
+        set
+        {
+            RawType = value;
+            Type = new BeatmapsetEventTypeConverter().TryParse(value, out var type)
+                ? type : BeatmapsetEventType.Unknown;
+        }
+    }
 
     [JsonProperty("created_at")]
     [JsonConverter(typeof(DateTimeOffsetRequiredConverter))]

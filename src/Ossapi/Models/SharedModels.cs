@@ -68,8 +68,7 @@ public class UserGroup
     [JsonProperty("has_listing")]     public bool             HasListing    { get; set; }
     [JsonProperty("has_playmodes")]   public bool             HasPlaymodes  { get; set; }
 
-    [JsonProperty("playmodes")]
-    [JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+    [JsonProperty("playmodes", ItemConverterType = typeof(GameModeConverter))]
     public List<GameMode>? Playmodes { get; set; }
 }
 
@@ -139,6 +138,7 @@ public class UserAchievement
 
 public class UserStatistics
 {
+    [JsonProperty("rank")] public UserStatisticsRank? Rank { get; set; }
     [JsonProperty("count_100")]         public int             Count100              { get; set; }
     [JsonProperty("count_300")]         public int             Count300              { get; set; }
     [JsonProperty("count_50")]          public int             Count50               { get; set; }
@@ -214,9 +214,51 @@ public class DailyChallengeUserStats
 
 public class Team
 {
-    [JsonProperty("flag_url")]   public string FlagUrl   { get; set; } = "";
+    [JsonProperty("flag_url")]   public string? FlagUrl   { get; set; }
     [JsonProperty("id")]         public int    Id        { get; set; }
     [JsonProperty("name")]       public string Name      { get; set; } = "";
     [JsonProperty("short_name")] public string ShortName { get; set; } = "";
     [JsonProperty("url")]        public string Url       { get; set; } = "";
+}
+
+
+public class UserStatisticsRank
+{
+    [JsonProperty("country")] public int? Country { get; set; }
+}
+
+public class MatchmakingStatistics
+{
+    [JsonProperty("first_placements")] public int FirstPlacements { get; set; }
+    [JsonProperty("is_rating_provisional")] public bool IsRatingProvisional { get; set; }
+    [JsonProperty("plays")] public int Plays { get; set; }
+    [JsonProperty("pool_id")] public int PoolId { get; set; }
+    [JsonProperty("rank")] public int? Rank { get; set; }
+    [JsonProperty("rank_percent")] public double? RankPercent { get; set; }
+    [JsonProperty("rating")] public double Rating { get; set; }
+    [JsonProperty("total_points")] public long TotalPoints { get; set; }
+    [JsonProperty("user_id")] public int UserId { get; set; }
+    [JsonProperty("pool")] public MatchmakingPool? Pool { get; set; }
+    [JsonProperty("recent_history")] public List<MatchmakingHistory>? RecentHistory { get; set; }
+}
+
+public class MatchmakingPool
+{
+    [JsonProperty("active")] public bool Active { get; set; }
+    [JsonProperty("id")] public int Id { get; set; }
+    [JsonProperty("name")] public string Name { get; set; } = "";
+    [JsonProperty("ruleset_id")] public int RulesetId { get; set; }
+    [JsonProperty("type")] public string Type { get; set; } = "";
+    [JsonProperty("variant_id")] public int VariantId { get; set; }
+}
+
+public class MatchmakingHistory
+{
+    [JsonProperty("created_at")]
+    [JsonConverter(typeof(DateTimeOffsetRequiredConverter))]
+    public DateTimeOffset CreatedAt { get; set; }
+    [JsonProperty("elo_after")] public double EloAfter { get; set; }
+    [JsonProperty("id")] public long Id { get; set; }
+    [JsonProperty("result")] public string Result { get; set; } = "";
+    [JsonProperty("room_id")] public int RoomId { get; set; }
 }

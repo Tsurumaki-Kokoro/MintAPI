@@ -57,6 +57,7 @@ public class BeatmapsetEventConverter : JsonConverter
 {
     private static readonly Dictionary<BeatmapsetEventType, Type> CommentTypeMap = new()
     {
+        [BeatmapsetEventType.OffsetEdit]             = typeof(BeatmapsetEventCommentChange),
         [BeatmapsetEventType.BeatmapOwnerChange]      = typeof(BeatmapsetEventCommentOwnerChange),
         [BeatmapsetEventType.DiscussionDelete]         = typeof(BeatmapsetEventCommentNoPost),
         [BeatmapsetEventType.DiscussionPostDelete]     = typeof(BeatmapsetEventComment),
@@ -94,7 +95,8 @@ public class BeatmapsetEventConverter : JsonConverter
         var typeStr = obj["type"]?.Value<string>() ?? "";
 
         var bsEventTypeConverter = new BeatmapsetEventTypeConverter();
-        bsEventTypeConverter.TryParse(typeStr, out var bsEventType);
+        if (!bsEventTypeConverter.TryParse(typeStr, out var bsEventType))
+            bsEventType = BeatmapsetEventType.Unknown;
         CommentTypeMap.TryGetValue(bsEventType, out var commentType);
 
         var result = new BeatmapsetEvent
@@ -102,6 +104,7 @@ public class BeatmapsetEventConverter : JsonConverter
             Id         = obj["id"]?.Value<int>()    ?? 0,
             UserId     = obj["user_id"]?.Value<int?>(),
             Type       = bsEventType,
+            RawType    = typeStr,
             CreatedAt  = obj["created_at"] is JToken ca
                          ? ca.ToObject<DateTimeOffset>(serializer)
                          : default,

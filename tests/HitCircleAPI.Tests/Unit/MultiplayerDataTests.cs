@@ -128,7 +128,7 @@ public class MultiplayerDataTests
                     Id = index, BeatmapId = 123 + index, StartTime = start.AddMinutes(index * 3), EndTime = start.AddMinutes(index * 3 + 2),
                     TeamType = team ? TeamType.TeamVs : TeamType.HeadToHead, ScoringType = ScoringType.ScoreV2,
                     Beatmap = new BeatmapCompact { Id = 123 + index, Version = "Another", DifficultyRating = 6.42,
-                        Beatmapset = new BeatmapsetCompact { Title = index % 2 == 0 ? "星の海 / Sea of Stars" : "A New Beginning", Artist = "Sample Artist" } },
+                        Beatmapset = new Beatmapset { Title = index % 2 == 0 ? "星の海 / Sea of Stars" : "A New Beginning", Artist = "Sample Artist" } },
                     Scores = [new LegacyScore { UserId = 1, Score = 100, Accuracy = .98, MaxCombo = 800, Match = new ScoreMatchInfo { Team = team ? "red" : "none", Pass = true } },
                         new LegacyScore { UserId = 2, Score = 100, Accuracy = .97, MaxCombo = 700, Match = new ScoreMatchInfo { Team = team ? "blue" : "none", Pass = true } }]
                 }

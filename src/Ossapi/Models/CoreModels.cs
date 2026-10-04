@@ -106,6 +106,7 @@ public class NonLegacyMod
 
 public class BeatmapCompact
 {
+    [JsonProperty("lazer_only")] public bool? LazerOnly { get; set; }
     [JsonProperty("difficulty_rating")] public double     DifficultyRating { get; set; }
     [JsonProperty("id")]                public int        Id               { get; set; }
     [JsonProperty("mode")]
@@ -122,7 +123,7 @@ public class BeatmapCompact
     [JsonProperty("beatmapset_id")] public int    BeatmapsetId { get; set; }
 
     // optional
-    [JsonProperty("beatmapset")]   public BeatmapsetCompact? Beatmapset { get; set; }
+    [JsonProperty("beatmapset")]   public Beatmapset? Beatmapset { get; set; }
     [JsonProperty("checksum")]     public string?            Checksum   { get; set; }
     [JsonProperty("failtimes")]    public Failtimes?         Failtimes  { get; set; }
     [JsonProperty("max_combo")]    public int?               MaxCombo   { get; set; }
@@ -241,7 +242,7 @@ public class Nominations
 public class Nomination
 {
     [JsonProperty("beatmapset_id")] public int         BeatmapsetId { get; set; }
-    [JsonProperty("rulesets")]      public List<GameMode> Rulesets  { get; set; } = [];
+    [JsonProperty("rulesets")]      public List<GameMode>? Rulesets  { get; set; }
     [JsonProperty("reset")]         public bool        Reset        { get; set; }
     [JsonProperty("user_id")]       public int         UserId       { get; set; }
 }
@@ -251,7 +252,7 @@ public class BeatmapTag
     [JsonProperty("description")] public string Description { get; set; } = "";
     [JsonProperty("id")]          public int    Id          { get; set; }
     [JsonProperty("name")]        public string Name        { get; set; } = "";
-    [JsonProperty("ruleset_id")]  public int    RulesetId   { get; set; }
+    [JsonProperty("ruleset_id")]  public int?   RulesetId   { get; set; }
 
     [JsonProperty("created_at")]
     [JsonConverter(typeof(DateTimeOffsetConverter))]
@@ -264,6 +265,13 @@ public class BeatmapTag
 
 public class Beatmapset : BeatmapsetCompact
 {
+    [JsonProperty("converts")] public List<Beatmap>? Converts { get; set; }
+    [JsonProperty("description")] public BeatmapsetDescription? Description { get; set; }
+    [JsonProperty("genre")] public BeatmapsetClassification? Genre { get; set; }
+    [JsonProperty("language")] public BeatmapsetClassification? Language { get; set; }
+    [JsonProperty("recent_favourites")] public List<UserCompact>? RecentFavourites { get; set; }
+    [JsonProperty("related_users")] public List<UserCompact>? RelatedUsers { get; set; }
+    [JsonProperty("ratings")] public List<int>? Ratings { get; set; }
     [JsonProperty("availability")]       public Availability  AvailabilityInfo  { get; set; } = new();
     [JsonProperty("bpm")]                public double        Bpm               { get; set; }
     [JsonProperty("can_be_hyped")]       public bool          CanBeHyped        { get; set; }
@@ -308,6 +316,8 @@ public class ScoreMatchInfo
 
 public class LegacyScore
 {
+    /// <summary>Full current-format score, when returned by the matches endpoint.</summary>
+    [JsonIgnore] public Score? ModernScore { get; set; }
     [JsonProperty("id")]          public long?  Id        { get; set; }
     [JsonProperty("best_id")]     public long?  BestId    { get; set; }
     [JsonProperty("user_id")]     public int   UserId    { get; set; }
@@ -339,7 +349,10 @@ public class LegacyScore
     [JsonConverter(typeof(DateTimeOffsetRequiredConverter))]
     public DateTimeOffset CreatedAt { get; set; }
 
-    [JsonProperty("statistics")]   public Statistics?          Statistics { get; set; }
+    [JsonProperty("statistics")]
+    [JsonConverter(typeof(LegacyScoreStatisticsConverter))]
+    public Statistics? Statistics { get; set; }
+    [JsonIgnore] public LegacyStatistics? LegacyStatistics { get; set; }
     [JsonProperty("beatmap")]      public Beatmap?             Beatmap    { get; set; }
     [JsonProperty("beatmapset")]   public BeatmapsetCompact?   Beatmapset { get; set; }
     [JsonProperty("weight")]       public Weight?              Weight     { get; set; }
@@ -349,6 +362,12 @@ public class LegacyScore
 
 public class Score
 {
+    [JsonProperty("current_user_attributes")] public ScoreCurrentUserAttributes? CurrentUserAttributes { get; set; }
+    [JsonProperty("replay_views")] public int? ReplayViews { get; set; }
+    [JsonProperty("room_summary")] public Newtonsoft.Json.Linq.JObject? RoomSummary { get; set; }
+    [JsonProperty("room_id")] public int? RoomId { get; set; }
+    [JsonProperty("playlist_item_id")] public int? PlaylistItemId { get; set; }
+    [JsonProperty("solo_score_id")] public long? SoloScoreId { get; set; }
     [JsonProperty("id")]                     public long?   Id                      { get; set; }
     [JsonProperty("best_id")]                public long?   BestId                  { get; set; }
     [JsonProperty("user_id")]                public int     UserId                  { get; set; }
@@ -489,7 +508,7 @@ public class BeatmapsetEventCommentOwnerChange : BeatmapsetEventCommentNone
     [JsonProperty("beatmap_version")]     public string       BeatmapVersion  { get; set; } = "";
     [JsonProperty("new_user_id")]         public int          NewUserId       { get; set; }
     [JsonProperty("new_user_username")]   public string       NewUserUsername { get; set; } = "";
-    [JsonProperty("new_users")]           public List<int>    NewUsers        { get; set; } = [];
+    [JsonProperty("new_users")]           public List<BeatmapOwner> NewUsers        { get; set; } = [];
 }
 
 public class BeatmapsetEventCommentNominate
@@ -508,4 +527,22 @@ public class BeatmapsetEventCommentWithSourceUser : BeatmapsetEventCommentNoPost
 {
     [JsonProperty("source_user_id")]       public int    SourceUserId       { get; set; }
     [JsonProperty("source_user_username")] public string SourceUserUsername { get; set; } = "";
+}
+
+
+public class ScoreCurrentUserAttributes
+{
+    [JsonProperty("pin")] public Newtonsoft.Json.Linq.JObject? Pin { get; set; }
+}
+
+
+public class BeatmapsetDescription
+{
+    [JsonProperty("description")] public string Description { get; set; } = "";
+}
+
+public class BeatmapsetClassification
+{
+    [JsonProperty("id")] public int Id { get; set; }
+    [JsonProperty("name")] public string Name { get; set; } = "";
 }

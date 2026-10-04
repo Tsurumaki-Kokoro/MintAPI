@@ -6,6 +6,8 @@ namespace Ossapi.Models;
 
 public class UserCompact
 {
+    [JsonProperty("current_user_attributes")] public Newtonsoft.Json.Linq.JObject? CurrentUserAttributes { get; set; }
+    [JsonProperty("matchmaking_stats")] public List<MatchmakingStatistics>? MatchmakingStats { get; set; }
     // required fields
     [JsonProperty("avatar_url")]      public string AvatarUrl     { get; set; } = "";
     [JsonProperty("country_code")]    public string CountryCode   { get; set; } = "";
@@ -30,7 +32,7 @@ public class UserCompact
     [JsonProperty("active_tournament_banners")]  public List<ProfileBanner>?      ActiveTournamentBanners { get; set; }
     [JsonProperty("badges")]                     public List<UserBadge>?          Badges                  { get; set; }
     [JsonProperty("beatmap_playcounts_count")]   public int?                      BeatmapPlaycountsCount  { get; set; }
-    [JsonProperty("blocks")]                     public UserRelation?             Blocks                  { get; set; }
+    [JsonProperty("blocks")]                     public List<UserRelation>?       Blocks                  { get; set; }
     [JsonProperty("country")]                    public Country?                  Country                 { get; set; }
     [JsonProperty("cover")]                      public Cover?                    Cover                   { get; set; }
     [JsonProperty("default_group")]              public string?                   DefaultGroup            { get; set; }

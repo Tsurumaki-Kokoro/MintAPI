@@ -45,6 +45,8 @@ public class OssapiClient : IDisposable
     public OssapiClient(HttpClient httpClient)
     {
         _http = httpClient;
+        if (!_http.DefaultRequestHeaders.Contains("x-api-version"))
+            _http.DefaultRequestHeaders.Add("x-api-version", ApiVersion.ToString());
         _jsonSettings = BuildJsonSettings();
     }
 
@@ -88,11 +90,10 @@ public class OssapiClient : IDisposable
     // -------------------------------------------------------------------------
 
     private async Task<T> GetAsync<T>(string url, Dictionary<string, object?>? queryParams = null,
-        CancellationToken ct = default, bool ensureSuccess = false)
+        CancellationToken ct = default)
     {
         var fullUrl = BuildUrl(url, queryParams);
         using var response = await _http.GetAsync(fullUrl, ct);
-        if (ensureSuccess) response.EnsureSuccessStatusCode();
         return await DeserializeAsync<T>(response, ct);
     }
 
@@ -104,7 +105,8 @@ public class OssapiClient : IDisposable
             var json = JsonConvert.SerializeObject(body, _jsonSettings);
             content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
         }
-        var response = await _http.PostAsync(url, content, ct);
+        using var requestContent = content;
+        using var response = await _http.PostAsync(url, requestContent, ct);
         return await DeserializeAsync<T>(response, ct);
     }
 
@@ -116,12 +118,14 @@ public class OssapiClient : IDisposable
             var json = JsonConvert.SerializeObject(body, _jsonSettings);
             content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
         }
-        var response = await _http.PutAsync(url, content, ct);
+        using var requestContent = content;
+        using var response = await _http.PutAsync(url, requestContent, ct);
         return await DeserializeAsync<T>(response, ct);
     }
 
     private async Task<T> DeserializeAsync<T>(HttpResponseMessage response, CancellationToken ct)
     {
+        response.EnsureSuccessStatusCode();
         var body = await response.Content.ReadAsStringAsync(ct);
         CheckApiError(body, response.RequestMessage?.RequestUri?.ToString() ?? "");
         var result = JsonConvert.DeserializeObject<T>(body, _jsonSettings);
@@ -205,6 +209,7 @@ public class OssapiClient : IDisposable
             ScoreType.Recent  => "recent",
             _                 => v.ToString(),
         },
+        BeatmapScoreRankingType v => v.ToString().ToLowerInvariant(),
         RankingType v                    => v switch
         {
             RankingType.Charts      => "charts",
@@ -369,9 +374,11 @@ public class OssapiClient : IDisposable
             ChangelogMessageFormat.Markdown => "markdown",
             _                               => v.ToString(),
         },
+        BeatmapsetEventType v => new BeatmapsetEventTypeConverter().Format(v),
+        MessageType v => new MessageTypeConverter().Format(v),
         BeatmapsetDiscussionVoteValue v  => ((int)v).ToString(),
         Enum e                           => Convert.ToInt64(e).ToString(),
-        DateTimeOffset dt                => (dt.ToUnixTimeMilliseconds() * 1000L).ToString(),
+        DateTimeOffset dt                => dt.ToString("O", System.Globalization.CultureInfo.InvariantCulture),
         _                                => value.ToString() ?? "",
     };
 
@@ -436,7 +443,7 @@ public class OssapiClient : IDisposable
         int beatmapId,
         GameMode? mode       = null,
         Mod? mods            = null,
-        RankingType? type    = null,
+        BeatmapScoreRankingType? type = null,
         int? limit           = null,
         bool? legacyOnly     = null,
         CancellationToken ct = default)
@@ -487,7 +494,7 @@ public class OssapiClient : IDisposable
         CancellationToken ct = default)
         => PostAsync<DifficultyAttributes>($"beatmaps/{beatmapId}/attributes", new
         {
-            mods        = mods,
+            mods        = mods?.Value,
             ruleset     = ruleset.HasValue ? FormatValue(ruleset.Value) : null,
             ruleset_id  = rulesetId,
         }, ct);
@@ -878,7 +885,7 @@ public class OssapiClient : IDisposable
             ["after"]  = afterId,
             ["before"] = beforeId,
             ["limit"]  = limit,
-        }, ct, ensureSuccess: true);
+        }, ct);
 
     // -------------------------------------------------------------------------
     // Me endpoint
@@ -1071,7 +1078,7 @@ public class OssapiClient : IDisposable
         var query = key is not null
             ? new Dictionary<string, object?> { ["key"] = key }
             : null;
-        return await GetAsync<User>(url, query, ct, ensureSuccess: true);
+        return await GetAsync<User>(url, query, ct);
     }
 
     /// <summary>Get kudosu history of a user.</summary>
@@ -1180,13 +1187,19 @@ public class OssapiClient : IDisposable
     }
 
     /// <summary>Batch-get users by id.</summary>
+    public Task<List<UserCompact>> GetUsersAsync(IEnumerable<int> userIds, CancellationToken ct = default)
+        => GetUsersAsync(userIds, includeVariantStatistics: false, ct);
+
+    /// <summary>Batch-get users, optionally including ruleset variant statistics.</summary>
     public async Task<List<UserCompact>> GetUsersAsync(
         IEnumerable<int> userIds,
+        bool includeVariantStatistics,
         CancellationToken ct = default)
     {
         var result = await GetAsync<Users>("users", new()
         {
             ["ids"] = userIds.ToList(),
+            ["include_variant_statistics"] = includeVariantStatistics ? 1 : 0,
         }, ct);
         return result.UserList;
     }
@@ -1197,7 +1210,7 @@ public class OssapiClient : IDisposable
 
     /// <summary>Get a wiki page.</summary>
     public Task<WikiPage> GetWikiPageAsync(string locale, string path, CancellationToken ct = default)
-        => GetAsync<WikiPage>($"wiki/{Uri.EscapeDataString(locale)}/{Uri.EscapeDataString(path)}", ct: ct);
+        => GetAsync<WikiPage>($"wiki/{Uri.EscapeDataString(locale)}/{string.Join("/", path.Split('/').Select(Uri.EscapeDataString))}", ct: ct);
 
     // -------------------------------------------------------------------------
     // IDisposable

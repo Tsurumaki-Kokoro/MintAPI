@@ -24,6 +24,9 @@ public abstract class StringEnumConverterBase<T> : JsonConverter<T> where T : st
         else throw new JsonSerializationException($"Cannot serialize {typeof(T).Name}.{value}");
     }
 
+    public string Format(T value) => EnumToApiString.TryGetValue(value, out var text)
+        ? text : throw new JsonSerializationException($"Unknown {typeof(T).Name}: {value}");
+
     public bool TryParse(string s, out T value) => ApiStringToEnum.TryGetValue(s, out value);
 }
 
@@ -113,6 +116,8 @@ public class BeatmapsetEventTypeConverter : StringEnumConverterBase<BeatmapsetEv
         ["rank"]                       = BeatmapsetEventType.Rank,
         ["remove_from_loved"]          = BeatmapsetEventType.RemoveFromLoved,
         ["nsfw_toggle"]                = BeatmapsetEventType.NsfwToggle,
+        ["offset_edit"]                = BeatmapsetEventType.OffsetEdit,
+        ["unknown"]                    = BeatmapsetEventType.Unknown,
     };
     private static readonly Dictionary<BeatmapsetEventType, string> Reverse =
         Forward.ToDictionary(kv => kv.Value, kv => kv.Key);

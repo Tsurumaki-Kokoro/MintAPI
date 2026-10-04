@@ -99,6 +99,8 @@ public enum BeatmapsetEventType
     Rank,
     RemoveFromLoved,
     NsfwToggle,
+    OffsetEdit,
+    Unknown,
 }
 
 public enum BeatmapsetDownload
@@ -245,6 +247,15 @@ public enum RankingFilter
 {
     All,
     Friends,
+}
+
+/// <summary>Leaderboard filters for scores on a single beatmap.</summary>
+public enum BeatmapScoreRankingType
+{
+    Global,
+    Country,
+    Friend,
+    Team,
 }
 
 public enum RankingType
