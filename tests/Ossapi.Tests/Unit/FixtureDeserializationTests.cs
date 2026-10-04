@@ -77,6 +77,29 @@ public class FixtureDeserializationTests
     }
 
     [Fact]
+    public void Beatmap_retains_ranked_date_from_embedded_compact_beatmapset()
+    {
+        var beatmap = JsonConvert.DeserializeObject<Beatmap>("""
+            {"id":1949106,"beatmapset_id":933630,"status":"ranked","ranked":1,
+             "beatmapset":{"id":933630,"user_id":6381153,"status":"ranked",
+                           "ranked_date":"2019-05-07T09:40:07Z"}}
+            """, Settings)!;
+        Assert.IsAssignableFrom<BeatmapsetCompact>(beatmap.Beatmapset);
+        Assert.Equal(RankStatus.Ranked, beatmap.Status);
+        Assert.Equal(DateTimeOffset.Parse("2019-05-07T09:40:07Z"), beatmap.Beatmapset!.RankedDate);
+    }
+
+    [Fact]
+    public void Full_beatmapset_retains_ranked_date_and_missing_date_stays_null()
+    {
+        var set = JsonConvert.DeserializeObject<Beatmapset>("""
+            {"id":933630,"status":"ranked","ranked_date":"2019-05-07T09:40:07Z"}
+            """, Settings)!;
+        Assert.Equal(DateTimeOffset.Parse("2019-05-07T09:40:07Z"), set.RankedDate);
+        Assert.Null(JsonConvert.DeserializeObject<BeatmapsetCompact>("{\"status\":\"ranked\"}", Settings)!.RankedDate);
+    }
+
+    [Fact]
     public void Beatmap_Deserializes_Failtimes()
     {
         var beatmap = Deserialize<Beatmap>("beatmap.json");

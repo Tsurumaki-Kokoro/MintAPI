@@ -199,6 +199,10 @@ public class BeatmapsetCompact
     public RankStatus Status { get; set; }
 
     // optional expanded fields
+    [JsonProperty("ranked_date")]
+    [JsonConverter(typeof(DateTimeOffsetConverter))]
+    public DateTimeOffset? RankedDate { get; set; }
+
     [JsonProperty("beatmaps")]              public List<Beatmap>?      Beatmaps             { get; set; }
     [JsonProperty("current_nominations")]   public List<Nomination>?   CurrentNominations   { get; set; }
     [JsonProperty("genre_id")]              public int?                GenreId              { get; set; }
@@ -285,10 +289,6 @@ public class Beatmapset : BeatmapsetCompact
     [JsonProperty("last_updated")]
     [JsonConverter(typeof(DateTimeOffsetRequiredConverter))]
     public DateTimeOffset LastUpdated { get; set; }
-
-    [JsonProperty("ranked_date")]
-    [JsonConverter(typeof(DateTimeOffsetConverter))]
-    public DateTimeOffset? RankedDate { get; set; }
 
     [JsonProperty("submitted_date")]
     [JsonConverter(typeof(DateTimeOffsetConverter))]

@@ -19,20 +19,30 @@ public class DateTimeOffsetConverter : JsonConverter<DateTimeOffset?>
             return DateTimeOffset.FromUnixTimeMilliseconds(ms);
         }
 
+        // Json.NET may have parsed ISO strings already. Keep the instant and offset;
+        // DateTime.ToString() discards UTC's trailing Z before a second parse.
+        if (reader.TokenType == JsonToken.Date)
+        {
+            if (reader.Value is DateTimeOffset offset) return offset;
+            if (reader.Value is DateTime date)
+                return new DateTimeOffset(date.Kind == DateTimeKind.Unspecified
+                    ? DateTime.SpecifyKind(date, DateTimeKind.Utc) : date);
+        }
+
         if (reader.TokenType is JsonToken.String or JsonToken.Date)
         {
             var s = reader.Value?.ToString();
             if (string.IsNullOrEmpty(s)) return null;
-
-            if (DateTimeOffset.TryParse(s, null,
-                    System.Globalization.DateTimeStyles.RoundtripKind, out var dto))
-                return dto;
 
             // date-only: "2021-01-01"
             if (DateTime.TryParseExact(s, "yyyy-MM-dd",
                     System.Globalization.CultureInfo.InvariantCulture,
                     System.Globalization.DateTimeStyles.None, out var dt))
                 return new DateTimeOffset(dt, TimeSpan.Zero);
+
+            if (DateTimeOffset.TryParse(s, null,
+                    System.Globalization.DateTimeStyles.RoundtripKind, out var dto))
+                return dto;
 
             throw new JsonSerializationException($"Cannot parse datetime: '{s}'");
         }

@@ -90,6 +90,22 @@ public class JsonConverterTests
         var dto = JsonConvert.DeserializeObject<DateTimeOffset?>("\"2021-06-15\"", settings);
         Assert.NotNull(dto);
         Assert.Equal(15, dto!.Value.Day);
+        Assert.Equal(TimeSpan.Zero, dto.Value.Offset);
+    }
+
+    [Theory]
+    [InlineData(DateParseHandling.DateTime)]
+    [InlineData(DateParseHandling.DateTimeOffset)]
+    [InlineData(DateParseHandling.None)]
+    public void DateTimeOffset_keeps_the_actual_instant_for_all_reader_date_modes(DateParseHandling mode)
+    {
+        var settings = new JsonSerializerSettings { DateParseHandling = mode, Converters = { new DateTimeOffsetConverter() } };
+        foreach (var timestamp in new[] { "2019-05-07T09:40:07Z", "2019-05-07T13:10:07+03:30" })
+        {
+            var result = JsonConvert.DeserializeObject<DateTimeOffset?>(JsonConvert.SerializeObject(timestamp), settings);
+            Assert.Equal(DateTimeOffset.Parse("2019-05-07T09:40:07Z"), result);
+            Assert.Equal("2019-05-07 17:40:07", result!.Value.ToOffset(TimeSpan.FromHours(8)).ToString("yyyy-MM-dd HH:mm:ss"));
+        }
     }
 
     [Fact]
