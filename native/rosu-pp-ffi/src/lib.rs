@@ -134,6 +134,33 @@ pub extern "C" fn difficulty_attrs_mode(handle: *const DifficultyAttrsHandle) ->
     }
 }
 
+#[repr(C)]
+pub struct OsuAnalysisAttributes {
+    pub aim: f64,
+    pub speed: f64,
+    pub slider_factor: f64,
+    pub ar: f64,
+    pub od: f64,
+}
+
+/// Standard-only skill attributes and effective map settings. Additive ABI.
+#[unsafe(no_mangle)]
+pub extern "C" fn beatmap_osu_analysis_attributes(
+    map: *const BeatmapHandle, mods: u32, output: *mut OsuAnalysisAttributes,
+) -> bool {
+    if map.is_null() || output.is_null() { return false; }
+    let map = unsafe { &(*map).0 };
+    if map.mode != rosu_pp::model::mode::GameMode::Osu || map.hit_objects.is_empty() { return false; }
+    let DifficultyAttributes::Osu(attrs) = Difficulty::new().mods(mods).lazer(true).calculate(map)
+        else { return false; };
+    let effective = map.attributes().mods(mods).build().apply_clock_rate();
+    unsafe { *output = OsuAnalysisAttributes {
+        aim: attrs.aim, speed: attrs.speed, slider_factor: attrs.slider_factor,
+        ar: effective.ar, od: effective.od,
+    }; }
+    true
+}
+
 // ── Performance ───────────────────────────────────────────────────────────────
 
 // Performance<'map> holds a reference to the beatmap. We extend the lifetime
@@ -401,4 +428,135 @@ fn prepare_preview_mania(map: &mut Beatmap, inverse: bool, hold_off: bool) {
     if hold_off {
         for h in &mut map.hit_objects { h.kind = HitObjectKind::Circle; }
     }
+}
+
+// Additive analysis ABI; existing performance and preview layouts remain stable.
+#[repr(C)]
+#[derive(Default)]
+pub struct RulesetAnalysisAttributes {
+    pub stamina: f64,
+    pub rhythm: f64,
+    pub color: f64,
+    pub reading: f64,
+    pub mono_stamina_factor: f64,
+    pub great_hit_window: f64,
+    pub ok_hit_window: f64,
+    pub preempt: f64,
+    pub ar: f64,
+    pub od: f64,
+    pub fruits: u32,
+    pub droplets: u32,
+    pub tiny_droplets: u32,
+    pub objects: u32,
+    pub holds: u32,
+    pub mode: u8,
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn beatmap_ruleset_analysis_attributes(
+    map: *const BeatmapHandle, mods: u32, output: *mut RulesetAnalysisAttributes,
+) -> bool {
+    if map.is_null() || output.is_null() { return false; }
+    let map = unsafe { &(*map).0 };
+    if map.hit_objects.is_empty() { return false; }
+    let difficulty = Difficulty::new().mods(mods).lazer(true);
+    let Ok(attrs) = difficulty.checked_calculate(map) else { return false; };
+    let effective = map.attributes().difficulty(&difficulty).build().apply_clock_rate();
+    let mut result = RulesetAnalysisAttributes { ar: effective.ar, od: effective.od,
+        objects: map.hit_objects.len() as u32, ..Default::default() };
+    match attrs {
+        DifficultyAttributes::Osu(_) => {},
+        DifficultyAttributes::Taiko(a) => {
+            result.mode = 1;
+            result.stamina = a.stamina;
+            result.rhythm = a.rhythm;
+            result.color = a.color;
+            result.reading = a.reading;
+            result.mono_stamina_factor = a.mono_stamina_factor;
+            result.great_hit_window = a.great_hit_window;
+            result.ok_hit_window = a.ok_hit_window;
+        },
+        DifficultyAttributes::Catch(a) => {
+            result.mode = 2;
+            result.preempt = a.preempt;
+            result.fruits = a.n_fruits;
+            result.droplets = a.n_droplets;
+            result.tiny_droplets = a.n_tiny_droplets;
+        },
+        DifficultyAttributes::Mania(a) => {
+            result.mode = 3;
+            result.objects = a.n_objects;
+            result.holds = a.n_hold_notes;
+        },
+    }
+    unsafe { *output = result; }
+    true
+}
+
+#[repr(C)]
+pub struct AnalysisPerformanceResult {
+    pub result: PerformanceResult,
+    pub pp_difficulty: f64,
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn performance_calculate_analysis(handle: *mut PerformanceHandle) -> AnalysisPerformanceResult {
+    let owned = unsafe { Box::from_raw(handle) };
+    let attrs = owned.0.calculate();
+    let (mode, pp_aim, pp_speed, pp_acc, pp_difficulty) = match &attrs {
+        rosu_pp::any::PerformanceAttributes::Osu(a) => (0, a.pp_aim, a.pp_speed, a.pp_acc, f64::NAN),
+        rosu_pp::any::PerformanceAttributes::Taiko(a) => (1, f64::NAN, f64::NAN, a.pp_acc, a.pp_difficulty),
+        rosu_pp::any::PerformanceAttributes::Catch(_) => (2, f64::NAN, f64::NAN, f64::NAN, f64::NAN),
+        rosu_pp::any::PerformanceAttributes::Mania(a) => (3, f64::NAN, f64::NAN, f64::NAN, a.pp_difficulty),
+    };
+    AnalysisPerformanceResult { result: PerformanceResult { pp: attrs.pp(), stars: attrs.stars(),
+        pp_aim, pp_speed, pp_acc, max_combo: attrs.max_combo(), mode }, pp_difficulty }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct AnalysisStrainPoint {
+    pub end_time_ms: f64,
+    pub values: [f64; 4],
+}
+pub struct AnalysisStrainsHandle { points: Vec<AnalysisStrainPoint> }
+
+#[unsafe(no_mangle)]
+pub extern "C" fn difficulty_analysis_strains(diff: *const DifficultyHandle, map: *const BeatmapHandle) -> *mut AnalysisStrainsHandle {
+    if diff.is_null() || map.is_null() { return std::ptr::null_mut(); }
+    let (difficulty, beatmap) = unsafe { (&(*diff).0, &(*map).0) };
+    let Ok(strains) = difficulty.checked_strains(beatmap) else { return std::ptr::null_mut(); };
+    let series: Vec<Vec<f64>> = match strains {
+        rosu_pp::any::Strains::Osu(s) => vec![s.aim, s.speed],
+        rosu_pp::any::Strains::Taiko(s) => vec![s.stamina, s.rhythm, s.color, s.reading],
+        rosu_pp::any::Strains::Catch(s) => vec![s.movement],
+        rosu_pp::any::Strains::Mania(s) => vec![s.strains],
+    };
+    // Use the same processed-object alignment as native preview selection.
+    let timeline = difficulty_preview_strains(diff, map, false, false);
+    if timeline.is_null() { return std::ptr::null_mut(); }
+    let timeline = unsafe { Box::from_raw(timeline) };
+    let points = timeline.points.iter().enumerate().map(|(i, point)| {
+        let mut values = [0.0; 4];
+        for (j, skill) in series.iter().enumerate() { values[j] = skill.get(i).copied().unwrap_or(0.0); }
+        AnalysisStrainPoint { end_time_ms: point.end_time_ms, values }
+    }).collect();
+    Box::into_raw(Box::new(AnalysisStrainsHandle { points }))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn analysis_strains_count(handle: *const AnalysisStrainsHandle) -> usize {
+    if handle.is_null() { return 0; }
+    unsafe { (*handle).points.len() }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn analysis_strains_point(handle: *const AnalysisStrainsHandle, index: usize, output: *mut AnalysisStrainPoint) -> bool {
+    if handle.is_null() || output.is_null() { return false; }
+    if let Some(point) = unsafe { &(*handle).points }.get(index) {
+        unsafe { *output = *point; }
+        true
+    } else { false }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn analysis_strains_free(handle: *mut AnalysisStrainsHandle) {
+    if !handle.is_null() { unsafe { drop(Box::from_raw(handle)); } }
 }

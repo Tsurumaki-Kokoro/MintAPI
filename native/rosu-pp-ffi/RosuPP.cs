@@ -25,6 +25,18 @@ public sealed class Beatmap : IDisposable
         }
     }
 
+    public OsuAnalysisAttributes? GetOsuAnalysisAttributes(uint mods = 0)
+    {
+        ObjectDisposedException.ThrowIf(Handle == IntPtr.Zero, this);
+        return Native.beatmap_osu_analysis_attributes(Handle, mods, out var attributes) ? attributes : null;
+    }
+
+    public RulesetAnalysisAttributes? GetRulesetAnalysisAttributes(uint mods = 0)
+    {
+        ObjectDisposedException.ThrowIf(Handle == IntPtr.Zero, this);
+        return Native.beatmap_ruleset_analysis_attributes(Handle, mods, out var attributes) ? attributes : null;
+    }
+
     public void Dispose()
     {
         if (Handle != IntPtr.Zero) { Native.beatmap_free(Handle); Handle = IntPtr.Zero; }
@@ -72,6 +84,22 @@ public sealed class Difficulty : IDisposable
             return new(first, last, section, points);
         }
         finally { Native.osu_strains_free(handle); }
+    }
+
+    public AnalysisStrainPoint[] GetAnalysisStrains(Beatmap map)
+    {
+        ObjectDisposedException.ThrowIf(_h == IntPtr.Zero || map.Handle == IntPtr.Zero, this);
+        var handle = Native.difficulty_analysis_strains(_h, map.Handle);
+        if (handle == IntPtr.Zero) throw new InvalidOperationException("Analysis strains require a nonempty map.");
+        try
+        {
+            var points = new AnalysisStrainPoint[checked((int)Native.analysis_strains_count(handle))];
+            for (var i = 0; i < points.Length; i++)
+                if (!Native.analysis_strains_point(handle, (nuint)i, out points[i]))
+                    throw new InvalidOperationException("Invalid analysis strain index.");
+            return points;
+        }
+        finally { Native.analysis_strains_free(handle); }
     }
 
     public void Dispose()
@@ -134,6 +162,15 @@ public sealed class Performance : IDisposable
         return result;
     }
 
+    /// <summary>Consumes the handle and exposes ruleset-specific PP components.</summary>
+    public AnalysisPerformanceResult CalculateAnalysis()
+    {
+        ObjectDisposedException.ThrowIf(_h == IntPtr.Zero, this);
+        var result = Native.performance_calculate_analysis(_h);
+        _h = IntPtr.Zero;
+        return result;
+    }
+
     public void Dispose()
     {
         if (_h != IntPtr.Zero) { Native.performance_free(_h); _h = IntPtr.Zero; }
@@ -157,11 +194,22 @@ public struct PerformanceResult
 
 internal static unsafe class Native
 {
+    [DllImport("rosu_pp_ffi")] [return: MarshalAs(UnmanagedType.I1)]
+    internal static extern bool beatmap_ruleset_analysis_attributes(IntPtr map, uint mods, out RulesetAnalysisAttributes attributes);
+    [DllImport("rosu_pp_ffi")] internal static extern AnalysisPerformanceResult performance_calculate_analysis(IntPtr handle);
+    [DllImport("rosu_pp_ffi")] internal static extern IntPtr difficulty_analysis_strains(IntPtr diff, IntPtr map);
+    [DllImport("rosu_pp_ffi")] internal static extern nuint analysis_strains_count(IntPtr handle);
+    [DllImport("rosu_pp_ffi")] [return: MarshalAs(UnmanagedType.I1)]
+    internal static extern bool analysis_strains_point(IntPtr handle, nuint index, out AnalysisStrainPoint point);
+    [DllImport("rosu_pp_ffi")] internal static extern void analysis_strains_free(IntPtr handle);
+
     private const string Lib = "rosu_pp_ffi";
 
     [DllImport(Lib)] internal static extern IntPtr beatmap_from_path([MarshalAs(UnmanagedType.LPUTF8Str)] string path);
     [DllImport(Lib)] internal static extern IntPtr beatmap_from_bytes(byte* data, nuint len);
     [DllImport(Lib)] internal static extern void   beatmap_free(IntPtr h);
+    [DllImport(Lib)] [return: MarshalAs(UnmanagedType.I1)]
+    internal static extern bool beatmap_osu_analysis_attributes(IntPtr map, uint mods, out OsuAnalysisAttributes attributes);
     [DllImport(Lib)] internal static extern IntPtr difficulty_preview_strains(IntPtr difficulty, IntPtr map, [MarshalAs(UnmanagedType.I1)] bool inverse, [MarshalAs(UnmanagedType.I1)] bool holdOff);
 
     [DllImport(Lib)] internal static extern IntPtr difficulty_osu_strains(IntPtr diff, IntPtr map);
@@ -214,3 +262,55 @@ public struct OsuStrainPoint
 }
 
 public record OsuStrainTimeline(double FirstObjectMs, double LastObjectMs, double SectionMs, OsuStrainPoint[] Points);
+
+[StructLayout(LayoutKind.Sequential)]
+public struct OsuAnalysisAttributes
+{
+    public double Aim;
+    public double Speed;
+    public double SliderFactor;
+    public double Ar;
+    public double Od;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public struct RulesetAnalysisAttributes
+{
+    public double Stamina;
+    public double Rhythm;
+    public double Color;
+    public double Reading;
+    public double MonoStaminaFactor;
+    public double GreatHitWindow;
+    public double OkHitWindow;
+    public double Preempt;
+    public double Ar;
+    public double Od;
+    public uint Fruits;
+    public uint Droplets;
+    public uint TinyDroplets;
+    public uint Objects;
+    public uint Holds;
+    public byte Mode;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public struct AnalysisPerformanceResult
+{
+    public PerformanceResult Result;
+    public double PpDifficulty;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public struct AnalysisStrainPoint
+{
+    public double EndTimeMs;
+    public double First;
+    public double Second;
+    public double Third;
+    public double Fourth;
+    public readonly double Value(int index) => index switch
+    {
+        0 => First, 1 => Second, 2 => Third, 3 => Fourth, _ => throw new ArgumentOutOfRangeException(nameof(index))
+    };
+}
