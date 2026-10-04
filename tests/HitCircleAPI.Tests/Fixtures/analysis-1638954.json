@@ -1,0 +1,30 @@
+{
+  "id": 1638954,
+  "beatmapset_id": 777881,
+  "user_id": 2449200,
+  "mode": "mania",
+  "mode_int": 3,
+  "version": "[4K] Hard",
+  "status": "ranked",
+  "total_length": 65,
+  "hit_length": 64,
+  "bpm": 150,
+  "cs": 4,
+  "drain": 8,
+  "accuracy": 8,
+  "ar": 5,
+  "count_circles": 473,
+  "count_sliders": 121,
+  "count_spinners": 0,
+  "max_combo": 956,
+  "difficulty_rating": 3.3583,
+  "beatmapset": {
+    "id": 777881,
+    "artist": "ARCIEN",
+    "artist_unicode": "ARCIEN",
+    "title": "Future Son",
+    "creator": "AncuL",
+    "source": "",
+    "ranked_date": "2019-04-02T15:40:02Z"
+  }
+}

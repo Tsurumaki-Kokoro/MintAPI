@@ -80,10 +80,10 @@ public class BeatmapController(
         return File(cover, "image/jpeg");
     }
 
-    /// <summary>渲染谱面或谱面集信息图。</summary>
+    /// <summary>渲染谱面或谱面集信息图。default 单谱面包含各模式的 PP 参考、局部难度曲线与 Mods 对比，并展示 Standard / Taiko 的原生难度分项及 Catch / Mania 的物件构成。</summary>
     /// <param name="beatmap_id">谱面 ID，与 beatmapset_id 二选一。</param>
     /// <param name="beatmapset_id">谱面集 ID，与 beatmap_id 二选一。</param>
-    /// <param name="theme">渲染主题：yaowan（原 Python 模板）。</param>
+    /// <param name="theme">渲染主题：default 或 yaowan（原 Python 模板）。</param>
     /// <response code="200">PNG 图片。</response>
     /// <response code="400">参数或谱面无效。</response>
     /// <response code="500">读取或渲染失败。</response>
@@ -92,23 +92,23 @@ public class BeatmapController(
     public async Task<IActionResult> GetBeatmapInfo(
         [FromQuery] int? beatmap_id = null,
         [FromQuery] int? beatmapset_id = null,
-        [FromQuery] string theme = "yaowan")
+        [FromQuery] string theme = "default")
     {
-        if (theme != "yaowan") return BadRequest("theme 必须为 yaowan。");
+        if (theme is not ("default" or "yaowan")) return BadRequest("theme 必须为 default 或 yaowan。");
         if (beatmap_id is null && beatmapset_id is null)
             return BadRequest("Either beatmap_id or beatmapset_id is required");
 
         if (beatmap_id.HasValue)
         {
-            return await RenderBeatmapInfoAsync(beatmap_id.Value);
+            return await RenderBeatmapInfoAsync(beatmap_id.Value, theme);
         }
         else
         {
-            return await RenderBeatmapsetInfoAsync(beatmapset_id!.Value);
+            return await RenderBeatmapsetInfoAsync(beatmapset_id!.Value, theme);
         }
     }
 
-    private async Task<IActionResult> RenderBeatmapInfoAsync(int beatmapId)
+    private async Task<IActionResult> RenderBeatmapInfoAsync(int beatmapId, string theme)
     {
         Beatmap beatmap;
         try
@@ -141,6 +141,7 @@ public class BeatmapController(
             if (mapperId == 0)
             {
                 var fullSet = await osuApi.GetBeatmapsetAsync(beatmapsetId);
+                beatmap.Beatmapset = fullSet;
                 mapperId = fullSet.UserId;
             }
             mapper = await osuApi.GetUserAsync(mapperId.ToString());
@@ -166,7 +167,7 @@ public class BeatmapController(
         byte[] image;
         try
         {
-            image = await beatmapTheme.RenderBeatmapAsync(beatmap, mapper, mapBg, osuFilePath);
+            image = await beatmapTheme.RenderBeatmapAsync(beatmap, mapper, mapBg, osuFilePath, theme);
         }
         catch (Exception ex) when (ex is not RetryableException)
         {
@@ -177,7 +178,7 @@ public class BeatmapController(
         return File(image, "image/png");
     }
 
-    private async Task<IActionResult> RenderBeatmapsetInfoAsync(int beatmapsetId)
+    private async Task<IActionResult> RenderBeatmapsetInfoAsync(int beatmapsetId, string theme)
     {
         Beatmapset beatmapset;
         try
@@ -220,7 +221,7 @@ public class BeatmapController(
         byte[] image;
         try
         {
-            image = await beatmapTheme.RenderBeatmapsetAsync(beatmapset, coverBg);
+            image = await beatmapTheme.RenderBeatmapsetAsync(beatmapset, coverBg, theme);
         }
         catch (Exception ex) when (ex is not RetryableException)
         {

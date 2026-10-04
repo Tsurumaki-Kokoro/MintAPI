@@ -1,0 +1,30 @@
+{
+  "id": 1028484,
+  "beatmapset_id": 481954,
+  "user_id": 672430,
+  "mode": "taiko",
+  "mode_int": 1,
+  "version": "Muzukashii",
+  "status": "ranked",
+  "total_length": 89,
+  "hit_length": 88,
+  "bpm": 195,
+  "cs": 2,
+  "drain": 6,
+  "accuracy": 5,
+  "ar": 8,
+  "count_circles": 289,
+  "count_sliders": 4,
+  "count_spinners": 2,
+  "max_combo": 289,
+  "difficulty_rating": 2.91442,
+  "beatmapset": {
+    "id": 481954,
+    "artist": "9mm Parabellum Bullet",
+    "artist_unicode": "9mm Parabellum Bullet",
+    "title": "Inferno",
+    "creator": "Nofool",
+    "source": "ベルセルク",
+    "ranked_date": "2016-10-12T23:00:14Z"
+  }
+}

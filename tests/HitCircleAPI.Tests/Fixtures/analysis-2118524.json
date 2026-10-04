@@ -1,0 +1,30 @@
+{
+  "id": 2118524,
+  "beatmapset_id": 994994,
+  "user_id": 6053071,
+  "mode": "fruits",
+  "mode_int": 2,
+  "version": "Platter",
+  "status": "ranked",
+  "total_length": 118,
+  "hit_length": 116,
+  "bpm": 190,
+  "cs": 3.5,
+  "drain": 5,
+  "accuracy": 8,
+  "ar": 8,
+  "count_circles": 249,
+  "count_sliders": 227,
+  "count_spinners": 1,
+  "max_combo": 730,
+  "difficulty_rating": 3.23402,
+  "beatmapset": {
+    "id": 994994,
+    "artist": "gmtn. (witch's slave)",
+    "artist_unicode": "gmtn. (witch's slave)",
+    "title": "trappola bewitching",
+    "creator": "Du5t",
+    "source": "Arcaea",
+    "ranked_date": "2019-10-10T16:41:23Z"
+  }
+}
