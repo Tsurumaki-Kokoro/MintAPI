@@ -18,7 +18,7 @@ public sealed class PlaywrightRenderer(IBrowserProvider browserProvider) : IRend
 
             await using var context = await browser.NewContextAsync(new BrowserNewContextOptions
             {
-                ViewportSize = new ViewportSize { Width = width, Height = height },
+                ViewportSize = new ViewportSize { Width = width, Height = height > 0 ? height : 720 },
             });
             using var cancellationRegistration = cancellationToken.Register(
                 static state => _ = CloseContextOnCancellationAsync((IBrowserContext)state!), context);
@@ -32,10 +32,17 @@ public sealed class PlaywrightRenderer(IBrowserProvider browserProvider) : IRend
             });
             await page.EvaluateAsync("document.fonts.ready");
 
+            if (height == 0)
+            {
+                // 内容高度在图片和字体加载后确定，避免按行数估算造成底部留白。
+                height = await page.Locator("body").EvaluateAsync<int>("e => Math.max(1, Math.ceil(e.getBoundingClientRect().height))");
+                await page.SetViewportSizeAsync(width, height);
+            }
+
             return await page.ScreenshotAsync(new PageScreenshotOptions
             {
                 Type = ScreenshotType.Png,
-                Clip = new Clip { X = 0, Y = 0, Width = width, Height = height },
+                Clip = new Clip { X = 0, Y = 0, Width = width, Height = height > 0 ? height : 720 },
             });
         }
         finally

@@ -33,6 +33,16 @@ public class PlaywrightRendererTests
     }
 
     [Fact]
+    public async Task RenderHtmlAsync_auto_height_matches_content_even_below_initial_viewport()
+    {
+        await using var provider = new PlaywrightBrowserProvider(NullLogger<PlaywrightBrowserProvider>.Instance);
+        await provider.StartAsync();
+        var png = await new PlaywrightRenderer(provider).RenderHtmlAsync(
+            "<!doctype html><body style='margin:0'><main style='height:173px;padding:0'></main></body>", 120, 0);
+        Assert.Equal(173u, ReadBigEndianUInt32(png, 20));
+    }
+
+    [Fact]
     public async Task RenderHtmlAsync_after_timeout_closes_browser_context()
     {
         await using var provider = new PlaywrightBrowserProvider(NullLogger<PlaywrightBrowserProvider>.Instance);
