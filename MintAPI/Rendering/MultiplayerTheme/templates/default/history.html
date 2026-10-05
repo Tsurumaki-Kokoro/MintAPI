@@ -1,49 +1,13 @@
 <!doctype html>
 <html lang="zh-CN">
 <meta charset="utf-8">
-<style>@font-face{font-family:Harmony;src:url("{{ base_url }}/fonts/HarmonyOS_Sans_SC_Regular.ttf")}
-*{box-sizing:border-box}html,body{margin:0;background:#fff;color:#1d1d1f}
-body{font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Harmony,sans-serif;font-size:16px;font-variant-numeric:tabular-nums}
-main{width:1200px;padding:0 64px}
-header{height:300px;padding-top:44px;border-bottom:1px solid #d2d2d7;position:relative}
-.eyebrow{font-size:13px;font-weight:600;letter-spacing:2px;color:#6e6e73;display:flex;justify-content:space-between}
-h1{font-size:42px;line-height:1.16;letter-spacing:-1.5px;margin:18px 0 12px;height:98px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;max-width:880px}
-.time{color:#6e6e73;font-size:15px}
-.summary{display:flex;gap:32px;align-items:center;margin-top:22px;color:#6e6e73}
-.summary>span{max-width:230px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.summary>b{font-size:28px;letter-spacing:-1px}
-.summary b{color:#1d1d1f;font-weight:600}
-.red{color:#c43743}
-.blue{color:#0071e3}
-.none,.mixed{color:#6e6e73}
-footer{height:98px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid #d2d2d7;color:#86868b;font-size:13px;letter-spacing:.5px}
-.avatar{width:30px;height:30px;border-radius:50%;object-fit:cover;flex:none}
-.initial{background:#f5f5f7;display:inline-flex;align-items:center;justify-content:center;color:#6e6e73}
-.player{display:flex;align-items:center;gap:12px;min-width:0}
-.name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#1d1d1f}
-.team-dot{width:5px;height:20px;background:currentColor;flex:none}
-table{width:100%;border-collapse:collapse;table-layout:fixed}
-th{text-align:right;color:#86868b;font-size:12px;font-weight:500}
-td{text-align:right;font-size:16px}
-td:first-child,th:first-child{text-align:left}
-.number{font-weight:500}
-.failed{color:#c43743;font-size:11px;margin-left:8px}
-section{height:auto;padding-top:32px}
-.round-head{height:102px;display:grid;grid-template-columns:72px 1fr 260px;gap:20px}
-.round-index{font-size:38px;letter-spacing:-2px;color:#86868b;line-height:1}
-.map-title{font-size:24px;font-weight:600;line-height:30px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.map-meta{color:#6e6e73;font-size:14px;margin-top:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.map-extra{color:#86868b;font-size:12px;margin-top:8px}
-.result{text-align:right;font-size:15px;padding-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.team-score{font-size:24px;letter-spacing:-.5px;margin-top:12px}
-.round-table{height:44px}
-tbody tr{height:48px;border-top:1px solid #ececef}
-section{padding-bottom:0}
-.rank{display:inline-block;width:30px;color:#86868b;font-size:13px}
-.mods{font-size:13px;color:#6e6e73}
-.players th:first-child{padding-left:0}
-.players td{padding:0}
-.map-mode{color:#6e6e73}
+<style>@font-face{font-family:Harmony;src:url("{{ base_url }}/fonts/HarmonyOS_Sans_SC_Regular.ttf");font-weight:400}
+@font-face{font-family:Harmony;src:url("{{ base_url }}/fonts/HarmonyOS_Sans_SC_Bold.ttf");font-weight:600 700}
+*{box-sizing:border-box;margin:0}body{width:1500px;background:#fafaf9;color:#1d1d1f;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Harmony,sans-serif;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}main{padding:38px 44px 24px}header{padding-bottom:32px;border-bottom:1px solid #d2d2d7}.eyebrow{display:flex;justify-content:space-between;color:#65656e;font-size:24px}h1{margin:24px 0 16px;font-size:42px;font-weight:600;line-height:1.3;letter-spacing:-1px;overflow-wrap:anywhere}.time{color:#65656e;font-size:24px}.summary{display:flex;flex-wrap:wrap;gap:24px 32px;align-items:center;margin-top:30px;color:#65656e;font-size:24px}.summary>span{max-width:420px;overflow-wrap:anywhere}.summary b{color:#1d1d1f;font-size:42px;font-weight:600;letter-spacing:-1px}.red{color:#df2346}.blue{color:#0066ed}.none,.mixed{color:#65656e}footer{margin-top:24px;min-height:66px;border-top:1px solid #d2d2d7;display:flex;align-items:center;justify-content:space-between;font-size:20px;color:#65656e}.avatar{width:48px;height:48px;border-radius:6px;object-fit:cover;flex:none}.initial{background:#e9e9ec;display:inline-flex;align-items:center;justify-content:center;color:#65656e}.player{display:flex;align-items:center;gap:16px;min-width:0}.name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#1d1d1f;font-weight:600}.team-dot{width:4px;height:32px;background:currentColor;flex:none}table{width:100%;border-collapse:collapse;table-layout:fixed}th{text-align:right;color:#65656e;font-size:22px;font-weight:400;height:60px}td{text-align:right;font-size:28px}td:first-child,th:first-child{text-align:left}.number{font-weight:500}.failed{color:#df2346;font-size:18px;margin-left:8px}
+section{padding-top:36px}section+section{margin-top:36px;border-top:1px solid #d2d2d7}.round-head{display:grid;grid-template-columns:360px minmax(0,1fr);gap:28px;margin-bottom:24px;align-items:stretch}.round-head.no-cover{grid-template-columns:minmax(0,1fr)}.round-index{font-size:30px;font-weight:400;color:#65656e;letter-spacing:0;margin-right:16px}.map-title{font-size:42px;font-weight:600;line-height:1.15;letter-spacing:-1px;overflow-wrap:anywhere}.map-meta{color:#65656e;font-size:26px;margin-top:14px;overflow-wrap:anywhere}.map-extra{color:#65656e;font-size:22px;margin-top:12px}.map-details{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto 1fr auto;column-gap:24px;min-height:180px;align-items:end}.map-title{grid-column:1 / -1}.map-meta{grid-column:1 / -1;align-self:center;margin:12px 0}.map-extra{grid-column:1;line-height:1.2}.result{grid-column:2;grid-row:3;align-self:end;text-align:right;font-size:26px}.team-score{line-height:1}.team-score{font-size:46px;letter-spacing:-1px;white-space:nowrap;flex:none}tbody tr{height:82px;border-top:1px solid #d2d2d7}.rank{width:28px;flex:none;color:#65656e;font-size:22px}.mods{font-size:24px;color:#65656e}
+.map-bg{display:block;width:360px;height:180px;object-fit:cover}
+.summary .match-score{font-weight:400}.leading{font-weight:700;font-size:1.12em}.team-score{font-weight:400}
+.stars{font-weight:600;white-space:nowrap}.mod-label{display:inline-block;padding:3px 8px;border:1px solid #d2d2d7;border-radius:4px;font-size:22px;font-weight:500;line-height:1.2;white-space:nowrap}.numeric,.number{font-variant-numeric:tabular-nums lining-nums;white-space:nowrap;text-align:right}.unit{display:inline-block;width:1em;text-align:right;color:#65656e}
 </style>
 <body>
 <main>{{ label = "对局历史" }}<header>
@@ -58,21 +22,21 @@ section{padding-bottom:0}
 <b>{{ game_count }}</b> 局对局</span>
 <span>
 <b>{{ player_count }}</b> 位玩家</span>{{ if has_teams }}<span class="red">{{ red_name }}</span>
-<b>{{ red_wins }} : {{ blue_wins }}</b>
+<b class="match-score"><span class="red{{ if red_wins > blue_wins }} leading{{ end }}">{{ red_wins }}</span> : <span class="blue{{ if blue_wins > red_wins }} leading{{ end }}">{{ blue_wins }}</span></b>
 <span class="blue">{{ blue_name }}</span>{{ end }}</div>
 </header>{{ for r in rounds }}<section>
-<div class="round-head">
-<div class="round-index">{{ r.index }}</div>
-<div>
-<div class="map-title">{{ r.title }}</div>
+<div class="round-head{{ if r.cover == "" }} no-cover{{ end }}">
+{{ if r.cover != "" }}<img class="map-bg" src="{{ r.cover }}" alt="">{{ end }}
+<div class="map-details">
+<div class="map-title"><span class="round-index">{{ if r.index < 10 }}0{{ end }}{{ r.index }}</span>{{ r.title }}</div>
 <div class="map-meta">{{ r.artist }} · {{ r.difficulty }}</div>
-<div class="map-extra">{{ r.stars }} ★ · #{{ r.map_id }} · {{ r.mode }} · {{ r.scoring }}</div>
+<div class="map-extra"><span class="stars" style="color:{{ r.stars_color }}">★ {{ r.stars }}</span> · #{{ r.map_id }} · {{ r.mode }} · {{ r.scoring }}</div>
+<div class="result">{{ if r.is_team }}<div class="team-score">
+<span class="red{{ if r.red_leads }} leading{{ end }}">{{ r.red_score }}</span>
+<span style="color:#65656e"> : </span>
+<span class="blue{{ if r.blue_leads }} leading{{ end }}">{{ r.blue_score }}</span>
+</div>{{ else }}{{ r.result }}{{ end }}</div>
 </div>
-<div class="result {{ r.winner }}">{{ r.result }}{{ if r.is_team }}<div class="team-score">
-<span class="red">{{ r.red_score }}</span>
-<span style="color:#86868b"> : </span>
-<span class="blue">{{ r.blue_score }}</span>
-</div>{{ end }}</div>
 </div>
 <table class="players">
 <colgroup>
@@ -98,15 +62,15 @@ section{padding-bottom:0}
 <span class="team-dot {{ p.team }}">
 </span>{{ if p.avatar != "" }}<img class="avatar" src="{{ p.avatar }}" alt="">{{ else }}<span class="avatar initial">{{ p.initial }}</span>{{ end }}<span class="name">{{ p.name }}</span>{{ if !p.passed }}<span class="failed">FAIL</span>{{ end }}</div>
 </td>
-<td class="mods">{{ p.mods }}</td>
+<td class="mods"><span class="mod-label">{{ p.mods }}</span></td>
 <td class="number">{{ p.score }}</td>
-<td>{{ p.accuracy }}%</td>
-<td>{{ p.combo }}×</td>
+<td class="numeric">{{ p.accuracy }}<span class="unit">%</span></td>
+<td class="numeric">{{ p.combo }}<span class="unit">×</span></td>
 </tr>{{ end }}</tbody>
 </table>
 </section>{{ end }}<footer>
 <span>osu! · MintAPI / Multiplayer</span>
-<span>{{ page }} / {{ pages }}</span>
+<span>{{ if page == 0 }}全部 {{ game_count }} 局{{ else }}{{ page }} / {{ pages }}{{ end }}</span>
 </footer>
 </main>
 </body>

@@ -13,7 +13,7 @@ public class MultiplayerController(MultiplayerService multiplayer, MultiplayerTh
     /// <summary>渲染多人房已结束对局。</summary>
     /// <param name="mp_id">多人房 ID。</param>
     /// <param name="theme">渲染主题：default。</param>
-    /// <param name="page">页码，从 1 开始。</param>
+    /// <param name="page">页码，从 1 开始；0 表示不分页，返回全部对局。</param>
     /// <param name="team_type">可选：head-to-head、team-vs、tag-coop 或 tag-team-vs。</param>
     /// <response code="200">PNG 图片，X-Page-Count 表示总页数。</response>
     /// <response code="400">参数无效或没有已结束的对局。</response>
@@ -45,7 +45,8 @@ public class MultiplayerController(MultiplayerService multiplayer, MultiplayerTh
     {
         if (id is null or <= 0) return BadRequest("mp_id 必须为正整数。");
         if (theme != "default") return BadRequest("theme 必须为 default。");
-        if (page < 1) return BadRequest("page 必须为正整数。");
+        if (page < 0 || (algorithm != null && page == 0))
+            return BadRequest(algorithm == null ? "page 必须为非负整数，0 表示不分页。" : "page 必须为正整数。");
         if (algorithm != null && algorithm is not ("osuplus" or "bathbot" or "flashlight"))
             return BadRequest("algorithm 必须为 osuplus、bathbot 或 flashlight。");
         if (teamType != null)
@@ -75,7 +76,7 @@ public class MultiplayerController(MultiplayerService multiplayer, MultiplayerTh
             var png = algorithm == null
                 ? await renderer.RenderHistoryAsync(data, page, HttpContext.RequestAborted)
                 : await renderer.RenderRatingAsync(data, algorithm, page, HttpContext.RequestAborted);
-            Response.Headers["X-Page-Count"] = pages.ToString();
+            Response.Headers["X-Page-Count"] = (page == 0 ? 1 : pages).ToString();
             Response.Headers["X-Page"] = page.ToString();
             return File(png, "image/png");
         }

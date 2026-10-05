@@ -328,7 +328,7 @@ public class DefaultBeatmapTheme
         return File.Exists(path) ? $"data:image/svg+xml;base64,{Convert.ToBase64String(File.ReadAllBytes(path))}" : "";
     }
 
-    private static string GetStarsColor(double stars)
+    internal static string GetStarsColor(double stars)
     {
         if (stars < 0.1) return "rgb(170,170,170)";
         if (stars >= 9) return "rgb(0,0,0)";

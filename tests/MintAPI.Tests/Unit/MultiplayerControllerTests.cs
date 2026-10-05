@@ -15,7 +15,7 @@ public class MultiplayerControllerTests
     [InlineData(null, "default", 1)]
     [InlineData(-1, "default", 1)]
     [InlineData(1, "unknown", 1)]
-    [InlineData(1, "default", 0)]
+    [InlineData(1, "default", -1)]
     public async Task Invalid_history_parameters_do_not_call_upstream(int? id, string theme, int page)
     {
         var api = new RecordingOsuApiService();
@@ -44,6 +44,22 @@ public class MultiplayerControllerTests
     }
 
     [Fact]
+    public async Task History_page_zero_renders_every_round_and_rating_rejects_zero()
+    {
+        var api = new RecordingOsuApiService { MatchHandler = _ => MultiplayerDataTests.Sample(rounds: 20) };
+        var renderer = new StubRenderer();
+        var controller = Create(api, renderer);
+        Assert.IsType<FileContentResult>(await controller.GetMatchHistory(12345, page: 0));
+        Assert.Equal("0", controller.Response.Headers["X-Page"].ToString());
+        Assert.Equal("1", controller.Response.Headers["X-Page-Count"].ToString());
+        Assert.Equal(20, System.Text.RegularExpressions.Regex.Matches(renderer.Html, "<section>").Count);
+        Assert.Contains("全部 20 局", renderer.Html);
+        var calls = api.CallCount;
+        Assert.IsType<BadRequestObjectResult>(await controller.GetRating(12345, page: 0));
+        Assert.Equal(calls, api.CallCount);
+    }
+
+    [Fact]
     public async Task Rating_returns_png_with_case_insensitive_algorithm()
     {
         var api = new RecordingOsuApiService { MatchHandler = _ => MultiplayerDataTests.Sample(false) };
@@ -65,9 +81,9 @@ public class MultiplayerControllerTests
         await Assert.ThrowsAsync<OsuQuotaExceededException>(() => Create(api).GetMatchHistory(12345));
     }
 
-    private static MultiplayerController Create(RecordingOsuApiService api)
+    private static MultiplayerController Create(RecordingOsuApiService api, StubRenderer? renderer = null)
     {
-        var theme = new MultiplayerTheme(new StubRenderer(), new StubImages(), NullLogger<MultiplayerTheme>.Instance);
+        var theme = new MultiplayerTheme(renderer ?? new StubRenderer(), new StubImages(), NullLogger<MultiplayerTheme>.Instance);
         return new MultiplayerController(new MultiplayerService(api), theme, NullLogger<MultiplayerController>.Instance)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
@@ -76,8 +92,12 @@ public class MultiplayerControllerTests
 
     private sealed class StubRenderer : IRenderService
     {
+        public string Html { get; private set; } = "";
         public Task<byte[]> RenderHtmlAsync(string html, int width, int height, CancellationToken cancellationToken = default)
-            => Task.FromResult(new byte[] { 0x89, 0x50, 0x4e, 0x47 });
+        {
+            Html = html;
+            return Task.FromResult(new byte[] { 0x89, 0x50, 0x4e, 0x47 });
+        }
     }
 
     private sealed class StubImages : IImageCacheService

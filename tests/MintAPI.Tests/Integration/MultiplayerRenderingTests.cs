@@ -19,6 +19,7 @@ public class MultiplayerRenderingTests
         var capture = new CaptureRenderer(new PlaywrightRenderer(provider));
         var theme = new MultiplayerTheme(capture, new EmptyImageCache(), NullLogger<MultiplayerTheme>.Instance);
         var match = MultiplayerDataTests.Sample(team, 3);
+        match.MatchInfo.Name = string.Concat(Enumerable.Repeat("比赛长标题：红队与蓝队的多人比赛 / Multiplayer Invitational · ", 4));
         match.Users[0].Username = "Aster <script>alert(1)</script> & Friends";
         foreach (var item in match.EventList)
         {
@@ -62,7 +63,7 @@ public class MultiplayerRenderingTests
     {
         await using var context = await provider.Browser.NewContextAsync(new BrowserNewContextOptions
         {
-            ViewportSize = new ViewportSize { Width = 1200, Height = capture.Height }
+            ViewportSize = new ViewportSize { Width = 1500, Height = capture.Height }
         });
         var page = await context.NewPageAsync();
         // Fonts are local file URLs, so use the same navigation path as production.
@@ -72,9 +73,15 @@ public class MultiplayerRenderingTests
             await File.WriteAllTextAsync(path, capture.Html);
             await page.GotoAsync(new Uri(path).AbsoluteUri);
             await page.EvaluateAsync("document.fonts.ready");
-            var bottom = await page.Locator("footer").EvaluateAsync<double>("el => el.getBoundingClientRect().bottom");
+            foreach (var section in await page.Locator("section").AllAsync())
+            {
+                if (await section.Locator(".team-score").CountAsync() == 0) continue;
+                Assert.True(await section.EvaluateAsync<bool>("e => Math.abs(e.querySelector('.team-score').getBoundingClientRect().bottom - e.querySelector('.map-extra').getBoundingClientRect().bottom) < 1"));
+                Assert.DoesNotContain("获胜", await section.Locator(".result").InnerTextAsync());
+            }
+            var bottom = await page.Locator("main").EvaluateAsync<double>("el => el.getBoundingClientRect().bottom");
             Assert.InRange(bottom, capture.Height - 2, capture.Height);
-            Assert.True(await page.EvaluateAsync<bool>("document.documentElement.scrollWidth === 1200"));
+            Assert.True(await page.EvaluateAsync<bool>("document.documentElement.scrollWidth === 1500"));
         }
         finally { File.Delete(path); }
     }
@@ -83,10 +90,12 @@ public class MultiplayerRenderingTests
     {
         public string Html { get; private set; } = "";
         public int Height { get; private set; }
-        public Task<byte[]> RenderHtmlAsync(string html, int width, int height, CancellationToken cancellationToken = default)
+        public async Task<byte[]> RenderHtmlAsync(string html, int width, int height, CancellationToken cancellationToken = default)
         {
-            Html = html; Height = height;
-            return inner.RenderHtmlAsync(html, width, height, cancellationToken);
+            Html = html;
+            var png = await inner.RenderHtmlAsync(html, width, height, cancellationToken);
+            Height = System.Buffers.Binary.BinaryPrimitives.ReadInt32BigEndian(png.AsSpan(20, 4));
+            return png;
         }
     }
 

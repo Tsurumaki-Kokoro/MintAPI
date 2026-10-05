@@ -7,22 +7,30 @@ using Scriban.Runtime;
 namespace MintAPI.Rendering.MultiplayerTheme;
 
 public sealed class MultiplayerTheme(IRenderService renderer, IImageCacheService imageCache,
-    ILogger<MultiplayerTheme> logger)
+    ILogger<MultiplayerTheme> logger, IBeatmapFileService? beatmapFiles = null)
 {
     public async Task<byte[]> RenderHistoryAsync(MultiplayerData data, int page, CancellationToken cancellationToken = default)
     {
         var pages = data.HistoryPages();
-        if (page < 1 || page > pages.Count) throw new ArgumentException($"page 必须在 1 至 {pages.Count} 之间。");
-        var rounds = pages[page - 1];
+        if (page < 0 || page > pages.Count) throw new ArgumentException($"page 必须为 0 或在 1 至 {pages.Count} 之间。");
+        var rounds = page == 0 ? data.Rounds : pages[page - 1];
         var avatars = await AvatarsAsync(rounds.SelectMany(round => round.Players)
             .Select(player => (player.UserId, player.Avatar)));
-        var values = Common(data, page, pages.Count);
+        var covers = new Dictionary<int, string>();
+        foreach (var round in rounds)
+        {
+            var setId = round.Source.Beatmap?.Beatmapset?.Id ?? round.Source.Beatmap?.BeatmapsetId ?? 0;
+            if (!covers.ContainsKey(setId)) covers[setId] = await CoverAsync(setId, cancellationToken);
+        }
+        var values = Common(data, page, page == 0 ? 1 : pages.Count);
         values["rounds"] = rounds.Select(round => new
         {
             index = round.Index, mode = round.Mode,
+            cover = covers[round.Source.Beatmap?.Beatmapset?.Id ?? round.Source.Beatmap?.BeatmapsetId ?? 0],
             title = Escape(round.Source.Beatmap?.Beatmapset?.Title ?? $"Beatmap {round.Source.BeatmapId}"),
             artist = Escape(round.Source.Beatmap?.Beatmapset?.Artist ?? ""),
             difficulty = Escape(round.Source.Beatmap?.Version ?? "未知难度"),
+            stars_color = round.Source.Beatmap is null ? "#65656e" : MintAPI.Rendering.BeatmapTheme.DefaultBeatmapTheme.GetStarsColor(round.Source.Beatmap.DifficultyRating),
             stars = round.Source.Beatmap?.DifficultyRating.ToString("0.00", CultureInfo.InvariantCulture) ?? "—",
             map_id = round.Source.BeatmapId,
             scoring = round.Source.ScoringType switch { MintOsuApi.Enums.ScoringType.Accuracy => "准确率计分", MintOsuApi.Enums.ScoringType.Combo => "连击计分", MintOsuApi.Enums.ScoringType.ScoreV2 => "Score V2", _ => "Score" },
@@ -31,6 +39,7 @@ public sealed class MultiplayerTheme(IRenderService renderer, IImageCacheService
                     ? "并列第一" : Escape(round.Players[0].Name) + " 第一",
             winner = round.IsTeam ? round.Winner : "none",
             red_score = Number(round.RedScore), blue_score = Number(round.BlueScore), is_team = round.IsTeam,
+            red_leads = round.RedScore > round.BlueScore, blue_leads = round.BlueScore > round.RedScore,
             players = round.Players.Select((player, rank) => new
             {
                 rank = rank + 1, name = Escape(player.Name), team = TeamClass(player.Team),
@@ -39,8 +48,7 @@ public sealed class MultiplayerTheme(IRenderService renderer, IImageCacheService
                 combo = Number(player.Combo), mods = Escape(player.Mods), passed = player.Passed
             }).ToArray()
         }).ToArray();
-        var height = 398 + rounds.Sum(round => 178 + 48 * round.Players.Count);
-        return await RenderAsync("history", values, height, cancellationToken);
+        return await RenderAsync("history", values, 0, cancellationToken);
     }
 
     public async Task<byte[]> RenderRatingAsync(MultiplayerData data, string algorithm, int page,
@@ -62,7 +70,7 @@ public sealed class MultiplayerTheme(IRenderService renderer, IImageCacheService
         values["players"] = shown.Select((player, index) => new
         {
             rank = (page - 1) * 24 + index + 1, name = Escape(player.Name), team = TeamClass(player.Team),
-            team_name = Escape(player.Team switch { "red" => data.RedName, "blue" => data.BlueName, "mixed" => "换队", _ => "个人" }),
+            team_name = player.Team switch { "red" => "红队", "blue" => "蓝队", "mixed" => "换队", _ => "个人" },
             avatar = avatars[player.UserId], initial = Escape(Initial(player.Name)),
             rating = player.Rating.ToString("0.00", CultureInfo.InvariantCulture), total = Number(player.TotalScore),
             average = Number(player.AverageScore), played = player.Played,
@@ -70,7 +78,7 @@ public sealed class MultiplayerTheme(IRenderService renderer, IImageCacheService
             rate = (100.0 * player.Wins / player.Played).ToString("0.0", CultureInfo.InvariantCulture),
             bar = (100 * player.Rating / players[0].Rating).ToString("0.0", CultureInfo.InvariantCulture)
         }).ToArray();
-        return await RenderAsync("rating", values, 608 + shown.Length * 72, cancellationToken);
+        return await RenderAsync("rating", values, 0, cancellationToken);
     }
 
     private static ScriptObject Common(MultiplayerData data, int page, int pages) => new()
@@ -83,6 +91,21 @@ public sealed class MultiplayerTheme(IRenderService renderer, IImageCacheService
         ["game_count"] = data.Rounds.Count, ["player_count"] = data.PlayerCount, ["page"] = page, ["pages"] = pages
     };
 
+    private async Task<string> CoverAsync(int setId, CancellationToken cancellationToken)
+    {
+        if (beatmapFiles is null || setId <= 0) return "";
+        try
+        {
+            var bytes = await beatmapFiles.GetListCoverAsync(setId, cancellationToken);
+            return bytes is { Length: > 0 } ? $"data:image/jpeg;base64,{Convert.ToBase64String(bytes)}" : "";
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "Failed to load multiplayer cover for {SetId}", setId);
+            return "";
+        }
+    }
+
     private async Task<Dictionary<int, string>> AvatarsAsync(IEnumerable<(int UserId, string Avatar)> players)
     {
         var result = new Dictionary<int, string>();
@@ -91,7 +114,7 @@ public sealed class MultiplayerTheme(IRenderService renderer, IImageCacheService
             try
             {
                 var bytes = await imageCache.GetAvatarAsync(player.Avatar, player.UserId);
-                result[player.UserId] = $"data:image/png;base64,{Convert.ToBase64String(bytes)}";
+                result[player.UserId] = bytes.Length == 0 ? "" : $"data:image/png;base64,{Convert.ToBase64String(bytes)}";
             }
             catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
             {
@@ -109,7 +132,7 @@ public sealed class MultiplayerTheme(IRenderService renderer, IImageCacheService
         if (template.HasErrors) throw new InvalidOperationException(string.Join("\n", template.Messages));
         var context = new TemplateContext();
         context.PushGlobal(values);
-        return await renderer.RenderHtmlAsync(await template.RenderAsync(context), 1200, height, cancellationToken);
+        return await renderer.RenderHtmlAsync(await template.RenderAsync(context), 1500, height, cancellationToken);
     }
 
     private static string Escape(string value) => WebUtility.HtmlEncode(value);
