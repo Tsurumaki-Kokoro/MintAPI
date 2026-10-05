@@ -51,6 +51,7 @@ try
     builder.Services.AddScoped<HistoryService>();
     builder.Services.AddScoped<HistoryCollector>();
     builder.Services.AddSingleton<HistoryRenderer>();
+    builder.Services.AddSingleton<UserRankingRenderer>();
     builder.Services.AddHostedService<HistoryScheduler>();
 
     builder.Services.AddSingleton<OsuApiService>();
