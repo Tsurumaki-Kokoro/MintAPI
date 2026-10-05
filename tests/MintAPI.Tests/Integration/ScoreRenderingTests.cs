@@ -39,6 +39,7 @@ public class ScoreRenderingTests
         Assert.Contains("&lt;script&gt;", capture.Html);
         Assert.DoesNotContain("<script>", capture.Html);
         Assert.Equal(new byte[] { 137, 80, 78, 71 }, png[..4]);
+        Assert.Equal(themeName == "default", capture.Html.Contains("Powered By MintAPI"));
         if (themeName == "default")
         {
             Assert.Contains("321.45", capture.Html);
@@ -56,8 +57,9 @@ public class ScoreRenderingTests
             var page = await context.NewPageAsync();
             await page.SetViewportSizeAsync(1500, capture.Height);
             await page.SetContentAsync(capture.Html);
+            await RenderingAttributionAssertions.CheckAsync(page);
             Assert.Equal($"1500x{capture.Height}", await page.EvaluateAsync<string>("`${document.documentElement.scrollWidth}x${document.documentElement.scrollHeight}`"));
-            Assert.InRange(await page.Locator("footer").EvaluateAsync<double>("e => e.getBoundingClientRect().bottom"), capture.Height - 1, capture.Height);
+            Assert.InRange(await page.Locator("footer").EvaluateAsync<double>("e => e.getBoundingClientRect().bottom"), capture.Height - 29, capture.Height - 28);
             Assert.Equal(2, await page.Locator(".mod-art").CountAsync());
             Assert.Equal("A", await page.Locator(".grade").InnerTextAsync());
             Assert.Equal(0, await page.Locator(".grade-art").CountAsync());
@@ -70,6 +72,7 @@ public class ScoreRenderingTests
                     score.Rank = grade;
                     await theme.RenderAsync(score, user, pixel, "fixture.osu", null);
                     await page.SetContentAsync(capture.Html);
+                    await RenderingAttributionAssertions.CheckAsync(page);
                     Assert.Equal(grade.ToString(), await page.Locator(".grade").InnerTextAsync());
                     Assert.True(await page.Locator("img").EvaluateAllAsync<bool>("els => els.every(e => e.complete && e.naturalWidth > 0)"));
                 }
@@ -152,6 +155,7 @@ public class ScoreRenderingTests
             var page = await context.NewPageAsync();
             await page.SetViewportSizeAsync(1500, capture.Height);
             await page.SetContentAsync(capture.Html);
+            await RenderingAttributionAssertions.CheckAsync(page);
             Assert.InRange(await page.Locator("footer").EvaluateAsync<double>("e => e.getBoundingClientRect().bottom"), capture.Height - 24, capture.Height);
             if (output != null)
             {

@@ -176,7 +176,7 @@ public class DefaultScoreTheme
         identityHeight = Math.Max(identityHeight, 112 + (int)Math.Ceiling(TextWidth(user.Username) / 18d) * 52);
         scriptObj["identity_height"] = identityHeight;
         scriptObj["title_size"] = longIdentity ? 42 : 58;
-        scriptObj["image_height"] = theme == "default" ? identityHeight + 1070 : 720;
+        scriptObj["image_height"] = theme == "default" ? identityHeight + 1098 : 720;
         var ppText = $"{score.Pp ?? ppResult.Pp:0.00}";
         scriptObj["pp"] = ppText;
         scriptObj["pp_size"] = ppText.Length <= 6 ? 124 : ppText.Length == 7 ? 96 : 82;
@@ -236,7 +236,9 @@ public class DefaultScoreTheme
         scriptObj["mods"] = modNames.Select(System.Net.WebUtility.HtmlEncode).ToArray();
         var html = await template.RenderAsync(templateCtx);
 
-        return await _renderer.RenderHtmlAsync(html, 1500, (int)scriptObj["image_height"]);
+        return theme == "default"
+            ? await RenderAttribution.RenderAsync(_renderer, html, 1500, (int)scriptObj["image_height"])
+            : await _renderer.RenderHtmlAsync(html, 1500, (int)scriptObj["image_height"]);
     }
 
     public Task<byte[]> RenderBestListAsync(List<Score> scores, User user, int firstIndex,
@@ -354,7 +356,7 @@ public class DefaultScoreTheme
         var path = Path.Combine(AppContext.BaseDirectory, "Rendering", "ScoreTheme", "templates", "default", "list.html");
         var template = Template.Parse(await File.ReadAllTextAsync(path, cancellationToken));
         if (template.HasErrors) throw new InvalidOperationException(template.Messages.ToString());
-        return await _renderer.RenderHtmlAsync(await template.RenderAsync(context), 1500, imageHeight, cancellationToken);
+        return await RenderAttribution.RenderAsync(_renderer, await template.RenderAsync(context), 1500, imageHeight, cancellationToken);
     }
 
     private static object[] BuildJudgements(Score score)

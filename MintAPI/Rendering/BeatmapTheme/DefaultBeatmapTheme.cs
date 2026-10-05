@@ -134,8 +134,9 @@ public class DefaultBeatmapTheme
         var template = Template.Parse(templateSrc);
         var html = await template.RenderAsync(templateCtx);
 
-        return await _renderer.RenderHtmlAsync(html, theme == "default" ? 1500 : 1200,
-            imageHeight);
+        return theme == "default"
+            ? await RenderAttribution.RenderAsync(_renderer, html, 1500, imageHeight)
+            : await _renderer.RenderHtmlAsync(html, 1200, imageHeight);
     }
 
     public async Task<byte[]> RenderBeatmapsetAsync(Beatmapset beatmapset, byte[] coverBg, string theme = "default")
@@ -217,7 +218,9 @@ public class DefaultBeatmapTheme
         var template = Template.Parse(templateSrc);
         var html = await template.RenderAsync(templateCtx);
 
-        return await _renderer.RenderHtmlAsync(html, theme == "default" ? 1500 : 1200, imgHeight);
+        return theme == "default"
+            ? await RenderAttribution.RenderAsync(_renderer, html, 1500, imgHeight)
+            : await _renderer.RenderHtmlAsync(html, 1200, imgHeight);
     }
 
     private static void ValidateTheme(string theme)

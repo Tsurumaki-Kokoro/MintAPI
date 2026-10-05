@@ -49,6 +49,6 @@ public sealed class BeatmapBpmTheme(IRenderService renderer)
         if (template.HasErrors) throw new InvalidOperationException(string.Join("\n", template.Messages));
         var context = new TemplateContext();
         context.PushGlobal(values);
-        return await renderer.RenderHtmlAsync(await template.RenderAsync(context), 2000, 0, cancellationToken);
+        return await RenderAttribution.RenderAsync(renderer, await template.RenderAsync(context), 2000, 0, cancellationToken);
     }
 }

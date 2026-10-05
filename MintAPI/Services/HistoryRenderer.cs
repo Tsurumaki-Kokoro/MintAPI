@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net;
 using System.Text;
 using MintOsuApi.Models;
+using MintAPI.Rendering;
 
 namespace MintAPI.Services;
 
@@ -32,7 +33,7 @@ public sealed class HistoryRenderer(IRenderService renderer)
                 + $"<text x='50' y='250'  font-size='14'>{points[0].Date:yyyy-MM-dd}</text><text x='750' y='250' font-size='14'>{points[^1].Date:yyyy-MM-dd}</text></svg></section>");
         }
         content.Append($"<small>{points.Count} 个每日数据点 · 来源：{E(string.Join(" + ", points.Select(p => p.Source).Distinct()))} · 缺失日期没有补值</small>");
-        return renderer.RenderHtmlAsync(Page(title, content.ToString()), 1000, 1040, ct);
+        return RenderAttribution.RenderAsync(renderer, Page(title, content.ToString()), 1000, 1040, ct);
     }
 
     public Task<byte[]> RenderScoresAsync(string title, string notice, IReadOnlyList<Score> scores, int offset, int total, CancellationToken ct)
@@ -47,6 +48,6 @@ public sealed class HistoryRenderer(IRenderService renderer)
                 + $"<td>{s.TotalScore}</td><td>{N(s.Accuracy * 100)}%</td><td>{s.MaxCombo}x</td><td>{(s.Pp.HasValue ? N(s.Pp.Value) : "—")}</td></tr>");
         }
         content.Append("</table></section>");
-        return renderer.RenderHtmlAsync(Page(title, content.ToString()), 1100, 300 + scores.Count * 72, ct);
+        return RenderAttribution.RenderAsync(renderer, Page(title, content.ToString()), 1100, 300 + scores.Count * 72, ct);
     }
 }

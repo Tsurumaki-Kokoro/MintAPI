@@ -81,6 +81,7 @@ public class PerformanceAnalyzeRenderingTests
             await File.WriteAllTextAsync(htmlPath, capture.Html);
             await page.GotoAsync(new Uri(htmlPath).AbsoluteUri);
             await page.EvaluateAsync("document.fonts.ready");
+            await RenderingAttributionAssertions.CheckAsync(page);
             Assert.Equal("2000x1800", await page.EvaluateAsync<string>("document.documentElement.scrollWidth + 'x' + document.documentElement.scrollHeight"));
             Assert.True(await page.Locator("img").EvaluateAllAsync<bool>("els => els.every(e => e.complete && e.naturalWidth > 0)"));
             Assert.True(await page.Locator(".song").EvaluateAllAsync<bool>("els => els.every(e => { const b=e.getBoundingClientRect(), r=e.closest('.play-row').getBoundingClientRect(); return b.top>=r.top && b.bottom<=r.bottom; })"));

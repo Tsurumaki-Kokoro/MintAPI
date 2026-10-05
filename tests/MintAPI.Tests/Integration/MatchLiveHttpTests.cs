@@ -83,7 +83,8 @@ public class MatchLiveHttpTests
         await page.EvaluateAsync("document.fonts.ready");
         Assert.Equal(playerCount, await page.Locator("tbody tr").CountAsync());
         Assert.True(await page.Locator("img").EvaluateAllAsync<bool>("els => els.every(e => e.complete && e.naturalWidth > 0)"));
-        Assert.InRange(await page.Locator("main").EvaluateAsync<double>("e => e.getBoundingClientRect().bottom"), renderer.Height - 1, renderer.Height);
+        await RenderingAttributionAssertions.CheckAsync(page);
+        Assert.True(await page.Locator("main").EvaluateAsync<double>("e => e.getBoundingClientRect().bottom") <= await page.Locator(".mint-attribution").EvaluateAsync<double>("e => e.getBoundingClientRect().top"));
         Assert.Equal(1500, await page.EvaluateAsync<int>("document.documentElement.scrollWidth"));
         var directory = Environment.GetEnvironmentVariable("MULTIPLAYER_PREVIEW_DIR");
         if (directory is not null)

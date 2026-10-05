@@ -60,6 +60,7 @@ public sealed class AvatarCardRenderingTests
                 var page = await context.NewPageAsync();
                 await page.GotoAsync(new Uri(file).AbsoluteUri);
                 await page.EvaluateAsync("document.fonts.ready");
+                await RenderingAttributionAssertions.CheckAsync(page);
                 Assert.Equal("rgb(237, 231, 246)", await page.EvaluateAsync<string>("getComputedStyle(document.body).backgroundColor"));
                 Assert.Equal("400px", await page.Locator(".avatar").EvaluateAsync<string>("e => getComputedStyle(e).width"));
                 Assert.Equal("cover", await page.Locator(".avatar").EvaluateAsync<string>("e => getComputedStyle(e).objectFit"));

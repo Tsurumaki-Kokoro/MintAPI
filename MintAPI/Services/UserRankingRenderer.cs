@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net;
 using System.Text;
 using MintAPI.Controllers;
+using MintAPI.Rendering;
 
 namespace MintAPI.Services;
 
@@ -72,6 +73,6 @@ public sealed class UserRankingRenderer(IRenderService renderer, IImageCacheServ
             html.Append("</section>");
         }
         html.Append("</main><footer>RANK 全球排名 · ACC 准确率 · — 暂无数据</footer></body></html>");
-        return await renderer.RenderHtmlAsync(html.ToString(), topFive ? 1440 : 1080, 0, ct);
+        return await RenderAttribution.RenderAsync(renderer, html.ToString(), topFive ? 1440 : 1080, 0, ct);
     }
 }

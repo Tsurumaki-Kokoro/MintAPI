@@ -181,7 +181,7 @@ public sealed class MultiplayerTheme(IRenderService renderer, IImageCacheService
         if (template.HasErrors) throw new InvalidOperationException(string.Join("\n", template.Messages));
         var context = new TemplateContext();
         context.PushGlobal(values);
-        return await renderer.RenderHtmlAsync(await template.RenderAsync(context), 1500, height, cancellationToken);
+        return await RenderAttribution.RenderAsync(renderer, await template.RenderAsync(context), 1500, height, cancellationToken);
     }
 
     private static string Escape(string value) => WebUtility.HtmlEncode(value);

@@ -210,7 +210,9 @@ public class DefaultUserInfoTheme
         var html = await template.RenderAsync(templateCtx);
 
         var height = theme == "default" ? (int)scriptObj["canvas_height"] : 1350;
-        return await _renderer.RenderHtmlAsync(html, 1000, height);
+        return theme == "default"
+            ? await RenderAttribution.RenderAsync(_renderer, html, 1000, height)
+            : await _renderer.RenderHtmlAsync(html, 1000, height);
     }
 
     private static string ComparisonSuffix(string value) => value.Contains('(') ? value[(value.IndexOf('(') + 1)..^1] : "";

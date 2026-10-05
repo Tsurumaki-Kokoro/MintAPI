@@ -422,6 +422,7 @@ public class BeatmapInfoRenderingTests
             await File.WriteAllTextAsync(path, capture.Html);
             await page.GotoAsync(new Uri(path).AbsoluteUri);
             await page.EvaluateAsync("document.fonts.ready");
+            await RenderingAttributionAssertions.CheckAsync(page);
             Assert.Equal($"{capture.Width}x{capture.Height}", await page.EvaluateAsync<string>("document.documentElement.scrollWidth + 'x' + document.documentElement.scrollHeight"));
             Assert.True(await page.Locator("img").EvaluateAllAsync<bool>("els => els.every(e => e.complete && e.naturalWidth > 0)"));
             Assert.True(await page.Locator(".number, .small-value, .map-details, .summary-item").EvaluateAllAsync<bool>("els => els.every(e => e.scrollWidth <= e.clientWidth + 1)"));

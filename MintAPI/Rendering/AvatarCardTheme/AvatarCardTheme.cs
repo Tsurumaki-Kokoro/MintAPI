@@ -40,6 +40,6 @@ public sealed class AvatarCardTheme(IImageCacheService imageCache, IRenderServic
             Object.defineProperty(document.fonts, 'ready', { value: ready });
             </script></body></html>
             """;
-        return await renderer.RenderHtmlAsync(html, 512, 512, cancellationToken);
+        return await RenderAttribution.RenderAsync(renderer, html, 512, 512, cancellationToken);
     }
 }

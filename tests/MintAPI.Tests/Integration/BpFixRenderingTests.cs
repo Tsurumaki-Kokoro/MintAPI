@@ -36,6 +36,7 @@ public class BpFixRenderingTests
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1500, capture.Height);
         await page.SetContentAsync(capture.Html);
+        await RenderingAttributionAssertions.CheckAsync(page);
         Assert.Equal($"1500x{capture.Height}", await page.EvaluateAsync<string>("`${document.documentElement.scrollWidth}x${document.documentElement.scrollHeight}`"));
         Assert.InRange(await page.Locator("footer").EvaluateAsync<double>("e => e.getBoundingClientRect().bottom"), capture.Height - 25, capture.Height - 24);
         Assert.True(await page.Locator(".results").EvaluateAllAsync<bool>("els => els.every(e => e.scrollHeight <= e.closest('.row').clientHeight)"));

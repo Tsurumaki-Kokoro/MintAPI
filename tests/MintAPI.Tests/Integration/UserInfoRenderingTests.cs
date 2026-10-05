@@ -1,3 +1,4 @@
+using MintAPI.Tests.TestDoubles;
 using MintAPI.Models.Entities;
 using MintAPI.Rendering.UserInfoTheme;
 using MintAPI.Services;
@@ -65,6 +66,7 @@ public class UserInfoRenderingTests
             await File.WriteAllTextAsync(path, renderer.Html);
             await page.GotoAsync(new Uri(path).AbsoluteUri);
             await page.EvaluateAsync("document.fonts.ready");
+            await RenderingAttributionAssertions.CheckAsync(page);
             Assert.Equal($"1000x{renderer.Height}", await page.EvaluateAsync<string>("document.documentElement.scrollWidth + 'x' + document.documentElement.scrollHeight"));
             Assert.True(await page.Locator("img").EvaluateAllAsync<bool>("els => els.every(e => e.complete && e.naturalWidth > 0)"));
             Assert.Equal(badgeCount, await page.Locator(".badges img").CountAsync());
@@ -105,6 +107,7 @@ public class UserInfoRenderingTests
         Assert.Equal(1, images.LocalRequests);
         Assert.Null(images.RequestedBannerUrl);
         Assert.Equal(themeName == "default" ? 1220 : 1350, renderer.Height);
+        Assert.Equal(themeName == "default", renderer.Html.Contains("Powered By MintAPI"));
     }
 
     private sealed class Images(byte[] avatar, byte[]? banner, byte[]? background) : IImageCacheService

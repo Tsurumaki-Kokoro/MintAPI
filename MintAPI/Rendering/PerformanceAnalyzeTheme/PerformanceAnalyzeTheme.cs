@@ -131,7 +131,7 @@ public sealed class PerformanceAnalyzeTheme(
         if (template.HasErrors)
             throw new InvalidOperationException($"Performance analysis template is invalid: {string.Join("; ", template.Messages)}");
         var html = await template.RenderAsync(context);
-        return await renderer.RenderHtmlAsync(html, 2000, 1800);
+        return await RenderAttribution.RenderAsync(renderer, html, 2000, 1800);
     }
 
     private async Task<object[]> BuildTopPlaysAsync(IReadOnlyList<Score> scores)

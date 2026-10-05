@@ -28,8 +28,9 @@ public sealed class UserRankingRenderingTests
             Assert.Equal(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 }, png.Take(8));
             await using var context = await browser.Browser.NewContextAsync();
             var page = await context.NewPageAsync();
-            await page.SetViewportSizeAsync(capture.Width, 1000);
+            await page.SetViewportSizeAsync(capture.Width, System.Buffers.Binary.BinaryPrimitives.ReadInt32BigEndian(png.AsSpan(20, 4)));
             await page.SetContentAsync(capture.Html);
+            await RenderingAttributionAssertions.CheckAsync(page);
             Assert.Equal(capture.Width, await page.EvaluateAsync<int>("document.documentElement.scrollWidth"));
             Assert.Equal(topFive ? 4 : 1, await page.Locator("section").CountAsync());
             Assert.Equal(topFive ? 20 : 7, await page.Locator("tbody tr").CountAsync());

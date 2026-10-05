@@ -1,3 +1,4 @@
+using MintAPI.Tests.TestDoubles;
 using MintAPI.Rendering.MultiplayerTheme;
 using MintAPI.Services;
 using MintAPI.Tests.Unit;
@@ -73,6 +74,7 @@ public class MultiplayerRenderingTests
             await File.WriteAllTextAsync(path, capture.Html);
             await page.GotoAsync(new Uri(path).AbsoluteUri);
             await page.EvaluateAsync("document.fonts.ready");
+            await RenderingAttributionAssertions.CheckAsync(page);
             foreach (var section in await page.Locator("section").AllAsync())
             {
                 if (await section.Locator(".team-score").CountAsync() == 0) continue;
@@ -80,7 +82,7 @@ public class MultiplayerRenderingTests
                 Assert.DoesNotContain("获胜", await section.Locator(".result").InnerTextAsync());
             }
             var bottom = await page.Locator("main").EvaluateAsync<double>("el => el.getBoundingClientRect().bottom");
-            Assert.InRange(bottom, capture.Height - 2, capture.Height);
+            Assert.True(bottom <= await page.Locator(".mint-attribution").EvaluateAsync<double>("e => e.getBoundingClientRect().top"));
             Assert.True(await page.EvaluateAsync<bool>("document.documentElement.scrollWidth === 1500"));
         }
         finally { File.Delete(path); }
