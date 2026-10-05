@@ -91,6 +91,7 @@ try
     builder.Services.AddSingleton<MintAPI.Rendering.UserInfoTheme.DefaultUserInfoTheme>();
     builder.Services.AddSingleton<MintAPI.Rendering.PerformanceAnalyzeTheme.PerformanceAnalyzeTheme>();
     builder.Services.AddSingleton<MintAPI.Rendering.BeatmapTheme.DefaultBeatmapTheme>();
+    builder.Services.AddSingleton<MintAPI.Rendering.BeatmapTheme.BeatmapBpmTheme>();
     builder.Services.AddSingleton<MultiplayerService>();
     builder.Services.AddSingleton(TimeProvider.System);
     builder.Services.AddOptions<MatchLiveOptions>().Bind(config.GetSection("MatchLive"))

@@ -12,6 +12,7 @@ public record BeatmapAnalysis(PpResult Ss, AccuracyPpReference[] AccuracyReferen
     RulesetAnalysisAttributes Ruleset, double? DifficultyPp, BeatmapStrainSeries[] Curves)
 {
     public byte Mode => Ruleset.Mode;
+    public BeatmapBpmSegment[] BpmSegments { get; init; } = [];
 }
 
 public interface IBeatmapAnalysisService

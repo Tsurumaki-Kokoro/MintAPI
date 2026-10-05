@@ -13,6 +13,201 @@ namespace MintAPI.Tests.Integration;
 [Trait("Category", "Integration")]
 public class BeatmapInfoRenderingTests
 {
+    [Theory]
+    [InlineData(4313549)]
+    [InlineData(5148257)]
+    public async Task Variable_bpm_reference_maps_render_aligned_readable_bands(int beatmapId)
+    {
+        var fixtures = Path.Combine(AppContext.BaseDirectory, "Fixtures");
+        var map = JsonConvert.DeserializeObject<Beatmap>(await File.ReadAllTextAsync(
+            Path.Combine(fixtures, $"analysis-{beatmapId}.json")), OsuClient.BuildJsonSettings())!;
+        var file = Path.Combine(fixtures, $"{beatmapId}.osu");
+        var analysis = new BeatmapAnalysisService().Calculate(file)!;
+        Assert.True(analysis.BpmSegments.Length > 1);
+        Assert.True(analysis.BpmSegments.Max(s => s.Bpm) > analysis.BpmSegments.Min(s => s.Bpm));
+        await using var browser = new PlaywrightBrowserProvider(NullLogger<PlaywrightBrowserProvider>.Instance);
+        await browser.StartAsync();
+        var capture = new Capture(new PlaywrightRenderer(browser));
+        var assets = Environment.GetEnvironmentVariable("BEATMAP_ANALYSIS_ASSET_DIR");
+        async Task<byte[]> Asset(string suffix) => assets is null ? Pixel :
+            await File.ReadAllBytesAsync(Path.Combine(assets, $"{beatmapId}-{suffix}"));
+        var theme = new DefaultBeatmapTheme(capture, new AvatarCardImageCache(await Asset("avatar.png")),
+            new PpCalculatorService(), NullLogger<DefaultBeatmapTheme>.Instance, new BeatmapAnalysisService());
+        var png = await theme.RenderBeatmapAsync(map, new User { Id = map.UserId, Username = map.Beatmapset!.Creator },
+            await Asset("bg.jpg"), file);
+        await Inspect(browser, capture, async page =>
+        {
+            Assert.Equal(2, await page.Locator(".curve-panel polyline").CountAsync());
+            Assert.Equal(analysis.BpmSegments.Length, await page.Locator(".bpm-band rect").CountAsync());
+            Assert.Contains(beatmapId == 4313549 ? "BPM 66–200" : "BPM 17–333",
+                await page.Locator(".curve-panel .legend").InnerTextAsync());
+            Assert.True(await page.Locator(".bpm-band").EvaluateAsync<bool>("e => { const labels = [...e.querySelectorAll('text')].filter(t => t.getAttribute('y') === '235').slice(1).map(t => t.getBoundingClientRect()); return labels.every((r, i) => i === 0 || r.left >= labels[i - 1].right); }"));
+            Assert.True(await page.Locator(".curve-panel").EvaluateAsync<bool>("e => e.querySelector('svg').getBoundingClientRect().bottom <= e.getBoundingClientRect().bottom"));
+            Assert.Equal(1802, capture.Height);
+            Assert.Equal(0, await page.Locator(".bpm-details, .bpm-detail-marker").CountAsync());
+            var starts = await page.Locator(".bpm-band rect").EvaluateAllAsync<double[]>("els => els.map(e => Number(e.getAttribute('x')))");
+            for (var i = 0; i < starts.Length; i++)
+                Assert.InRange(Math.Abs(starts[i] - (64 + 1314 * analysis.BpmSegments[i].StartTimeMs / analysis.Strains.Points.Last().EndTimeMs)), 0, .01);
+        });
+        if (Environment.GetEnvironmentVariable("BEATMAP_INFO_PREVIEW_DIR") is { } output)
+        {
+            Directory.CreateDirectory(output);
+            await File.WriteAllBytesAsync(Path.Combine(output, $"beatmap-{beatmapId}-bpm.png"), png);
+            await File.WriteAllTextAsync(Path.Combine(output, $"beatmap-{beatmapId}-bpm.html"), capture.Html);
+        }
+    }
+
+    [Theory]
+    [InlineData(4313549)]
+    [InlineData(5148257)]
+    public async Task Separate_bpm_endpoint_renders_all_segments_with_overview_and_detail_curves(int beatmapId)
+    {
+        var fixtures = Path.Combine(AppContext.BaseDirectory, "Fixtures");
+        var map = JsonConvert.DeserializeObject<Beatmap>(await File.ReadAllTextAsync(
+            Path.Combine(fixtures, $"analysis-{beatmapId}.json")), OsuClient.BuildJsonSettings())!;
+        var file = Path.Combine(fixtures, $"{beatmapId}.osu");
+        var segments = BeatmapBpmTimeline.ReadAll(file);
+        await using var browser = new PlaywrightBrowserProvider(NullLogger<PlaywrightBrowserProvider>.Instance);
+        await browser.StartAsync();
+        var capture = new Capture(new PlaywrightRenderer(browser));
+        var theme = new BeatmapBpmTheme(capture);
+        var api = new RecordingOsuApiService { BeatmapHandler = _ => map };
+        var controller = new MintAPI.Controllers.BeatmapController(api, new BpmFiles(file), null!,
+            NullLogger<MintAPI.Controllers.BeatmapController>.Instance)
+        { ControllerContext = new Microsoft.AspNetCore.Mvc.ControllerContext { HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext() } };
+        var result = Assert.IsType<Microsoft.AspNetCore.Mvc.FileContentResult>(
+            await controller.GetBeatmapBpm(theme, beatmapId, include_details: true));
+        Assert.Equal("image/png", result.ContentType);
+        Assert.Equal(segments.Length.ToString(), controller.Response.Headers["X-Bpm-Segment-Count"].ToString());
+        Assert.False(controller.Response.Headers.ContainsKey("X-Page"));
+        Assert.False(controller.Response.Headers.ContainsKey("X-Page-Count"));
+        Assert.Equal(2000, capture.Width);
+        await Inspect(browser, capture, async page =>
+        {
+            var rows = await page.Locator("tbody tr").AllAsync();
+            Assert.Equal(segments.Length, rows.Count);
+            for (var index = 0; index < rows.Count; index++)
+            {
+                Assert.Equal((index + 1).ToString(), await rows[index].GetAttributeAsync("data-index"));
+                Assert.Equal(segments[index].Bpm.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture),
+                    await rows[index].Locator(".bpm").InnerTextAsync());
+                Assert.Equal(index == 0 ? "—" : segments[index - 1].Bpm.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture),
+                    await rows[index].Locator("td").Nth(4).InnerTextAsync());
+            }
+            Assert.True(await page.Locator("td").EvaluateAllAsync<bool>("els => els.every(e => e.scrollWidth <= e.clientWidth + 1)"));
+            Assert.True(await page.Locator("footer").EvaluateAsync<bool>("e => e.getBoundingClientRect().bottom <= document.body.getBoundingClientRect().bottom"));
+            var overview = page.Locator(".bpm-curve").First;
+            Assert.Equal(segments.Length, await overview.Locator(".bpm-change").CountAsync());
+            Assert.True(await page.Locator(".zoom-panel").CountAsync() > 0);
+            if (beatmapId == 5148257)
+                Assert.Contains("333", await page.Locator(".zoom-panel .bpm-value").AllTextContentsAsync());
+            Assert.True(await page.Locator("svg").EvaluateAllAsync<bool>("els => els.every(e => {const r=e.getBoundingClientRect(),p=e.parentElement.getBoundingClientRect();return r.right<=p.right+1;})"));
+            var points = await overview.Locator(".bpm-change").EvaluateAllAsync<double[][]>("els => els.map(e => [Number(e.dataset.time), Number(e.dataset.bpm), Number(e.getAttribute('cx'))])");
+            for (var index = 0; index < points.Length; index++)
+            {
+                Assert.Equal(segments[index].StartTimeMs, points[index][0], 3);
+                Assert.Equal(segments[index].Bpm, points[index][1], 5);
+                Assert.Equal(64 + 1804 * segments[index].StartTimeMs / segments[^1].EndTimeMs, points[index][2], 3);
+            }
+            var path = await overview.Locator(".bpm-step").GetAttributeAsync("d");
+            Assert.Contains("H", path);
+            Assert.Contains("V", path);
+            Assert.DoesNotContain("L", path);
+        });
+        if (Environment.GetEnvironmentVariable("BEATMAP_INFO_PREVIEW_DIR") is { } output)
+        {
+            Directory.CreateDirectory(output);
+            await File.WriteAllBytesAsync(Path.Combine(output, $"bpm-{beatmapId}-full.png"), result.FileContents);
+            await File.WriteAllTextAsync(Path.Combine(output, $"bpm-{beatmapId}-full.html"), capture.Html);
+        }
+        var fullHeight = capture.Height;
+        var fullCurves = System.Text.RegularExpressions.Regex.Matches(capture.Html, "<svg").Count;
+        var curvesOnly = Assert.IsType<Microsoft.AspNetCore.Mvc.FileContentResult>(
+            await controller.GetBeatmapBpm(theme, beatmapId));
+        Assert.Equal("image/png", curvesOnly.ContentType);
+        Assert.True(capture.Height < fullHeight);
+        Assert.DoesNotContain("完整变化明细", capture.Html);
+        await Inspect(browser, capture, async page =>
+        {
+            Assert.Equal(0, await page.Locator("table").CountAsync());
+            Assert.Equal(fullCurves, await page.Locator("svg").CountAsync());
+            Assert.Equal(segments.Length, await page.Locator(".bpm-curve").First.Locator(".bpm-change").CountAsync());
+            Assert.True(await page.Locator("footer").EvaluateAsync<bool>("e => e.getBoundingClientRect().bottom <= document.body.getBoundingClientRect().bottom"));
+        });
+        if (Environment.GetEnvironmentVariable("BEATMAP_INFO_PREVIEW_DIR") is { } curvesOutput)
+            await File.WriteAllBytesAsync(Path.Combine(curvesOutput, $"bpm-{beatmapId}-curves-only.png"), curvesOnly.FileContents);
+    }
+
+    private sealed class BpmFiles(string path) : IBeatmapFileService
+    {
+        public Task<string> GetOsuFilePathAsync(int setId, int mapId) => Task.FromResult(path);
+        public Task<byte[]> GetMapBgAsync(int setId, int mapId, string? bgName = null) => throw new NotSupportedException();
+        public string GetBgFilename(string file) => throw new NotSupportedException();
+        public Task<byte[]?> GetListCoverAsync(int setId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    }
+
+    [Fact]
+    public async Task Bpm_band_aligns_with_time_axis_without_adding_curves_or_clipping_content()
+    {
+        var source = Path.Combine(AppContext.BaseDirectory, "Fixtures", "3881559.osu");
+        var path = Path.GetTempFileName();
+        try
+        {
+            var text = await File.ReadAllTextAsync(source);
+            var timingStart = text.IndexOf("[TimingPoints]", StringComparison.Ordinal);
+            var timingEnd = text.IndexOf('[', timingStart + 1);
+            text = text[..timingStart] + "[TimingPoints]\n-174,500,4,1,0,100,1,0\n60000,400,4,1,0,100,1,0\n120000,500,4,1,0,100,1,0\n" + text[timingEnd..];
+            await File.WriteAllTextAsync(path, text);
+            await using var browser = new PlaywrightBrowserProvider(NullLogger<PlaywrightBrowserProvider>.Instance);
+            await browser.StartAsync();
+            var capture = new Capture(new PlaywrightRenderer(browser));
+            var theme = new DefaultBeatmapTheme(capture, new AvatarCardImageCache(Pixel),
+                new PpCalculatorService(), NullLogger<DefaultBeatmapTheme>.Instance, new BeatmapAnalysisService());
+            var map = Map(0, 0); map.Beatmapset = Set();
+            await theme.RenderBeatmapAsync(map, new User { Username = "BPM preview" }, Pixel, path);
+            Assert.Equal(1802, capture.Height);
+            await Inspect(browser, capture, async page =>
+            {
+                Assert.Equal(1, await page.Locator(".bpm-band").CountAsync());
+                Assert.Equal(2, await page.Locator(".curve-panel polyline").CountAsync());
+                Assert.Contains("150", await page.Locator(".bpm-band").TextContentAsync());
+                Assert.Contains("120", await page.Locator(".bpm-band").TextContentAsync());
+                Assert.True(await page.Locator(".curve-panel").EvaluateAsync<bool>("e => e.querySelector('svg').getBoundingClientRect().bottom <= e.getBoundingClientRect().bottom"));
+                Assert.True(await page.Locator("footer").EvaluateAsync<bool>("e => e.getBoundingClientRect().bottom <= document.body.getBoundingClientRect().bottom"));
+                var positions = await page.Locator(".bpm-band rect").EvaluateAllAsync<double[]>("els => els.map(e => Number(e.getAttribute('x')))");
+                var end = new BeatmapAnalysisService().Calculate(path)!.Strains.Points.Last().EndTimeMs;
+                Assert.InRange(Math.Abs(positions[1] - (64 + 1314 * 60000 / end)), 0, .01);
+            });
+            var output = Environment.GetEnvironmentVariable("BEATMAP_INFO_PREVIEW_DIR");
+            if (output is not null)
+            {
+                Directory.CreateDirectory(output);
+                await File.WriteAllBytesAsync(Path.Combine(output, "beatmap-bpm.png"),
+                    await theme.RenderBeatmapAsync(map, new User { Username = "BPM preview" }, Pixel, path));
+            }
+            var constant = (await File.ReadAllTextAsync(source)).Split("[TimingPoints]")[0]
+                + "[TimingPoints]\n-174,500,4,1,0,100,1,0\n[HitObjects]"
+                + (await File.ReadAllTextAsync(source)).Split("[HitObjects]")[1];
+            await File.WriteAllTextAsync(path, constant);
+            await theme.RenderBeatmapAsync(map, new User { Username = "BPM preview" }, Pixel, path);
+            Assert.DoesNotContain("bpm-band", capture.Html);
+            Assert.DoesNotContain("bpm-details", capture.Html);
+            Assert.DoesNotContain("BPM 120–120", capture.Html);
+            Assert.Equal(1768, capture.Height);
+            await new BeatmapBpmTheme(capture).RenderAsync(map, BeatmapBpmTimeline.ReadAll(path), includeDetails: true);
+            Assert.Contains("恒定 BPM", capture.Html);
+            await Inspect(browser, capture, async page =>
+            {
+                Assert.Equal(1, await page.Locator("tbody tr").CountAsync());
+                Assert.Equal(0, await page.Locator(".zoom-panel").CountAsync());
+                var curve = await page.Locator(".bpm-step").GetAttributeAsync("d");
+                Assert.Contains("H", curve);
+                Assert.DoesNotContain("V", curve);
+            });
+        }
+        finally { File.Delete(path); }
+    }
+
     private static readonly byte[] Pixel = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aWZsAAAAASUVORK5CYII=");
 
     [Theory]
@@ -52,7 +247,7 @@ public class BeatmapInfoRenderingTests
                 Assert.Equal(mode == 0 ? "56px" : "52px", await page.Locator(".title").EvaluateAsync<string>("e => getComputedStyle(e).fontSize"));
                 if (mode == 0)
                 {
-                    Assert.Equal(1768, capture.Height);
+                    Assert.Equal(1802, capture.Height);
                     Assert.Equal(4, await page.Locator(".fc-panel .analysis-cell").CountAsync());
                     Assert.Equal(3, await page.Locator(".component-cell").CountAsync());
                     Assert.Equal(5, await page.Locator(".mod-table tbody tr").CountAsync());
@@ -239,10 +434,12 @@ public class BeatmapInfoRenderingTests
         public string Html { get; private set; } = "";
         public int Width { get; private set; }
         public int Height { get; private set; }
-        public Task<byte[]> RenderHtmlAsync(string html, int width, int height, CancellationToken cancellationToken = default)
+        public async Task<byte[]> RenderHtmlAsync(string html, int width, int height, CancellationToken cancellationToken = default)
         {
-            Html = html; Width = width; Height = height;
-            return inner.RenderHtmlAsync(html, width, height, cancellationToken);
+            Html = html; Width = width;
+            var png = await inner.RenderHtmlAsync(html, width, height, cancellationToken);
+            Height = System.Buffers.Binary.BinaryPrimitives.ReadInt32BigEndian(png.AsSpan(20, 4));
+            return png;
         }
     }
     private sealed class Calculator : IPpCalculatorService

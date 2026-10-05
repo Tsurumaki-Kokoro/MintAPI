@@ -28,7 +28,7 @@
     <None Update="Fixtures/analysis-*.json" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Fixtures/match-109850222.json" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Fixtures/1028484.osu;Fixtures/2118524.osu;Fixtures/1638954.osu" CopyToOutputDirectory="PreserveNewest" />
-    <None Update="Fixtures/3881559.osu" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Fixtures/3881559.osu;Fixtures/4313549.osu;Fixtures/5148257.osu" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <PropertyGroup>

@@ -49,7 +49,10 @@ public sealed class BeatmapAnalysisService : IBeatmapAnalysisService
             ? strains.Points.Select(p => new AnalysisStrainPoint { EndTimeMs = p.EndTimeMs, First = p.Aim, Second = p.Speed }).ToArray()
             : difficulty.GetAnalysisStrains(map);
         var curves = curveNames.Select((name, i) => new BeatmapStrainSeries(name, colors[i], points.Select(p => p.Value(i)).ToArray())).ToArray();
-        return new BeatmapAnalysis(ss, references, mods, skills, strains, ruleset, Finite(ssResult.PpDifficulty), curves);
+        return new BeatmapAnalysis(ss, references, mods, skills, strains, ruleset, Finite(ssResult.PpDifficulty), curves)
+        {
+            BpmSegments = BeatmapBpmTimeline.Read(osuFilePath, strains.Points.LastOrDefault().EndTimeMs)
+        };
     }
 
     private static AccuracyPpReference[] CatchReferences(Beatmap map, RulesetAnalysisAttributes counts, PpResult ss)

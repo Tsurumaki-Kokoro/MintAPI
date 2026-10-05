@@ -79,6 +79,19 @@ public class OpenApiDocumentTests
         }
     }
 
+    [Fact]
+    public async Task Bpm_details_have_their_own_png_endpoint()
+    {
+        var operation = await GetOperationAsync("/beatmap/bpm", "get");
+        Assert.Equal(new[] { "beatmap_id", "include_details" }, operation.GetProperty("parameters").EnumerateArray()
+            .Select(parameter => parameter.GetProperty("name").GetString()).ToArray());
+        var flag = operation.GetProperty("parameters").EnumerateArray()
+            .Single(parameter => parameter.GetProperty("name").GetString() == "include_details");
+        Assert.False(flag.GetProperty("schema").GetProperty("default").GetBoolean());
+        Assert.True(operation.GetProperty("responses").GetProperty("200").GetProperty("content")
+            .TryGetProperty("image/png", out _));
+    }
+
     private static async Task<JsonElement> GetOperationAsync(string path, string method)
     {
         using var document = await GetDocumentAsync();

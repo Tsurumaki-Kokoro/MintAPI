@@ -118,6 +118,44 @@ public class BeatmapController(
         return await RenderBeatmapsetInfoAsync(beatmapset_id.Value, theme);
     }
 
+    /// <summary>渲染独立的完整 BPM 变化图，包含时间曲线、局部放大与全部区间明细。</summary>
+    /// <param name="beatmap_id">谱面 ID，必须为正整数。</param>
+    /// <param name="bpmTheme">BPM 明细渲染服务。</param>
+    /// <param name="include_details">是否渲染完整明细表格，默认 false，仅显示曲线与局部放大图；true 添加完整明细表格。</param>
+    /// <response code="200">PNG BPM 明细图。</response>
+    /// <response code="400">参数或谱面无效。</response>
+    /// <response code="404">谱面没有可用 BPM 数据。</response>
+    /// <response code="500">读取或渲染失败。</response>
+    [HttpGet("bpm")]
+    [Produces("image/png")]
+    public async Task<IActionResult> GetBeatmapBpm(
+        [FromServices] BeatmapBpmTheme bpmTheme,
+        [FromQuery] int? beatmap_id = null,
+        [FromQuery] bool include_details = false)
+    {
+        if (beatmap_id is null or <= 0) return BadRequest("beatmap_id 必须为正整数。");
+        Beatmap map;
+        try { map = await osuApi.GetBeatmapAsync(beatmap_id.Value); }
+        catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
+        {
+            logger.LogError(ex, "Failed to get beatmap {BeatmapId}", beatmap_id);
+            return BadRequest("Failed to get beatmap");
+        }
+        try
+        {
+            var path = await beatmapFile.GetOsuFilePathAsync(map.BeatmapsetId, map.Id);
+            var segments = BeatmapBpmTimeline.ReadAll(path);
+            if (segments.Length == 0) return NotFound("谱面没有可用 BPM 数据。");
+            Response.Headers["X-Bpm-Segment-Count"] = segments.Length.ToString();
+            return File(await bpmTheme.RenderAsync(map, segments, include_details, HttpContext.RequestAborted), "image/png");
+        }
+        catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
+        {
+            logger.LogError(ex, "Failed to render BPM details for beatmap {BeatmapId}", beatmap_id);
+            return StatusCode(500, "Failed to read or render BPM details");
+        }
+    }
+
     private async Task<IActionResult> RenderBeatmapInfoAsync(int beatmapId, string theme)
     {
         Beatmap beatmap;

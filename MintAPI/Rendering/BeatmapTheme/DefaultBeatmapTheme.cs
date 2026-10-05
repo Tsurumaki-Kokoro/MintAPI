@@ -35,6 +35,8 @@ public class DefaultBeatmapTheme
 
         var analysis = theme == "default" ? _analysis.Calculate(osuFilePath) : null;
         if (analysis is not null && analysis.Mode != beatmap.ModeInt) analysis = null;
+        var bpmExtraHeight = analysis?.BpmSegments.Length > 1 ? 34 : 0;
+        var imageHeight = theme == "default" ? analysis is not null ? 1768 + bpmExtraHeight : 900 : 600;
         var ppResult = analysis?.Ss ?? _ppCalc.CalculateSs(osuFilePath, beatmap.ModeInt);
         var stars = ppResult.Stars;
 
@@ -119,8 +121,9 @@ public class DefaultBeatmapTheme
             scriptObj["pp_text"] = analysis is not null ? $"{ppResult.Pp:N2}" : $"{Math.Round(ppResult.Pp):N0}";
             scriptObj["circles_text"] = $"{beatmap.CountCircles:N0}";
             scriptObj["sliders_text"] = $"{beatmap.CountSliders:N0}";
+            scriptObj["bpm_chart_extra_height"] = bpmExtraHeight;
             scriptObj["has_analysis"] = analysis is not null;
-            scriptObj["img_height"] = analysis is not null ? 1768 : 900;
+            scriptObj["img_height"] = imageHeight;
             if (analysis is not null) AddAnalysis(scriptObj, analysis);
         }
 
@@ -132,7 +135,7 @@ public class DefaultBeatmapTheme
         var html = await template.RenderAsync(templateCtx);
 
         return await _renderer.RenderHtmlAsync(html, theme == "default" ? 1500 : 1200,
-            theme == "default" ? analysis is not null ? 1768 : 900 : 600);
+            imageHeight);
     }
 
     public async Task<byte[]> RenderBeatmapsetAsync(Beatmapset beatmapset, byte[] coverBg, string theme = "default")
@@ -313,7 +316,10 @@ public class DefaultBeatmapTheme
             values["composition_metric"] = analysis.Mode == 2 ? $"{counts.Preempt:0} ms"
                 : $"{(counts.Objects == 0 ? 0 : 100d * counts.Holds / counts.Objects):0.0}%";
         }
-        values["strain_svg"] = BeatmapStrainChart.Render(analysis.Strains, analysis.Curves);
+        values["bpm_range"] = analysis.BpmSegments.Length > 1
+            ? FormattableString.Invariant($"BPM {analysis.BpmSegments.Min(s => s.Bpm):0.##}–{analysis.BpmSegments.Max(s => s.Bpm):0.##}")
+            : "";
+        values["strain_svg"] = BeatmapStrainChart.Render(analysis.Strains, analysis.Curves, analysis.BpmSegments);
     }
 
     private static string ModeImage(int mode)

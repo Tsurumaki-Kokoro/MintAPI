@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><style>
+@font-face{font-family:Harmony;src:url('{{ base_url }}/fonts/HarmonyOS_Sans_SC_Regular.ttf')}@font-face{font-family:Harmony;src:url('{{ base_url }}/fonts/HarmonyOS_Sans_SC_Bold.ttf');font-weight:700}
+*{box-sizing:border-box}html,body{margin:0;width:2000px}body{font-family:-apple-system,BlinkMacSystemFont,Harmony,sans-serif;background:#fafafa;color:#1d1d1f;font-variant-numeric:tabular-nums}main{padding:40px 56px 28px}header{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid #d2d2d8;padding-bottom:20px;font-size:28px;font-weight:600}header small{font-size:23px;font-weight:400;color:#6e6e73}h1{font-size:42px;line-height:1.18;margin:26px 0 10px;overflow-wrap:anywhere}.metadata{font-size:23px;color:#6e6e73;line-height:1.5;overflow-wrap:anywhere}.summary{display:flex;gap:60px;margin:28px 0;font-size:26px}.summary strong{font-size:34px;margin-left:12px}table{width:100%;border-collapse:collapse;table-layout:fixed}th{text-align:right;color:#6e6e73;font-size:21px;font-weight:400;padding:12px}td{font-size:23px;text-align:right;height:44px;padding:8px 12px;border-top:1px solid #e5e5ea;white-space:nowrap}th:first-child,td:first-child{text-align:left;width:65px;color:#6e6e73}th:nth-child(2),th:nth-child(3){width:330px}td.bpm{font-weight:600}.up{color:#0066cc}.down{color:#bf651d}.initial{color:#6e6e73}footer{display:flex;justify-content:space-between;border-top:1px solid #d2d2d8;margin-top:24px;padding-top:18px;font-size:23px;color:#6e6e73}
+h2{font-size:28px;margin:0 0 16px}h3{font-size:22px;font-weight:500;margin:0 0 8px;color:#53615c}.curve-section{border-top:1px solid #d2d2d8;padding-top:24px;margin-bottom:26px}.curve-section svg{display:block}.zoom-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px 40px;margin-top:22px}.details-title{border-top:1px solid #d2d2d8;padding-top:22px}.chart-context{color:#6e6e73;font-size:21px;margin:0 0 16px}
+</style></head><body><main>
+<header><span>BPM 变化明细</span><small>MAP {{ map_id }} · 原速</small></header>
+<h1>{{ title }}</h1><div class="metadata">{{ artist }}<br>{{ version }}</div>
+<div class="summary"><span>BPM<strong>{{ bpm_min }}{{ if !constant }}–{{ bpm_max }}{{ end }}</strong></span><span>{{ if constant }}恒定 BPM{{ else }}{{ changes }} 次变化{{ end }}</span><span>{{ segments }} 个区间</span></div>
+<section class="curve-section"><h2>BPM 时间曲线</h2><div class="chart-context">阶梯表示实际 BPM · 水平段表示持续时间</div>{{ curve_svg }}
+{{ if zoom_charts.size > 0 }}<h2>密集变速局部放大</h2><div class="zoom-grid">{{ for chart in zoom_charts }}<section class="zoom-panel"><h3>{{ chart.title }}</h3>{{ chart.svg }}</section>{{ end }}</div>{{ end }}</section>
+{{ if include_details }}<h2 class="details-title">完整变化明细</h2>
+<table><thead><tr><th>#</th><th>开始</th><th>结束</th><th>持续 / 秒</th><th>原 BPM</th><th>BPM</th><th>变化</th></tr></thead><tbody>
+{{ for row in rows }}<tr data-index="{{ row.index }}"><td>{{ row.index }}</td><td>{{ row.start }}</td><td>{{ row.end }}</td><td>{{ row.duration }}</td><td>{{ row.previous }}</td><td class="bpm">{{ row.bpm }}</td><td class="{{ row.direction }}">{{ row.delta }}</td></tr>{{ end }}
+</tbody></table>{{ end }}
+<footer><span>全部 {{ segments }} 个区间 · 时间精确到毫秒</span><span>MintAPI</span></footer>
+</main></body></html>

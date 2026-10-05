@@ -1,2 +1,4 @@
 # Keep the original beatmap bytes for its upstream checksum regression.
 3881559.osu -text whitespace=cr-at-eol
+4313549.osu -text whitespace=cr-at-eol
+5148257.osu -text whitespace=cr-at-eol

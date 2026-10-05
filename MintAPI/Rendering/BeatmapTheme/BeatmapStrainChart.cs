@@ -7,7 +7,7 @@ namespace MintAPI.Rendering.BeatmapTheme;
 
 internal static class BeatmapStrainChart
 {
-    public static string Render(OsuStrainTimeline timeline, BeatmapStrainSeries[] series)
+    public static string Render(OsuStrainTimeline timeline, BeatmapStrainSeries[] series, BeatmapBpmSegment[] bpmSegments)
     {
         var points = timeline.Points.Select((point, i) => new
         {
@@ -28,7 +28,10 @@ internal static class BeatmapStrainChart
         var tickFormat = decimals > 8 ? "0.##E+0" : "0" + (decimals > 0 ? "." + new string('#', decimals) : "");
         double X(double time) => left + (right - left) * (time - start) / (end - start);
         double Y(double value) => bottom - (bottom - top) * value / ceiling;
-        var svg = new StringBuilder("<svg role=\"img\" aria-label=\"局部 strain 曲线，共享纵轴\" width=\"1404\" height=\"238\" viewBox=\"0 0 1404 238\">");
+        var hasBpmChanges = bpmSegments.Length > 1;
+        var chartHeight = hasBpmChanges ? 272 : 238;
+        var timeLabelY = hasBpmChanges ? 265 : 231;
+        var svg = new StringBuilder($"<svg role=\"img\" aria-label=\"局部 strain 曲线，共享纵轴\" width=\"1404\" height=\"{chartHeight}\" viewBox=\"0 0 1404 {chartHeight}\">");
         for (var val = 0d; val <= ceiling + step / 2; val += step)
         {
             svg.Append(FormattableString.Invariant($"<line x1=\"{left}\" y1=\"{Y(val):0.##}\" x2=\"{right}\" y2=\"{Y(val):0.##}\" stroke=\"#e5e5ea\"/><text x=\"{left - 12}\" y=\"{Y(val) + 7:0.##}\" text-anchor=\"end\" font-size=\"21\" fill=\"#6e6e73\">{val.ToString(tickFormat, CultureInfo.InvariantCulture)}</text>"));
@@ -36,7 +39,23 @@ internal static class BeatmapStrainChart
         // Keep timestamp labels apart on both short and long maps.
         var tickSeconds = Math.Max(1, Math.Ceiling(end / 1000 / 6 / 10) * 10);
         for (var time = 0d; time <= end / 1000; time += tickSeconds)
-            svg.Append(FormattableString.Invariant($"<text x=\"{X(time * 1000):0.##}\" y=\"231\" text-anchor=\"middle\" font-size=\"23\" fill=\"#6e6e73\">{(int)time / 60}:{(int)time % 60:00}</text>"));
+            svg.Append(FormattableString.Invariant($"<text x=\"{X(time * 1000):0.##}\" y=\"{timeLabelY}\" text-anchor=\"middle\" font-size=\"23\" fill=\"#6e6e73\">{(int)time / 60}:{(int)time % 60:00}</text>"));
+
+        if (hasBpmChanges)
+        {
+            svg.Append("<g class=\"bpm-band\" aria-label=\"BPM 变化\"><text x=\"52\" y=\"235\" text-anchor=\"end\" font-size=\"17\" fill=\"#6e6e73\">BPM</text>");
+            foreach (var segment in bpmSegments)
+            {
+                var x = X(Math.Max(start, segment.StartTimeMs));
+                var width = X(Math.Min(end, segment.EndTimeMs)) - x;
+                if (width <= 0) continue;
+                var label = segment.Bpm.ToString("0.##", CultureInfo.InvariantCulture);
+                svg.Append(FormattableString.Invariant($"<rect x=\"{x:0.##}\" y=\"215\" width=\"{width:0.##}\" height=\"26\" fill=\"#ededf0\"/><line x1=\"{x:0.##}\" x2=\"{x:0.##}\" y1=\"215\" y2=\"241\" stroke=\"#8e8e93\"/>"));
+                if (width >= label.Length * 12 + 16)
+                    svg.Append(FormattableString.Invariant($"<text x=\"{x + width / 2:0.##}\" y=\"235\" text-anchor=\"middle\" font-size=\"19\" fill=\"#53615c\">{label}</text>"));
+            }
+            svg.Append("</g>");
+        }
 
         // Bound SVG size while preserving the local maximum of each skill per horizontal pixel.
         for (var i = series.Length - 1; i >= 0; i--)

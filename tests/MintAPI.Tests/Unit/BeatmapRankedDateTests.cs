@@ -106,6 +106,17 @@ public class BeatmapRankedDateTests
         Assert.Contains("933630", renderer.Html);
     }
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task Bpm_endpoint_rejects_invalid_parameters_without_upstream_calls(int? id)
+    {
+        var api = new RecordingOsuApiService();
+        Assert.IsType<BadRequestObjectResult>(await Create(api, new Capture()).GetBeatmapBpm(null!, id));
+        Assert.Equal(0, api.CallCount);
+    }
+
     private static BeatmapController Create(RecordingOsuApiService api, Capture renderer) => new(
         api, new Files(), Theme(renderer), NullLogger<BeatmapController>.Instance);
     private static DefaultBeatmapTheme Theme(Capture renderer) => new(renderer,
