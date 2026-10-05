@@ -22,7 +22,7 @@ public class ScoreControllerTests
     [InlineData(1, 21)]
     [InlineData(90, 101)]
     public async Task Invalid_bp_ranges_are_rejected(int first, int last)
-        => Assert.IsType<BadRequestObjectResult>(await Controller().BestPlay("qq", "1", best_index: first, best_end: last));
+        => Assert.IsType<BadRequestObjectResult>(await Controller().BestPlays("qq", "1", best_index: first, best_end: last));
 
     [Theory]
     [InlineData(10, 9)]
@@ -36,7 +36,7 @@ public class ScoreControllerTests
     {
         Assert.IsType<BadRequestObjectResult>(await Controller().RecentPlay("qq", "1", theme: "apple"));
         Assert.IsType<BadRequestObjectResult>(await Controller().BestPlay("qq", "1", game_mode: 4));
-        Assert.IsType<BadRequestObjectResult>(await Controller().BestPlay("qq", "1", theme: "yaowan", best_end: 5));
+        Assert.IsType<BadRequestObjectResult>(await Controller().BestPlays("qq", "1", game_mode: 4, best_end: 5));
         Assert.IsType<BadRequestObjectResult>(await Controller().RecentPlay("qq", "1", theme: "yaowan", recent_end: 5));
     }
 }

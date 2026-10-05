@@ -59,7 +59,7 @@ public class ScoreListControllerTests
         { ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() } };
         var result = recent
             ? await controller.RecentPlay("qq", "1", include_fails: true, recent_index: 3, legacy_only: false, recent_end: 7)
-            : await controller.BestPlay("qq", "1", best_index: 3, legacy_only: false, best_end: 7);
+            : await controller.BestPlays("qq", "1", best_index: 3, legacy_only: false, best_end: 7);
         if (available == 0)
         {
             Assert.IsType<NotFoundObjectResult>(result);

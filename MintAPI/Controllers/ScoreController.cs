@@ -89,12 +89,11 @@ public class ScoreController(
         return await RenderScoreAsync(scores[0], userInfo, mode, theme, $"RECENT PLAY · #{recent_index}");
     }
 
-    /// <summary>渲染第 N 个最好成绩（BP）或 BP 区间列表。</summary>
+    /// <summary>渲染第 N 个最好成绩（BP）。</summary>
     /// <param name="platform">平台。</param>
     /// <param name="platform_uid">平台用户 ID。</param>
     /// <param name="game_mode">模式 0–3，默认使用绑定模式。</param>
     /// <param name="legacy_only">true 仅 Stable 成绩，false 包含 Lazer，省略使用 API 默认。</param>
-    /// <param name="best_end">可选 BP 区间终点（含），最多 20 条；仅 default 支持列表。</param>
     /// <param name="best_index">第几个 BP，从 1 开始。</param>
     /// <param name="theme">渲染主题：default 或 yaowan。</param>
     /// <response code="200">PNG 成绩图。</response>
@@ -109,8 +108,29 @@ public class ScoreController(
         [FromQuery] int? game_mode = null,
         [FromQuery] int best_index = 1,
         [FromQuery] string theme = "default",
-        [FromQuery] bool? legacy_only = null,
-        [FromQuery] int? best_end = null)
+        [FromQuery] bool? legacy_only = null)
+        => await GetBestPlayAsync(platform, platform_uid, game_mode, best_index, theme, legacy_only, null);
+
+    /// <summary>渲染 BP 区间列表，最多 20 条。</summary>
+    /// <param name="platform">平台。</param>
+    /// <param name="platform_uid">平台用户 ID。</param>
+    /// <param name="game_mode">模式 0–3，默认绑定模式。</param>
+    /// <param name="best_index">起点，1–100。</param>
+    /// <param name="best_end">区间终点（含），1–100，最多 20 条。</param>
+    /// <param name="legacy_only">true 仅 Stable，false 包含 Lazer，省略使用 API 默认。</param>
+    /// <response code="200">PNG 列表图。</response>
+    /// <response code="400">无效区间或取成绩失败。</response>
+    /// <response code="404">用户未绑定或没有 BP。</response>
+    [HttpGet("best_plays")]
+    [Produces("image/png")]
+    public Task<IActionResult> BestPlays(
+        [FromQuery] string platform, [FromQuery] string platform_uid,
+        [FromQuery] int? game_mode = null, [FromQuery] int best_index = 1,
+        [FromQuery] int best_end = 10, [FromQuery] bool? legacy_only = null)
+        => GetBestPlayAsync(platform, platform_uid, game_mode, best_index, "default", legacy_only, best_end);
+
+    private async Task<IActionResult> GetBestPlayAsync(string platform, string platform_uid,
+        int? game_mode, int best_index, string theme, bool? legacy_only, int? best_end)
     {
         if (theme is not ("default" or "yaowan")) return BadRequest("theme 必须为 default 或 yaowan。");
         if (game_mode is < 0 or > 3) return BadRequest("game_mode 必须为 0–3。");

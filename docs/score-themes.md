@@ -5,13 +5,14 @@
 ```text
 /score/recent_play?platform=qq&platform_uid=123&recent_index=2&include_fails=true&theme=default
 /score/best_play?platform=qq&platform_uid=123&best_index=3&theme=default
-/score/best_play?platform=qq&platform_uid=123&best_index=1&best_end=10&theme=default
+/score/best_plays?platform=qq&platform_uid=123&best_index=1&best_end=10
 /score/recent_play?platform=qq&platform_uid=123&recent_index=1&recent_end=5&include_fails=true&theme=default
 ```
 
 - `game_mode`：0–3，省略使用绑定模式。
 - `recent_index`、`best_index`：1–100，从 1 开始。
-- `best_end` / `recent_end`：可选区间终点（含），不得小于对应起点，最多 20 条，终点不超过 100；列表仅支持 default。省略终点时仍返回单条成绩图；指定与起点相同的终点时返回一行列表。实际可用成绩少于请求数量时返回已有成绩，并显示实际返回的序号范围。
+- `best_play` 仅返回单条 BP，支持 `theme`；`best_plays` 始终返回列表，默认 `best_index=1&best_end=10`，仅支持 default。
+- `best_end`（best_plays）/ `recent_end`（recent_play）：区间终点（含），不得小于对应起点，最多 20 条，终点不超过 100；列表仅支持 default。最近成绩省略终点时仍返回单条成绩图；指定与起点相同的终点时返回一行列表。实际可用成绩少于请求数量时返回已有成绩，并显示实际返回的序号范围。
 - `legacy_only`：true 仅 Stable 成绩，false 包含 Lazer，省略沿用 osu! API 默认。
 - 单条显示模式对应判定、实际 PP（优先 API 值）、FC/SS 估算、连击及谱面参数；列表显示序号、谱面背景、标题、作者、难度、Mods、等级、准确率和 PP；BP 另显示加权比例与加权 PP（API 提供时）。列表不再显示连击、Miss 和成绩时间，单条图仍保留这些信息。最近游玩列表明确标记失败成绩，并沿用 include_fails 和 legacy_only 过滤。单条时间统一使用 UTC。
 
