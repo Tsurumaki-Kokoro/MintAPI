@@ -91,6 +91,7 @@ public class BeatmapRankedDateTests
     }
     private sealed class Calculator : IPpCalculatorService
     {
+        public PpResult CalculateFixed(Score score, string osuFilePath) => throw new NotSupportedException();
         public PpResult CalculateSs(string path, int rulesetId, uint mods = 0) => new(100, 5, 1000);
         public PpResult Calculate(Score score, string path) => throw new NotSupportedException();
         public (double IfPp, double SsPp) CalculateIfFcAndSs(Score score, string path) => throw new NotSupportedException();

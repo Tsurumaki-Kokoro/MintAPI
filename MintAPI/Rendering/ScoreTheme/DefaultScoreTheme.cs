@@ -247,8 +247,15 @@ public class DefaultScoreTheme
         CancellationToken cancellationToken = default)
         => RenderListAsync(scores, user, firstIndex, recent: true, cancellationToken);
 
+    public Task<byte[]> RenderFixAsync(BpFixReport report, User user, CancellationToken cancellationToken = default)
+        => RenderListAsync(report.Entries.Select(e => e.Score).ToList(), user, 1, false, cancellationToken, report);
+
+    public Task<byte[]> RenderNewBestListAsync(NewBestPlayReport report, User user, CancellationToken cancellationToken = default)
+        => RenderListAsync(report.Entries.Select(entry => entry.Score).ToList(), user, report.First, false,
+            cancellationToken, newBest: report);
+
     private async Task<byte[]> RenderListAsync(List<Score> scores, User user, int firstIndex, bool recent,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, BpFixReport? fix = null, NewBestPlayReport? newBest = null)
     {
         if (scores.Count is < 1 or > 20) throw new ArgumentOutOfRangeException(nameof(scores));
         cancellationToken.ThrowIfCancellationRequested();
@@ -301,7 +308,12 @@ public class DefaultScoreTheme
                 + (int)Math.Ceiling(TextWidth(artist) / 42d) * 30);
             return new
             {
-                position = firstIndex + index, height,
+                position = fix?.Entries[index].OldRank ?? newBest?.Entries[index].BpRank ?? firstIndex + index, height = fix is null && newBest is null ? height : Math.Max(height, 260),
+                played_at = newBest is null ? "" : score.EndedAt.ToUniversalTime().ToString("yyyy-MM-dd HH:mm 'UTC'"),
+                fixed_rank = fix?.Entries[index].NewRank ?? 0,
+                fixed_pp = fix is null ? "" : $"{fix.Entries[index].Fixed.Pp:0.00}",
+                gain = fix is null ? "" : $"+{fix.Entries[index].Fixed.Pp - (score.Pp ?? 0):0.00}",
+                combo = fix is null ? "" : $"{score.MaxCombo:N0}x → {fix.Entries[index].Fixed.MaxCombo:N0}x · {score.Statistics?.Miss ?? 0} miss",
                 title = Escape(set?.Title), artist = Escape(artist), version = Escape(map?.Version),
                 mods,
                 background = covers.GetValueOrDefault(SetId(score), ""),
@@ -315,7 +327,7 @@ public class DefaultScoreTheme
             };
         }).ToArray();
         var headerHeight = Math.Max(132, 64 + (int)Math.Ceiling(TextWidth(user.Username) / 32d) * 52);
-        var imageHeight = 112 + headerHeight + rows.Sum(row => row.height);
+        var imageHeight = 112 + headerHeight + rows.Sum(row => row.height) + (fix is null ? 0 : 150);
         var globals = new ScriptObject
         {
             ["base_url"] = $"file://{Path.Combine(AppContext.BaseDirectory, "wwwroot")}",
@@ -323,7 +335,12 @@ public class DefaultScoreTheme
             ["mode_name"] = string.Join(" / ", scores.Select(score => score.RulesetId switch
                 { 1 or 5 => "osu!taiko", 2 or 6 => "osu!catch", 3 => "osu!mania", _ => "osu!" }).Distinct()),
             ["is_supporter"] = user.IsSupporter, ["recent"] = recent,
-            ["heading"] = recent ? "RECENT PLAYS" : "BEST PLAYS",
+            ["heading"] = newBest is not null ? "NEW BEST PLAYS" : fix is not null ? "BP FIX" : recent ? "RECENT PLAYS" : "BEST PLAYS",
+            ["fix"] = fix is not null, ["new_best"] = newBest is not null,
+            ["days"] = newBest?.Days ?? 0, ["matched_total"] = newBest?.Total ?? 0,
+            ["current_pp"] = $"{fix?.CurrentPp:0.00}", ["total_fixed_pp"] = $"{fix?.FixedPp:0.00}",
+            ["weighted_gain"] = $"{fix?.Gain:0.00}",
+            ["candidate_count"] = fix?.CandidateCount ?? 0, ["skipped_count"] = fix?.SkippedCount ?? 0,
             ["first"] = firstIndex, ["last"] = firstIndex + scores.Count - 1,
             ["image_height"] = imageHeight, ["header_height"] = headerHeight,
             ["avatar"] = avatar.Length > 0 ? $"data:image/png;base64,{Convert.ToBase64String(avatar)}"

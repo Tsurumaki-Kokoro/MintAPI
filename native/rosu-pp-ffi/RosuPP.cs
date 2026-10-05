@@ -152,6 +152,7 @@ public sealed class Performance : IDisposable
     public Performance NKatu(uint n)                { Native.performance_n_katu(_h, n);                      return this; }
     public Performance PassedObjects(uint n)        { Native.performance_passed_objects(_h, n);              return this; }
     public Performance ClockRate(double rate)       { Native.performance_clock_rate(_h, rate);               return this; }
+    public Performance Mode(byte mode) { Native.performance_mode(_h, mode); return this; }
     public Performance Lazer(bool lazer)            { Native.performance_lazer(_h, lazer);                   return this; }
 
     /// <summary>Consumes this handle and returns the result. Do not use after calling.</summary>
@@ -249,6 +250,7 @@ internal static unsafe class Native
     [DllImport(Lib)] internal static extern void              performance_n_katu(IntPtr h, uint n);
     [DllImport(Lib)] internal static extern void              performance_passed_objects(IntPtr h, uint n);
     [DllImport(Lib)] internal static extern void              performance_clock_rate(IntPtr h, double rate);
+    [DllImport(Lib)] internal static extern void performance_mode(IntPtr h, byte mode);
     [DllImport(Lib)] internal static extern void              performance_lazer(IntPtr h, bool lazer);
     [DllImport(Lib, EntryPoint = "performance_calculate_v2")] internal static extern PerformanceResult performance_calculate(IntPtr h);
 }

@@ -109,6 +109,24 @@ public class PpCalculatorService : IPpCalculatorService
         return (ifPp, ssPp);
     }
 
+    public PpResult CalculateFixed(Score score, string osuFilePath)
+    {
+        using var beatmap = Beatmap.FromPath(osuFilePath);
+        using var performance = new Performance(beatmap).Mods(GetModsValue(score.Mods))
+            .Mode((byte)score.RulesetId).Lazer(score.BuildId.HasValue && score.BuildId > 0)
+            .Accuracy(score.Accuracy * 100).Misses(0);
+        var speed = score.Mods?.FirstOrDefault(m => m.Acronym is "DT" or "NC" or "HT" or "DC");
+        if (speed?.Settings?.TryGetValue("speed_change", out var value) == true &&
+            double.TryParse(Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture),
+                System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var rate) && rate > 0)
+            performance.ClockRate(rate);
+        else if (speed?.Acronym == "DC")
+            performance.ClockRate(.75);
+        var result = performance.Calculate();
+        if (!double.IsFinite(result.Pp)) throw new InvalidOperationException("Invalid FC PP result.");
+        return new PpResult(result.Pp, result.Stars, result.MaxCombo);
+    }
+
     public PpResult CalculateSs(string osuFilePath, int rulesetId, uint mods = 0)
     {
         using var beatmap = Beatmap.FromPath(osuFilePath);

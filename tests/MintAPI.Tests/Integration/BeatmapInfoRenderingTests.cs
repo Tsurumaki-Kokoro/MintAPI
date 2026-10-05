@@ -247,6 +247,7 @@ public class BeatmapInfoRenderingTests
     }
     private sealed class Calculator : IPpCalculatorService
     {
+        public PpResult CalculateFixed(Score score, string osuFilePath) => throw new NotSupportedException();
         public PpResult CalculateSs(string osuFilePath, int rulesetId, uint mods = 0) => new(792, 7.69, 2900);
         public PpResult Calculate(Score score, string osuFilePath) => throw new NotSupportedException();
         public (double IfPp, double SsPp) CalculateIfFcAndSs(Score score, string osuFilePath) => throw new NotSupportedException();

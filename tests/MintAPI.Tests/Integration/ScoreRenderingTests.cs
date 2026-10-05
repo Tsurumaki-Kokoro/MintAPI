@@ -294,6 +294,7 @@ public class ScoreRenderingTests
 
     private sealed class Calculator : IPpCalculatorService
     {
+        public PpResult CalculateFixed(Score score, string osuFilePath) => throw new NotSupportedException();
         public PpResult Calculate(Score score, string path) => new(300, 6.42, 1500, 180.12, 120.34, 45.67);
         public (double IfPp, double SsPp) CalculateIfFcAndSs(Score score, string path) => (350.67, 400.12);
         public PpResult CalculateSs(string path, int mode, uint mods = 0) => throw new NotSupportedException();

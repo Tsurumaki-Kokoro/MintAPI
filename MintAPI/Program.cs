@@ -65,6 +65,7 @@ try
         })));
 
     builder.Services.AddSingleton<IPpCalculatorService, PpCalculatorService>();
+    builder.Services.AddSingleton<BpFixService>();
     builder.Services.AddSingleton<IBeatmapAnalysisService, BeatmapAnalysisService>();
     builder.Services.AddSingleton<IBeatmapFileService, BeatmapFileService>();
     builder.Services.AddOptions<BeatmapPreviewOptions>().Bind(config.GetSection("BeatmapPreview"))

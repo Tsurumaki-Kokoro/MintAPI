@@ -178,6 +178,99 @@ public class ScoreController(
         return await RenderScoreAsync(scores[0], userInfo, mode, theme, $"BEST PLAY · #{best_index}");
     }
 
+    /// <summary>渲染近 N 日新增 BP，筛选当前前 200 BP，保留原 BP 排名。</summary>
+    /// <param name="platform">平台。</param>
+    /// <param name="platform_uid">平台用户 ID。</param>
+    /// <param name="days">回溯天数，1–365，默认近 24 小时。</param>
+    /// <param name="game_mode">模式 0–3，默认绑定模式。</param>
+    /// <param name="legacy_only">true 仅 Stable，false 包含 Lazer，省略使用 API 默认。</param>
+    /// <param name="mods">逗号分隔 Mods，包含匹配；NM 仅无 Mods（忽略 CL）。</param>
+    /// <param name="first">筛选结果的起点，从 1 开始。</param>
+    /// <param name="last">筛选结果的终点（含），最多 20 条，默认 20。</param>
+    /// <response code="200">PNG 新增 BP 列表。</response>
+    /// <response code="400">参数无效。</response>
+    /// <response code="404">未绑定或没有符合条件的成绩。</response>
+    /// <response code="500">查询或渲染失败。</response>
+    [HttpGet("new_best_plays")]
+    [HttpGet("nb")]
+    [Produces("image/png")]
+    public async Task<IActionResult> NewBestPlays([FromQuery] string platform, [FromQuery] string platform_uid,
+        [FromQuery] int days = 1, [FromQuery] int? game_mode = null, [FromQuery] bool? legacy_only = null,
+        [FromQuery] string? mods = null, [FromQuery] int first = 1, [FromQuery] int last = 20)
+    {
+        if (game_mode is < 0 or > 3) return BadRequest("game_mode 必须为 0–3。");
+        if (days is < 1 or > 365) return BadRequest("days 必须为 1–365。");
+        if (first < 1 || last < first || last > 200 || last - first >= 20)
+            return BadRequest("first/last 必须为 1–200，每次最多 20 条。");
+        var requiredMods = (mods ?? "").Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .Select(mod => mod.ToUpperInvariant()).Distinct().ToArray();
+        if (requiredMods.Any(mod => mod.Length is < 2 or > 4 || !mod.All(char.IsAsciiLetterOrDigit)) ||
+            (requiredMods.Contains("NM") && requiredMods.Length > 1))
+            return BadRequest("mods 使用逗号分隔的 Mods 缩写；NM 必须单独使用。");
+        var cancellationToken = HttpContext.RequestAborted;
+        var binding = await db.Users.FirstOrDefaultAsync(u => u.Platform == platform && u.PlatformUid == platform_uid, cancellationToken);
+        if (binding is null) return NotFound("User not found");
+        var now = DateTimeOffset.UtcNow;
+        var mode = (GameMode)(game_mode ?? binding.GameMode);
+        try
+        {
+            var user = await osuApi.GetUserAsync(binding.OsuUid, mode);
+            var scores = await osuApi.GetUserScoresAsync(user.Id, ScoreType.Best, mode, limit: 100,
+                offset: 0, legacyOnly: legacy_only, cancellationToken: cancellationToken);
+            if (scores.Count == 100)
+                scores.AddRange(await osuApi.GetUserScoresAsync(user.Id, ScoreType.Best, mode, limit: 100,
+                    offset: 100, legacyOnly: legacy_only, cancellationToken: cancellationToken));
+            var report = NewBestPlayData.Select(scores, now, days, first, last, requiredMods);
+            if (report.Entries.Count == 0) return NotFound("未查询到指定时间范围内的新增 BP");
+            return File(await scoreTheme.RenderNewBestListAsync(report, user, cancellationToken), "image/png");
+        }
+        catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
+        {
+            logger.LogError(ex, "Failed to render new BP for {OsuUid}", binding.OsuUid);
+            return StatusCode(500, "Failed to get or render new best plays");
+        }
+    }
+
+    /// <summary>分析前 100 BP 的少量 miss 或掉连成绩，渲染理论 FC 和加权 PP 提升。</summary>
+    /// <param name="platform">平台。</param>
+    /// <param name="platform_uid">平台用户 ID。</param>
+    /// <param name="game_mode">模式 0–3，默认绑定模式。</param>
+    /// <param name="legacy_only">true 仅 Stable，false 包含 Lazer，省略使用 API 默认。</param>
+    /// <param name="fixService">BP Fix 分析服务。</param>
+    /// <response code="200">PNG 分析图，最多展示 12 项。</response>
+    /// <response code="400">无效模式。</response>
+    /// <response code="404">用户未绑定、没有 BP 或没有可修复成绩。</response>
+    /// <response code="500">查询、计算或渲染失败。</response>
+    [HttpGet("fix")]
+    [Produces("image/png")]
+    public async Task<IActionResult> Fix([FromQuery] string platform, [FromQuery] string platform_uid,
+        [FromServices] BpFixService fixService, [FromQuery] int? game_mode = null,
+        [FromQuery] bool? legacy_only = null)
+    {
+        if (game_mode is < 0 or > 3) return BadRequest("game_mode 必须为 0–3。");
+        var binding = await db.Users.FirstOrDefaultAsync(u => u.Platform == platform && u.PlatformUid == platform_uid,
+            HttpContext.RequestAborted);
+        if (binding is null) return NotFound("User not found");
+        var mode = (GameMode)(game_mode ?? binding.GameMode);
+        try
+        {
+            var user = await osuApi.GetUserAsync(binding.OsuUid, mode);
+            var scores = await osuApi.GetUserScoresAsync(user.Id, ScoreType.Best, mode, limit: 100,
+                legacyOnly: legacy_only, cancellationToken: HttpContext.RequestAborted);
+            if (scores.Count == 0) return NotFound("No best play record found");
+            var report = await fixService.AnalyzeAsync(user, scores, HttpContext.RequestAborted);
+            if (report.Entries.Count == 0)
+                return report.SkippedCount > 0 ? StatusCode(500, "Failed to calculate BP Fix")
+                    : NotFound("BP 中没有符合条件的可修复掉连成绩");
+            return File(await scoreTheme.RenderFixAsync(report, user, HttpContext.RequestAborted), "image/png");
+        }
+        catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
+        {
+            logger.LogError(ex, "Failed to render BP Fix for {OsuUid}", binding.OsuUid);
+            return StatusCode(500, "Failed to analyze BP Fix");
+        }
+    }
+
     /// <summary>渲染指定用户在指定谱面上的成绩图。</summary>
     /// <param name="platform">平台。</param>
     /// <param name="platform_uid">平台用户 ID。</param>

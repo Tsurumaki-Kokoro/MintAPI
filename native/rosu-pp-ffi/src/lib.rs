@@ -223,6 +223,15 @@ pub extern "C" fn performance_lazer(handle: *mut PerformanceHandle, lazer: bool)
     unsafe { std::ptr::write(&mut h.0, p.lazer(lazer)) };
 }
 
+#[unsafe(no_mangle)]
+pub extern "C" fn performance_mode(handle: *mut PerformanceHandle, mode: u8) {
+    use rosu_pp::model::mode::GameMode;
+    let mode = match mode { 1 => GameMode::Taiko, 2 => GameMode::Catch, 3 => GameMode::Mania, _ => GameMode::Osu };
+    let h = unsafe { &mut *handle };
+    let p = unsafe { std::ptr::read(&h.0) };
+    unsafe { std::ptr::write(&mut h.0, p.mode_or_ignore(mode)) };
+}
+
 // ── PerformanceResult ─────────────────────────────────────────────────────────
 
 #[repr(C)]

@@ -6,6 +6,7 @@
 /score/recent_play?platform=qq&platform_uid=123&recent_index=2&include_fails=true&theme=default
 /score/best_play?platform=qq&platform_uid=123&best_index=3&theme=default
 /score/best_plays?platform=qq&platform_uid=123&best_index=1&best_end=10
+/score/fix?platform=qq&platform_uid=123&game_mode=0&legacy_only=true
 /score/recent_play?platform=qq&platform_uid=123&recent_index=1&recent_end=5&include_fails=true&theme=default
 ```
 
@@ -33,3 +34,27 @@ PP 分项的新版原生返回结构使用 `performance_calculate_v2`，旧 `per
 列表背景从 osu! 官方谱面集封面加载，按谱面集缓存为 `cache/beatmap/osu_file/{setId}/list-cover.jpg`。同一次渲染去重谱面集并最多同时加载 4 张，每张首次加载超时 5 秒；失败时使用占位，不下载 `.osu` 文件，不以随机季节背景替代实际谱面。背景和图标内嵌到 HTML 中，渲染无需再发出图片请求。
 
 列表保持 osu! API 的原始排序（BP 顺序、最近时间顺序），不因缺失 PP 重排。宽度为 1500px，高度按实际条目和文字内容变化；大量条目的完整细节需打开原图阅读，日常群聊建议每张请求 3–5 条。
+
+## BP Fix
+
+`GET /score/fix` 使用平台绑定账号与默认模式，支持 `game_mode=0–3` 和 `legacy_only`，返回 default 风格 PNG。参考 [osubot BP Fix](https://github.com/yaowan233/nonebot-plugin-osubot/blob/master/src/nonebot_plugin_osubot/draw/bp_fix.py)：分析前 100 BP，排除失败、缺少谱面/PP、SS 和完整 FC，miss 比例不超过物件数的 1%，无 miss 时检查掉连。保持原准确率和 Mods，清零 miss、补满 combo，由本地 rosu-pp 计算理论 FC。
+
+所有成功修复结果替换原 PP（不降低），重排整个已获取 BP 列表并按 `0.95^index` 计算差额，加到用户当前总 PP，保留原总 PP 的 bonus 与列表外部分。图片按原始 PP 收益降序展示最多 12 项，展示限制不影响总提升计算。未获取的 BP 和算法版本差异使此值属于估算。计算失败的项目保留原 PP，图片标明失败数量；全部失败返回 500，无可修复项或无 BP 返回 404。
+
+FC 计算支持 Stable/Lazer 及四种模式转换、自定义速度；其余非传统 Mods 的设置仍受当前本地计算器支持范围限制。升级需要同步部署原生库。
+
+## 近 N 日新增 BP（NB）
+
+参考 [osubot `/nb`（`tbp` / `todaybp`）](https://github.com/yaowan233/nonebot-plugin-osubot/blob/master/src/nonebot_plugin_osubot/matcher/bp.py)，新增 `GET /score/new_best_plays`，别名 `GET /score/nb`。返回 default 风格 PNG 列表，保留原 BP 排名、谱面/Mods/评级/PP/准确率/加权信息，并显示游玩时间（UTC）。
+
+```text
+/score/new_best_plays?platform=qq&platform_uid=123
+/score/nb?platform=qq&platform_uid=123&days=7&game_mode=0&legacy_only=true&mods=HD,HR&first=1&last=10
+```
+
+- `days`：1–365，默认 1，按请求开始时刻向前滚动 24 小时计算；不按日历日期截断。成绩时间必须严格晚于窗口起点，不晚于请求时刻。
+- `game_mode`：0–3，省略使用绑定模式；`legacy_only` 沿用其他成绩接口语义。
+- `mods`：可选逗号分隔缩写，忽略大小写，按包含匹配；`NM` 单独使用，仅匹配无 Mods（忽略 CL）成绩。
+- `first` / `last`：时间与 Mods 筛选后的列表位置，1–200，终点包含，默认 1–20，每张最多 20 条；不是原 BP 排名。结果按 API BP 顺序排列，行内显示原 BP 排名，页脚显示筛选结果区间。
+
+分两次最多 100 条请求读取当前前 200 BP，再筛选时间、Mods 和分页。窗口内无匹配或页码超出结果返回 404。这里的“新增”指目前仍在 BP 中且在窗口内完成的成绩，不能用于还原曾经进入 BP、后来被替换的所有历史成绩。原指令的自由文本/正则搜索未移植到此接口。
