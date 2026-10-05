@@ -72,6 +72,40 @@ public class BeatmapRankedDateTests
         Assert.Contains("—", renderer.Html);
     }
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task Info_routes_reject_missing_or_nonpositive_ids_without_upstream_calls(int? id)
+    {
+        var api = new RecordingOsuApiService();
+        var controller = Create(api, new Capture());
+        Assert.IsType<BadRequestObjectResult>(await controller.GetBeatmapInfo(id));
+        Assert.IsType<BadRequestObjectResult>(await controller.GetBeatmapsetInfo(id));
+        Assert.Equal(0, api.CallCount);
+    }
+
+    [Theory]
+    [InlineData("default")]
+    [InlineData("yaowan")]
+    public async Task Set_info_renders_the_requested_set_without_fetching_a_single_map(string themeName)
+    {
+        var api = new RecordingOsuApiService
+        {
+            BeatmapsetHandler = id => new Beatmapset
+            {
+                Id = id, Title = "Requested set", Beatmaps = [new Beatmap { Id = 1949106 }]
+            },
+            BeatmapHandler = _ => throw new InvalidOperationException("Set route must query the set")
+        };
+        var renderer = new Capture();
+        var result = Assert.IsType<FileContentResult>(await Create(api, renderer).GetBeatmapsetInfo(933630, themeName));
+        Assert.Equal("image/png", result.ContentType);
+        Assert.Equal(1, api.CallCount);
+        Assert.Contains("Requested set", renderer.Html);
+        Assert.Contains("933630", renderer.Html);
+    }
+
     private static BeatmapController Create(RecordingOsuApiService api, Capture renderer) => new(
         api, new Files(), Theme(renderer), NullLogger<BeatmapController>.Instance);
     private static DefaultBeatmapTheme Theme(Capture renderer) => new(renderer,

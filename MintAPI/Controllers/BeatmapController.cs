@@ -80,32 +80,42 @@ public class BeatmapController(
         return File(cover, "image/jpeg");
     }
 
-    /// <summary>渲染谱面或谱面集信息图。default 单谱面包含各模式的 PP 参考、局部难度曲线与 Mods 对比，并展示 Standard / Taiko 的原生难度分项及 Catch / Mania 的物件构成。</summary>
-    /// <param name="beatmap_id">谱面 ID，与 beatmapset_id 二选一。</param>
-    /// <param name="beatmapset_id">谱面集 ID，与 beatmap_id 二选一。</param>
+    /// <summary>渲染谱面信息图。default 包含各模式的 PP 参考、局部难度曲线与 Mods 对比，并展示 Standard / Taiko 的原生难度分项及 Catch / Mania 的物件构成。</summary>
+    /// <param name="beatmap_id">谱面 ID，必须为正整数。</param>
     /// <param name="theme">渲染主题：default 或 yaowan（原 Python 模板）。</param>
     /// <response code="200">PNG 图片。</response>
     /// <response code="400">参数或谱面无效。</response>
     /// <response code="500">读取或渲染失败。</response>
-    [HttpGet("info")]
+    [HttpGet("beatmap")]
     [Produces("image/png")]
     public async Task<IActionResult> GetBeatmapInfo(
         [FromQuery] int? beatmap_id = null,
+        [FromQuery] string theme = "default")
+    {
+        if (theme is not ("default" or "yaowan")) return BadRequest("theme 必须为 default 或 yaowan。");
+        if (beatmap_id is null or <= 0)
+            return BadRequest("beatmap_id 必须为正整数。");
+
+        return await RenderBeatmapInfoAsync(beatmap_id.Value, theme);
+    }
+
+    /// <summary>渲染谱面集信息图，展示谱面集资料与各难度列表。</summary>
+    /// <param name="beatmapset_id">谱面集 ID，必须为正整数。</param>
+    /// <param name="theme">渲染主题：default 或 yaowan（原 Python 模板）。</param>
+    /// <response code="200">PNG 图片。</response>
+    /// <response code="400">参数或谱面集无效。</response>
+    /// <response code="500">读取或渲染失败。</response>
+    [HttpGet("beatmapset")]
+    [Produces("image/png")]
+    public async Task<IActionResult> GetBeatmapsetInfo(
         [FromQuery] int? beatmapset_id = null,
         [FromQuery] string theme = "default")
     {
         if (theme is not ("default" or "yaowan")) return BadRequest("theme 必须为 default 或 yaowan。");
-        if (beatmap_id is null && beatmapset_id is null)
-            return BadRequest("Either beatmap_id or beatmapset_id is required");
+        if (beatmapset_id is null or <= 0)
+            return BadRequest("beatmapset_id 必须为正整数。");
 
-        if (beatmap_id.HasValue)
-        {
-            return await RenderBeatmapInfoAsync(beatmap_id.Value, theme);
-        }
-        else
-        {
-            return await RenderBeatmapsetInfoAsync(beatmapset_id!.Value, theme);
-        }
+        return await RenderBeatmapsetInfoAsync(beatmapset_id.Value, theme);
     }
 
     private async Task<IActionResult> RenderBeatmapInfoAsync(int beatmapId, string theme)

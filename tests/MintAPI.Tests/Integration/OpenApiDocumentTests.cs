@@ -62,6 +62,23 @@ public class OpenApiDocumentTests
         }
     }
 
+    [Fact]
+    public async Task Beatmap_info_is_split_into_map_and_set_routes()
+    {
+        using var document = await GetDocumentAsync();
+        var paths = document.RootElement.GetProperty("paths");
+        Assert.False(paths.TryGetProperty("/beatmap/info", out _));
+        foreach (var (path, id) in new[] { ("/beatmap/beatmap", "beatmap_id"), ("/beatmap/beatmapset", "beatmapset_id") })
+        {
+            var operation = paths.GetProperty(path).GetProperty("get");
+            Assert.Equal(new[] { id, "theme" }, operation.GetProperty("parameters").EnumerateArray()
+                .Select(parameter => parameter.GetProperty("name").GetString()).ToArray());
+            Assert.True(operation.GetProperty("responses").GetProperty("200").GetProperty("content")
+                .TryGetProperty("image/png", out _));
+            Assert.False(string.IsNullOrWhiteSpace(operation.GetProperty("summary").GetString()));
+        }
+    }
+
     private static async Task<JsonElement> GetOperationAsync(string path, string method)
     {
         using var document = await GetDocumentAsync();
@@ -89,16 +106,16 @@ public class OpenApiDocumentTests
     [Fact]
     public async Task Operation_carries_the_summary_from_the_xml_comment()
     {
-        var operation = await GetOperationAsync("/beatmap/info", "get");
+        var operation = await GetOperationAsync("/beatmap/beatmap", "get");
 
-        Assert.StartsWith("渲染谱面或谱面集信息图", operation.GetProperty("summary").GetString());
+        Assert.StartsWith("渲染谱面信息图", operation.GetProperty("summary").GetString());
     }
 
     // 每个参数要拿到自己那条注释，而不是全部为空或全部一样。
     [Fact]
     public async Task Each_query_parameter_carries_its_own_description()
     {
-        var operation = await GetOperationAsync("/beatmap/info", "get");
+        var operation = await GetOperationAsync("/beatmap/beatmap", "get");
 
         var descriptions = operation.GetProperty("parameters").EnumerateArray()
             .ToDictionary(
@@ -112,7 +129,7 @@ public class OpenApiDocumentTests
     [Fact]
     public async Task Response_carries_its_description()
     {
-        var operation = await GetOperationAsync("/beatmap/info", "get");
+        var operation = await GetOperationAsync("/beatmap/beatmap", "get");
 
         var ok = operation.GetProperty("responses").GetProperty("200").GetProperty("description").GetString();
 
@@ -123,7 +140,7 @@ public class OpenApiDocumentTests
     [Fact]
     public async Task Image_response_declares_its_content_type()
     {
-        var operation = await GetOperationAsync("/beatmap/info", "get");
+        var operation = await GetOperationAsync("/beatmap/beatmap", "get");
 
         var content = operation.GetProperty("responses").GetProperty("200").GetProperty("content");
 
@@ -159,7 +176,7 @@ public class OpenApiDocumentTests
     [Fact]
     public async Task Descriptions_carry_no_line_breaks_from_the_source()
     {
-        var operation = await GetOperationAsync("/beatmap/info", "get");
+        var operation = await GetOperationAsync("/beatmap/beatmap", "get");
 
         var texts = new List<string?> { operation.GetProperty("summary").GetString() };
         texts.AddRange(operation.GetProperty("parameters").EnumerateArray()
