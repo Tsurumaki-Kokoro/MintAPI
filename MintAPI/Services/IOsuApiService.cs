@@ -11,5 +11,6 @@ public interface IOsuApiService
     Task<Beatmapset> GetBeatmapsetAsync(int beatmapsetId);
     Task<List<Score>> GetBeatmapUserScoresAsync(int beatmapId, int userId, GameMode? mode = null);
     Task<MatchResponse> GetMatchAsync(int matchId, long? beforeId = null, CancellationToken cancellationToken = default);
+    Task<MatchResponse> GetMatchAfterAsync(int matchId, long afterId, CancellationToken cancellationToken = default);
     Task<SeasonalBackgrounds> GetSeasonalBackgroundsAsync();
 }

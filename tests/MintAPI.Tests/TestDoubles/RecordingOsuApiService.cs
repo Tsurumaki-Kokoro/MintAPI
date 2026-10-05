@@ -16,6 +16,8 @@ public sealed class RecordingOsuApiService : IOsuApiService
 
     public Func<long?, MatchResponse>? MatchHandler { get; set; }
 
+    public Func<int, long, MatchResponse>? MatchAfterHandler { get; set; }
+
     public int CallCount => Volatile.Read(ref _callCount);
 
     public Task<User> GetUserAsync(string userId, GameMode? mode = null)
@@ -54,6 +56,13 @@ public sealed class RecordingOsuApiService : IOsuApiService
         Interlocked.Increment(ref _callCount);
         cancellationToken.ThrowIfCancellationRequested();
         return Task.FromResult(MatchHandler?.Invoke(beforeId) ?? new MatchResponse());
+    }
+
+    public Task<MatchResponse> GetMatchAfterAsync(int matchId, long afterId, CancellationToken cancellationToken = default)
+    {
+        Interlocked.Increment(ref _callCount);
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(MatchAfterHandler?.Invoke(matchId, afterId) ?? new MatchResponse());
     }
 
     private Task<T> Record<T>()

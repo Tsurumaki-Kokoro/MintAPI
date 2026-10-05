@@ -33,6 +33,9 @@ public sealed class RateLimitedOsuApiService(
     public Task<MatchResponse> GetMatchAsync(int matchId, long? beforeId = null, CancellationToken cancellationToken = default)
         => ExecuteAsync(() => inner.GetMatchAsync(matchId, beforeId, cancellationToken), cancellationToken);
 
+    public Task<MatchResponse> GetMatchAfterAsync(int matchId, long afterId, CancellationToken cancellationToken = default)
+        => ExecuteAsync(() => inner.GetMatchAfterAsync(matchId, afterId, cancellationToken), cancellationToken);
+
     private async Task<T> ExecuteAsync<T>(Func<Task<T>> call, CancellationToken cancellationToken = default)
     {
         using var lease = await limiter.AcquireAsync(1, cancellationToken);

@@ -1,0 +1,555 @@
+{
+  "match": {
+    "id": 109975520,
+    "start_time": "2023-08-13T13:45:34+00:00",
+    "end_time": "2023-08-13T14:48:14+00:00",
+    "name": "OCLC S11: (除了上班就是屙屎，我想躺平了) vs (起队名困难综合征)"
+  },
+  "events": [
+    {
+      "id": 2275182201,
+      "detail": {
+        "type": "player-joined"
+      },
+      "timestamp": "2023-08-13T14:42:53+00:00",
+      "user_id": 694480
+    },
+    {
+      "id": 2275182222,
+      "detail": {
+        "type": "player-joined"
+      },
+      "timestamp": "2023-08-13T14:42:57+00:00",
+      "user_id": 6386735
+    },
+    {
+      "id": 2275182446,
+      "detail": {
+        "type": "player-left"
+      },
+      "timestamp": "2023-08-13T14:43:36+00:00",
+      "user_id": 6386735
+    },
+    {
+      "id": 2275182652,
+      "detail": {
+        "type": "other",
+        "text": "OCLC S11: (除了上班就是屙屎，我想躺平了) vs (起队名困难综合征)"
+      },
+      "timestamp": "2023-08-13T14:44:12+00:00",
+      "user_id": null,
+      "game": {
+        "beatmap_id": 4143665,
+        "id": 567283491,
+        "start_time": "2023-08-13T14:44:12Z",
+        "end_time": "2023-08-13T14:47:18Z",
+        "match_id": 109975520,
+        "mode": "osu",
+        "mode_int": 0,
+        "scoring_type": "scorev2",
+        "team_type": "team-vs",
+        "mods": [
+          "NF",
+          "HR"
+        ],
+        "beatmap": {
+          "beatmapset_id": 1889094,
+          "difficulty_rating": 5.99499,
+          "id": 4143665,
+          "lazer_only": false,
+          "mode": "osu",
+          "status": "ranked",
+          "total_length": 178,
+          "user_id": 9331411,
+          "version": "arkisol's Extra",
+          "beatmapset": {
+            "anime_cover": true,
+            "artist": "Rabbit House",
+            "artist_unicode": "Rabbit House",
+            "covers": {
+              "cover": "https://assets.ppy.sh/beatmaps/1889094/covers/cover.jpg?1686623784",
+              "cover@2x": "https://assets.ppy.sh/beatmaps/1889094/covers/cover@2x.jpg?1686623784",
+              "card": "https://assets.ppy.sh/beatmaps/1889094/covers/card.jpg?1686623784",
+              "card@2x": "https://assets.ppy.sh/beatmaps/1889094/covers/card@2x.jpg?1686623784",
+              "list": "https://assets.ppy.sh/beatmaps/1889094/covers/list.jpg?1686623784",
+              "list@2x": "https://assets.ppy.sh/beatmaps/1889094/covers/list@2x.jpg?1686623784",
+              "slimcover": "https://assets.ppy.sh/beatmaps/1889094/covers/slimcover.jpg?1686623784",
+              "slimcover@2x": "https://assets.ppy.sh/beatmaps/1889094/covers/slimcover@2x.jpg?1686623784"
+            },
+            "creator": "funny",
+            "favourite_count": 112,
+            "genre_id": 10,
+            "hype": null,
+            "id": 1889094,
+            "language_id": 5,
+            "nsfw": false,
+            "offset": 0,
+            "play_count": 74985,
+            "preview_url": "https://b.ppy.sh/preview/1889094.mp3",
+            "source": "osu! World Cup 2022",
+            "spotlight": false,
+            "status": "ranked",
+            "title": "Sanctuary",
+            "title_unicode": "Sanctuary",
+            "track_id": 8233,
+            "user_id": 8473573,
+            "video": false
+          }
+        },
+        "scores": [
+          {
+            "maximum_statistics": {
+              "miss": 0
+            },
+            "mods": [
+              {
+                "acronym": "NF"
+              },
+              {
+                "acronym": "HR"
+              }
+            ],
+            "statistics": {
+              "miss": 1,
+              "great": 682,
+              "ok": 71
+            },
+            "beatmap_id": 4143665,
+            "best_id": null,
+            "id": null,
+            "rank": "A",
+            "type": "legacy_match_score",
+            "user_id": 11396041,
+            "accuracy": 0.9358974358974359,
+            "build_id": null,
+            "ended_at": "2023-08-13T14:44:12Z",
+            "has_replay": false,
+            "is_perfect_combo": false,
+            "legacy_perfect": false,
+            "legacy_score_id": null,
+            "legacy_total_score": 588461,
+            "max_combo": 683,
+            "passed": true,
+            "pp": null,
+            "ruleset_id": 0,
+            "started_at": null,
+            "total_score": 588461,
+            "replay": false,
+            "current_user_attributes": {
+              "pin": null
+            },
+            "match": {
+              "slot": 0,
+              "team": "red",
+              "pass": true
+            }
+          },
+          {
+            "maximum_statistics": {
+              "miss": 0
+            },
+            "mods": [
+              {
+                "acronym": "NF"
+              },
+              {
+                "acronym": "HR"
+              }
+            ],
+            "statistics": {
+              "great": 684,
+              "ok": 60,
+              "meh": 10
+            },
+            "beatmap_id": 4143665,
+            "best_id": null,
+            "id": null,
+            "rank": "A",
+            "type": "legacy_match_score",
+            "user_id": 3826301,
+            "accuracy": 0.9358974358974359,
+            "build_id": null,
+            "ended_at": "2023-08-13T14:44:12Z",
+            "has_replay": false,
+            "is_perfect_combo": false,
+            "legacy_perfect": false,
+            "legacy_score_id": null,
+            "legacy_total_score": 649093,
+            "max_combo": 757,
+            "passed": true,
+            "pp": null,
+            "ruleset_id": 0,
+            "started_at": null,
+            "total_score": 649093,
+            "replay": false,
+            "current_user_attributes": {
+              "pin": null
+            },
+            "match": {
+              "slot": 1,
+              "team": "red",
+              "pass": true
+            }
+          },
+          {
+            "maximum_statistics": {
+              "miss": 0
+            },
+            "mods": [
+              {
+                "acronym": "NF"
+              },
+              {
+                "acronym": "HR"
+              }
+            ],
+            "statistics": {
+              "miss": 7,
+              "great": 678,
+              "ok": 61,
+              "meh": 8
+            },
+            "beatmap_id": 4143665,
+            "best_id": null,
+            "id": null,
+            "rank": "B",
+            "type": "legacy_match_score",
+            "user_id": 20971891,
+            "accuracy": 0.9279398762157383,
+            "build_id": null,
+            "ended_at": "2023-08-13T14:44:12Z",
+            "has_replay": false,
+            "is_perfect_combo": false,
+            "legacy_perfect": false,
+            "legacy_score_id": null,
+            "legacy_total_score": 272275,
+            "max_combo": 180,
+            "passed": true,
+            "pp": null,
+            "ruleset_id": 0,
+            "started_at": null,
+            "total_score": 272275,
+            "replay": false,
+            "current_user_attributes": {
+              "pin": null
+            },
+            "match": {
+              "slot": 2,
+              "team": "red",
+              "pass": true
+            }
+          },
+          {
+            "maximum_statistics": {
+              "miss": 0
+            },
+            "mods": [
+              {
+                "acronym": "NF"
+              },
+              {
+                "acronym": "HR"
+              }
+            ],
+            "statistics": {
+              "miss": 2,
+              "great": 728,
+              "ok": 23,
+              "meh": 1
+            },
+            "beatmap_id": 4143665,
+            "best_id": null,
+            "id": null,
+            "rank": "A",
+            "type": "legacy_match_score",
+            "user_id": 3635214,
+            "accuracy": 0.9759062776304156,
+            "build_id": null,
+            "ended_at": "2023-08-13T14:44:12Z",
+            "has_replay": false,
+            "is_perfect_combo": false,
+            "legacy_perfect": false,
+            "legacy_score_id": null,
+            "legacy_total_score": 787971,
+            "max_combo": 814,
+            "passed": true,
+            "pp": null,
+            "ruleset_id": 0,
+            "started_at": null,
+            "total_score": 787971,
+            "replay": false,
+            "current_user_attributes": {
+              "pin": null
+            },
+            "match": {
+              "slot": 3,
+              "team": "blue",
+              "pass": true
+            }
+          },
+          {
+            "maximum_statistics": {
+              "miss": 0
+            },
+            "mods": [
+              {
+                "acronym": "NF"
+              },
+              {
+                "acronym": "HR"
+              }
+            ],
+            "statistics": {
+              "miss": 2,
+              "great": 702,
+              "ok": 40,
+              "meh": 10
+            },
+            "beatmap_id": 4143665,
+            "best_id": null,
+            "id": null,
+            "rank": "A",
+            "type": "legacy_match_score",
+            "user_id": 694480,
+            "accuracy": 0.9509283819628647,
+            "build_id": null,
+            "ended_at": "2023-08-13T14:44:12Z",
+            "has_replay": false,
+            "is_perfect_combo": false,
+            "legacy_perfect": false,
+            "legacy_score_id": null,
+            "legacy_total_score": 630987,
+            "max_combo": 730,
+            "passed": true,
+            "pp": null,
+            "ruleset_id": 0,
+            "started_at": null,
+            "total_score": 630987,
+            "replay": false,
+            "current_user_attributes": {
+              "pin": null
+            },
+            "match": {
+              "slot": 4,
+              "team": "blue",
+              "pass": true
+            }
+          },
+          {
+            "maximum_statistics": {
+              "miss": 0
+            },
+            "mods": [
+              {
+                "acronym": "NF"
+              },
+              {
+                "acronym": "HR"
+              }
+            ],
+            "statistics": {
+              "miss": 6,
+              "great": 694,
+              "ok": 52,
+              "meh": 2
+            },
+            "beatmap_id": 4143665,
+            "best_id": null,
+            "id": null,
+            "rank": "A",
+            "type": "legacy_match_score",
+            "user_id": 8501053,
+            "accuracy": 0.9438549955791335,
+            "build_id": null,
+            "ended_at": "2023-08-13T14:44:12Z",
+            "has_replay": false,
+            "is_perfect_combo": false,
+            "legacy_perfect": false,
+            "legacy_score_id": null,
+            "legacy_total_score": 335092,
+            "max_combo": 247,
+            "passed": true,
+            "pp": null,
+            "ruleset_id": 0,
+            "started_at": null,
+            "total_score": 335092,
+            "replay": false,
+            "current_user_attributes": {
+              "pin": null
+            },
+            "match": {
+              "slot": 5,
+              "team": "blue",
+              "pass": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 2275183031,
+      "detail": {
+        "type": "player-joined"
+      },
+      "timestamp": "2023-08-13T14:45:23+00:00",
+      "user_id": 3825470
+    }
+  ],
+  "users": [
+    {
+      "avatar_url": "https://a.ppy.sh/694480?1722361458.jpeg",
+      "country_code": "CN",
+      "default_group": "default",
+      "id": 694480,
+      "is_active": true,
+      "is_bot": false,
+      "is_deleted": false,
+      "is_online": false,
+      "is_supporter": false,
+      "last_visit": "2026-10-03T17:13:16+00:00",
+      "pm_friends_only": false,
+      "profile_colour": null,
+      "username": "Hakumo Ai",
+      "country": {
+        "code": "CN",
+        "name": "China"
+      }
+    },
+    {
+      "avatar_url": "https://a.ppy.sh/3635214?1548221736.jpeg",
+      "country_code": "CN",
+      "default_group": "default",
+      "id": 3635214,
+      "is_active": false,
+      "is_bot": false,
+      "is_deleted": false,
+      "is_online": false,
+      "is_supporter": false,
+      "last_visit": "2026-03-08T06:07:22+00:00",
+      "pm_friends_only": false,
+      "profile_colour": null,
+      "username": "VRainbow",
+      "country": {
+        "code": "CN",
+        "name": "China"
+      }
+    },
+    {
+      "avatar_url": "https://a.ppy.sh/3825470?1748414993.jpeg",
+      "country_code": "HK",
+      "default_group": "default",
+      "id": 3825470,
+      "is_active": true,
+      "is_bot": false,
+      "is_deleted": false,
+      "is_online": false,
+      "is_supporter": false,
+      "last_visit": "2026-10-01T14:27:53+00:00",
+      "pm_friends_only": false,
+      "profile_colour": null,
+      "username": "K22",
+      "country": {
+        "code": "HK",
+        "name": "Hong Kong"
+      }
+    },
+    {
+      "avatar_url": "https://a.ppy.sh/3826301?1768771158.jpeg",
+      "country_code": "CN",
+      "default_group": "default",
+      "id": 3826301,
+      "is_active": true,
+      "is_bot": false,
+      "is_deleted": false,
+      "is_online": false,
+      "is_supporter": false,
+      "last_visit": "2026-10-03T11:24:38+00:00",
+      "pm_friends_only": false,
+      "profile_colour": null,
+      "username": "A Maker",
+      "country": {
+        "code": "CN",
+        "name": "China"
+      }
+    },
+    {
+      "avatar_url": "https://osu.ppy.sh/images/layout/avatar-guest@2x.png",
+      "country_code": "HK",
+      "default_group": "default",
+      "id": 6386735,
+      "is_active": true,
+      "is_bot": false,
+      "is_deleted": false,
+      "is_online": false,
+      "is_supporter": false,
+      "last_visit": null,
+      "pm_friends_only": false,
+      "profile_colour": null,
+      "username": "nuthing",
+      "country": {
+        "code": "HK",
+        "name": "Hong Kong"
+      }
+    },
+    {
+      "avatar_url": "https://a.ppy.sh/8501053?1696694874.gif",
+      "country_code": "NZ",
+      "default_group": "default",
+      "id": 8501053,
+      "is_active": true,
+      "is_bot": false,
+      "is_deleted": false,
+      "is_online": false,
+      "is_supporter": false,
+      "last_visit": "2026-09-26T03:16:11+00:00",
+      "pm_friends_only": false,
+      "profile_colour": null,
+      "username": "ShaBae",
+      "country": {
+        "code": "NZ",
+        "name": "New Zealand"
+      }
+    },
+    {
+      "avatar_url": "https://a.ppy.sh/11396041?1666163935.jpeg",
+      "country_code": "CN",
+      "default_group": "default",
+      "id": 11396041,
+      "is_active": true,
+      "is_bot": false,
+      "is_deleted": false,
+      "is_online": false,
+      "is_supporter": true,
+      "last_visit": "2026-09-30T16:36:33+00:00",
+      "pm_friends_only": false,
+      "profile_colour": null,
+      "username": "zmyk",
+      "country": {
+        "code": "CN",
+        "name": "China"
+      }
+    },
+    {
+      "avatar_url": "https://a.ppy.sh/20971891?1765619780.png",
+      "country_code": "HK",
+      "default_group": "default",
+      "id": 20971891,
+      "is_active": true,
+      "is_bot": false,
+      "is_deleted": false,
+      "is_online": false,
+      "is_supporter": true,
+      "last_visit": "2026-10-02T13:32:46+00:00",
+      "pm_friends_only": false,
+      "profile_colour": null,
+      "username": "AbbeyChan6203",
+      "country": {
+        "code": "HK",
+        "name": "Hong Kong"
+      }
+    }
+  ],
+  "first_event_id": 2275164202,
+  "latest_event_id": 2275183915,
+  "current_game_id": null
+}

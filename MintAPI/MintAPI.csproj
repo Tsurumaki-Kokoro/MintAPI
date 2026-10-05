@@ -104,6 +104,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <Content Update="Rendering/MultiplayerTheme/mock/*.json" CopyToOutputDirectory="PreserveNewest" />
         <!-- 渲染模板：复制到输出目录，保持相对路径结构 -->
         <Content Include="Rendering\**\*.html">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

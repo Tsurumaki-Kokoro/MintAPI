@@ -37,5 +37,8 @@ public class OsuApiService : IOsuApiService, IDisposable
     public Task<MatchResponse> GetMatchAsync(int matchId, long? beforeId = null, CancellationToken cancellationToken = default)
         => _client.GetMatchAsync(matchId, beforeId: beforeId, limit: 100, ct: cancellationToken);
 
+    public Task<MatchResponse> GetMatchAfterAsync(int matchId, long afterId, CancellationToken cancellationToken = default)
+        => _client.GetMatchAsync(matchId, afterId: afterId, limit: 100, ct: cancellationToken);
+
     public void Dispose() => _client.Dispose();
 }

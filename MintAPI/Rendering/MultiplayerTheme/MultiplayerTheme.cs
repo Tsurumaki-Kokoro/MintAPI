@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.Net;
 using MintAPI.Services;
+using MintAPI.Services.MatchLive;
+using MintOsuApi.Models;
 using Scriban;
 using Scriban.Runtime;
 
@@ -79,6 +81,53 @@ public sealed class MultiplayerTheme(IRenderService renderer, IImageCacheService
             bar = (100 * player.Rating / players[0].Rating).ToString("0.0", CultureInfo.InvariantCulture)
         }).ToArray();
         return await RenderAsync("rating", values, 0, cancellationToken);
+    }
+
+    public async Task<byte[]> RenderLiveGameAsync(LiveRoom room, int gameId, CancellationToken cancellationToken = default)
+    {
+        var games = room.Match.EventList.Where(e => e.Game is not null).Select(e => e.Game!).DistinctBy(g => g.Id).ToList();
+        var game = games.LastOrDefault(g => g.Id == gameId) ?? throw new KeyNotFoundException("没有该对局。");
+        var finished = game.EndTime.HasValue;
+        var aborted = finished && game.Scores.Count == 0;
+        MatchRound? round = null;
+        if (finished && !aborted)
+            round = MultiplayerData.Build(new MatchResponse { MatchInfo = room.Match.MatchInfo, Users = room.Match.Users,
+                EventList = room.Match.EventList.Where(e => e.Game?.Id == gameId).ToList() }).Rounds[0];
+        var players = round?.Players ?? [];
+        var avatars = await AvatarsAsync(players.Select(p => (p.UserId, p.Avatar)));
+        var redWins = 0; var blueWins = 0;
+        if (games.Any(g => g.EndTime.HasValue && g.Scores.Count > 0))
+        {
+            var totals = MultiplayerData.Build(room.Match);
+            redWins = totals.RedWins; blueWins = totals.BlueWins;
+        }
+        var cover = await CoverAsync(game.Beatmap?.Beatmapset?.Id ?? game.Beatmap?.BeatmapsetId ?? 0, cancellationToken);
+        var values = new ScriptObject
+        {
+            ["cover"] = cover,
+            ["base_url"] = new Uri(Path.Combine(AppContext.BaseDirectory, "wwwroot") + Path.DirectorySeparatorChar).AbsoluteUri.TrimEnd('/'),
+            ["match_id"] = room.MatchId, ["game_id"] = game.Id, ["room_name"] = Escape(room.Match.MatchInfo.Name),
+            ["mock"] = room.IsMock, ["finished"] = finished, ["aborted"] = aborted,
+            ["status"] = aborted ? "对局中止" : finished ? "对局结算" : "正在进行",
+            ["title"] = Escape(game.Beatmap?.Beatmapset?.Title ?? $"Beatmap {game.BeatmapId}"),
+            ["artist"] = Escape(game.Beatmap?.Beatmapset?.Artist ?? ""), ["version"] = Escape(game.Beatmap?.Version ?? "未知难度"),
+            ["map_id"] = game.BeatmapId, ["mods"] = Escape(game.Mods.ToShortName()),
+            ["mode"] = game.Mode.ToString(), ["scoring"] = game.ScoringType.ToString(), ["team_type"] = game.TeamType.ToString(),
+            ["started"] = game.StartTime.ToOffset(TimeSpan.FromHours(8)).ToString("yyyy-MM-dd HH:mm:ss"),
+            ["red_wins"] = redWins, ["blue_wins"] = blueWins,
+            ["is_team"] = round?.IsTeam ?? (game.TeamType is MintOsuApi.Enums.TeamType.TeamVs or MintOsuApi.Enums.TeamType.TagTeamVs),
+            ["red_score"] = Number(round?.RedScore ?? 0), ["blue_score"] = Number(round?.BlueScore ?? 0),
+            ["red_leads"] = round?.RedScore > round?.BlueScore, ["blue_leads"] = round?.BlueScore > round?.RedScore,
+            ["result"] = round is null ? "" : round.IsTeam ? round.Winner switch { "red" => "红队获胜", "blue" => "蓝队获胜", _ => "平局" }
+                : game.TeamType == MintOsuApi.Enums.TeamType.TagCoop ? "合作对局" : "领先：" + Escape(players[0].Name),
+            ["players"] = players.Select((p, rank) => new
+            {
+                rank = rank + 1, name = Escape(p.Name), team = TeamClass(p.Team), initial = Escape(Initial(p.Name)), avatar = avatars[p.UserId],
+                score = Number(p.Score), accuracy = (p.Accuracy * 100).ToString("0.00", CultureInfo.InvariantCulture),
+                combo = Number(p.Combo), mods = Escape(p.Mods), passed = p.Passed
+            }).ToArray()
+        };
+        return await RenderAsync("live", values, 0, cancellationToken);
     }
 
     private static ScriptObject Common(MultiplayerData data, int page, int pages) => new()

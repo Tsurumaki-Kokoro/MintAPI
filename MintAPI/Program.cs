@@ -1,4 +1,5 @@
 using MintAPI.Services.Preview;
+using MintAPI.Services.MatchLive;
 using MintAPI.Data;
 using MintAPI.Middleware;
 using MintAPI.OpenApi;
@@ -91,6 +92,14 @@ try
     builder.Services.AddSingleton<MintAPI.Rendering.PerformanceAnalyzeTheme.PerformanceAnalyzeTheme>();
     builder.Services.AddSingleton<MintAPI.Rendering.BeatmapTheme.DefaultBeatmapTheme>();
     builder.Services.AddSingleton<MultiplayerService>();
+    builder.Services.AddSingleton(TimeProvider.System);
+    builder.Services.AddOptions<MatchLiveOptions>().Bind(config.GetSection("MatchLive"))
+        .PostConfigure(options => options.MockEnabled &= builder.Environment.IsDevelopment())
+        .Validate(options => options.IsValid() && options.RequestBudgetPerMinute < config.GetValue("OsuApi:RateLimitPerMinute", 50),
+            "Invalid MatchLive limits, intervals, or query budget (must be below the global limit).").ValidateOnStart();
+    builder.Services.AddSingleton<IMatchLiveStore, RedisMatchLiveStore>();
+    builder.Services.AddSingleton<MatchLiveService>();
+    builder.Services.AddHostedService<MatchLiveWorker>();
     builder.Services.AddSingleton<MintAPI.Rendering.MultiplayerTheme.MultiplayerTheme>();
 
     builder.Services.AddExceptionHandler<RetryableExceptionHandler>();

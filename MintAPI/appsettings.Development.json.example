@@ -8,6 +8,17 @@
     "DefaultConnection": "Server=localhost;Port=3306;Database=mintapi;User=root;Password=<MySQL 密码>;",
     "Redis": "localhost:6379,defaultDatabase=1"
   },
+  "MatchLive": {
+    "PollSeconds": 10,
+    "RequestBudgetPerMinute": 24,
+    "MaxMatches": 4,
+    "MaxSubscriptionsPerScope": 3,
+    "LeaseMinutes": 30,
+    "RetentionMinutes": 60,
+    "MaxUpdates": 1000,
+    "MockEnabled": false,
+    "MockAutoAdvanceSeconds": 30
+  },
   "CacheDir": "cache",
   "Logging": {
     "LogLevel": {
