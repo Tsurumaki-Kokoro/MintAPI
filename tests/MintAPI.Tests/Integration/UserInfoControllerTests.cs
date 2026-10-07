@@ -19,6 +19,49 @@ namespace MintAPI.Tests.Integration;
 public sealed class UserInfoControllerTests
 {
     [Theory]
+    [InlineData(null, 3)]
+    [InlineData(0, 0)]
+    [InlineData(1, 1)]
+    public async Task Performance_analysis_uses_requested_or_bound_mode_without_changing_binding(int? requestedMode, int expectedMode)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateDb(connection);
+        await db.Database.EnsureCreatedAsync();
+        var binding = new UserModel { OsuUid = "123", Platform = "qq", PlatformUid = "100", GameMode = 3 };
+        db.Users.Add(binding);
+        await db.SaveChangesAsync();
+        var api = new RecordingOsuApiService
+        {
+            UserHandler = (_, mode) =>
+            {
+                Assert.Equal((GameMode)expectedMode, mode);
+                return new User { Id = 123 };
+            },
+            ScoresHandler = (_, _, mode, _, _, _, _) =>
+            {
+                Assert.Equal((GameMode)expectedMode, mode);
+                return [];
+            }
+        };
+        Assert.IsType<NotFoundObjectResult>(await CreateController(db, api).PerformanceAnalyze("qq", "100", game_mode: requestedMode));
+        Assert.Equal(2, api.CallCount);
+        Assert.Equal(3, binding.GameMode);
+        Assert.Equal(EntityState.Unchanged, db.Entry(binding).State);
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(4)]
+    public async Task Performance_analysis_rejects_invalid_mode_before_calling_osu(int mode)
+    {
+        await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().Options);
+        var api = new RecordingOsuApiService();
+        Assert.IsType<BadRequestObjectResult>(await CreateController(db, api).PerformanceAnalyze("qq", "100", game_mode: mode));
+        Assert.Equal(0, api.CallCount);
+    }
+
+    [Theory]
     [InlineData(" Player Name ", null, null, null, "Player Name", 0)]
     [InlineData("Player Name", "qq", "missing", null, "Player Name", 0)]
     [InlineData("Player Name", "qq", "100", null, "Player Name", 3)]

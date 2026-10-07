@@ -201,9 +201,10 @@ public class UserInfoController(
     /// <summary>渲染 BP 成绩分析图。</summary>
     /// <param name="platform">平台。</param>
     /// <param name="platform_uid">平台用户 ID。</param>
+    /// <param name="game_mode">模式 0–3，省略时使用绑定模式；临时查询不修改绑定。</param>
     /// <param name="theme">渲染主题：default。</param>
     /// <response code="200">PNG 分析图。</response>
-    /// <response code="400">主题不支持或取成绩失败。</response>
+    /// <response code="400">主题、模式无效或取成绩失败。</response>
     /// <response code="404">用户未绑定，或没有成绩记录。</response>
     /// <response code="500">取用户信息或渲染失败。</response>
     [HttpGet("extra/performance_analyze")]
@@ -211,17 +212,23 @@ public class UserInfoController(
     public async Task<IActionResult> PerformanceAnalyze(
         [FromQuery] string platform,
         [FromQuery] string platform_uid,
-        [FromQuery] string theme = "default")
+        [FromQuery] string theme = "default",
+        [FromQuery] int? game_mode = null)
     {
         if (theme != "default")
             return BadRequest("Unsupported performance analysis theme. Use default.");
+        if (game_mode is < 0 or > 3)
+            return BadRequest("game_mode must be between 0 and 3.");
 
         var userModel = await db.Users
             .FirstOrDefaultAsync(u => u.Platform == platform && u.PlatformUid == platform_uid);
         if (userModel is null)
             return NotFound("User not found");
 
-        var mode = (GameMode)userModel.GameMode;
+        var gameModeInt = game_mode ?? userModel.GameMode;
+        if (gameModeInt is < 0 or > 3)
+            return BadRequest("Invalid bound game mode.");
+        var mode = (GameMode)gameModeInt;
         MintOsuApi.Models.User userInfo;
         try
         {
@@ -250,7 +257,7 @@ public class UserInfoController(
         try
         {
             var image = await performanceAnalyzeTheme.RenderAsync(userInfo, scores,
-                GameModeToString(userModel.GameMode).ToUpperInvariant());
+                GameModeToString(gameModeInt).ToUpperInvariant());
             return File(image, "image/png");
         }
         catch (Exception ex) when (ex is not RetryableException)
