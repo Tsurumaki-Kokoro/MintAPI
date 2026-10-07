@@ -23,21 +23,21 @@ public class UserInfoController(
     ILogger<UserInfoController> logger) : ControllerBase
 {
     /// <summary>渲染用户资料卡。default 主题首区使用 osu! 用户 banner，获取失败时回退到上传的背景。</summary>
-    /// <param name="platform">平台，如 qq、discord。</param>
-    /// <param name="platform_uid">平台用户 ID。</param>
-    /// <param name="game_mode">模式 0–3，默认使用绑定模式。</param>
-    /// <param name="user_name">指定 osu! 用户名。</param>
+    /// <param name="platform">绑定平台，如 qq、discord；直接查询用户名时可省略。</param>
+    /// <param name="platform_uid">绑定平台用户 ID；指定用户名时用于选择调用者的默认模式，可省略。</param>
+    /// <param name="game_mode">模式 0–3，默认使用绑定模式，没有绑定时使用 0。</param>
+    /// <param name="user_name">直接指定 osu! 用户名或 UID，无需绑定。</param>
     /// <param name="compare_with">对比 N 天前的最近记录。</param>
     /// <param name="theme">渲染主题：default 或 yaowan。</param>
     /// <response code="200">PNG 资料卡。</response>
-    /// <response code="400">主题无效。</response>
-    /// <response code="404">用户未绑定。</response>
+    /// <response code="400">主题、模式或查询身份无效。</response>
+    /// <response code="404">用户未绑定或指定 osu! 用户不存在。</response>
     /// <response code="500">取用户信息或渲染失败。</response>
     [HttpGet]
     [Produces("image/png")]
     public async Task<IActionResult> GetUserInfo(
-        [FromQuery] string platform,
-        [FromQuery] string platform_uid,
+        [FromQuery] string? platform = null,
+        [FromQuery] string? platform_uid = null,
         [FromQuery] int? game_mode = null,
         [FromQuery] string? user_name = null,
         [FromQuery] int? compare_with = null,
@@ -45,27 +45,38 @@ public class UserInfoController(
     {
         if (theme is not ("default" or "yaowan"))
             return BadRequest("Unsupported user info theme. Use default or yaowan.");
+        if (game_mode is < 0 or > 3)
+            return BadRequest("game_mode must be between 0 and 3.");
 
-        var userModel = await db.Users
-            .FirstOrDefaultAsync(u => u.Platform == platform && u.PlatformUid == platform_uid);
-        if (userModel is null)
+        var target = user_name?.Trim();
+        var hasBindingIdentity = !string.IsNullOrWhiteSpace(platform) && !string.IsNullOrWhiteSpace(platform_uid);
+        if (string.IsNullOrWhiteSpace(target) && !hasBindingIdentity)
+            return BadRequest("Provide user_name or both platform and platform_uid.");
+        var userModel = hasBindingIdentity
+            ? await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Platform == platform && u.PlatformUid == platform_uid)
+            : null;
+        if (string.IsNullOrWhiteSpace(target) && userModel is null)
             return NotFound("User not found");
 
-        var gameModeInt = game_mode ?? userModel.GameMode;
+        target = string.IsNullOrWhiteSpace(target) ? userModel!.OsuUid : target;
+        var gameModeInt = game_mode ?? userModel?.GameMode ?? 0;
+        if (gameModeInt is < 0 or > 3)
+            return BadRequest("Invalid bound game mode.");
         var mode = (GameMode)gameModeInt;
         var modeStr = GameModeToString(gameModeInt);
 
         MintOsuApi.Models.User userInfo;
         try
         {
-            if (user_name is not null)
-                userInfo = await osuApi.GetUserAsync(user_name, mode);
-            else
-                userInfo = await osuApi.GetUserAsync(userModel.OsuUid, mode);
+            userInfo = await osuApi.GetUserAsync(target, mode);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return NotFound("osu! user not found");
         }
         catch (Exception ex) when (ex is not RetryableException)
         {
-            logger.LogError(ex, "Failed to get user info for {OsuUid}", userModel.OsuUid);
+            logger.LogError(ex, "Failed to get user info for {User}", target);
             return StatusCode(500, "Failed to get user info");
         }
 

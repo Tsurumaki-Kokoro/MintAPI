@@ -18,6 +18,18 @@ namespace MintAPI.Tests.Integration;
 /// </summary>
 public class OpenApiDocumentTests
 {
+    [Fact]
+    public async Task Direct_user_info_query_does_not_require_binding_parameters()
+    {
+        var operation = await GetOperationAsync("/user_info", "get");
+        foreach (var name in new[] { "platform", "platform_uid", "user_name" })
+        {
+            var parameter = operation.GetProperty("parameters").EnumerateArray()
+                .Single(p => p.GetProperty("name").GetString() == name);
+            Assert.False(parameter.TryGetProperty("required", out var required) && required.GetBoolean());
+        }
+    }
+
     private static async Task<JsonDocument> GetDocumentAsync()
     {
         var builder = WebApplication.CreateSlimBuilder();
