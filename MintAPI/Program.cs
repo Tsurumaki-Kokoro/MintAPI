@@ -91,6 +91,7 @@ try
     builder.Services.AddSingleton<MintAPI.Rendering.ScoreTheme.DefaultScoreTheme>();
     builder.Services.AddSingleton<MintAPI.Rendering.UserInfoTheme.DefaultUserInfoTheme>();
     builder.Services.AddSingleton<MintAPI.Rendering.PerformanceAnalyzeTheme.PerformanceAnalyzeTheme>();
+    builder.Services.AddSingleton<MintAPI.Rendering.BeatmapSearchTheme.BeatmapSearchTheme>();
     builder.Services.AddSingleton<MintAPI.Rendering.BeatmapTheme.DefaultBeatmapTheme>();
     builder.Services.AddSingleton<MintAPI.Rendering.BeatmapTheme.BeatmapBpmTheme>();
     builder.Services.AddSingleton<MultiplayerService>();

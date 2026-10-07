@@ -7,6 +7,14 @@ namespace MintAPI.Tests.TestDoubles;
 /// <summary>记录被调用次数的 <see cref="IOsuApiService"/>，不触碰网络。</summary>
 public sealed class RecordingOsuApiService : IOsuApiService
 {
+    public Func<string, BeatmapsetSearchMode, BeatmapsetSearchCategory, BeatmapsetSearchSort?, string?, BeatmapsetSearchResult>? SearchHandler { get; set; }
+    public Task<BeatmapsetSearchResult> SearchBeatmapsetsAsync(string query, BeatmapsetSearchMode mode, BeatmapsetSearchCategory category, BeatmapsetSearchSort? sort, string? cursorString, CancellationToken cancellationToken = default)
+    {
+        Interlocked.Increment(ref _callCount);
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(SearchHandler?.Invoke(query, mode, category, sort, cursorString) ?? new BeatmapsetSearchResult());
+    }
+
     private int _callCount;
     public Func<string, GameMode?, User>? UserHandler { get; set; }
     public Func<int, ScoreType, GameMode?, int, int, bool?, bool?, List<Score>>? ScoresHandler { get; set; }

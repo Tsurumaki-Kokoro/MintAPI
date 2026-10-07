@@ -5,6 +5,7 @@ namespace MintAPI.Services;
 
 public interface IOsuApiService
 {
+    Task<BeatmapsetSearchResult> SearchBeatmapsetsAsync(string query, BeatmapsetSearchMode mode, BeatmapsetSearchCategory category, BeatmapsetSearchSort? sort, string? cursorString, CancellationToken cancellationToken = default);
     Task<User> GetUserAsync(string userId, GameMode? mode = null);
     Task<List<Score>> GetUserScoresAsync(int userId, ScoreType type, GameMode? mode = null, int limit = 100, int offset = 0, bool? includeFails = null, bool? legacyOnly = null, CancellationToken cancellationToken = default);
     Task<Beatmap> GetBeatmapAsync(int beatmapId);

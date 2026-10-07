@@ -16,6 +16,9 @@ public class OsuApiService : IOsuApiService, IDisposable
         _client = new OsuClient(clientId, clientSecret, tokenDir);
     }
 
+    public Task<BeatmapsetSearchResult> SearchBeatmapsetsAsync(string query, BeatmapsetSearchMode mode, BeatmapsetSearchCategory category, BeatmapsetSearchSort? sort, string? cursorString, CancellationToken cancellationToken = default)
+        => _client.SearchBeatmapsetsAsync(query, mode, category, sort: sort, cursorString: cursorString, ct: cancellationToken);
+
     public Task<User> GetUserAsync(string userId, GameMode? mode = null)
         => _client.GetUserAsync(userId, mode);
 

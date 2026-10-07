@@ -12,6 +12,9 @@ public sealed class RateLimitedOsuApiService(
     IOsuApiService inner,
     RateLimiter limiter) : IOsuApiService
 {
+    public Task<BeatmapsetSearchResult> SearchBeatmapsetsAsync(string query, BeatmapsetSearchMode mode, BeatmapsetSearchCategory category, BeatmapsetSearchSort? sort, string? cursorString, CancellationToken cancellationToken = default)
+        => ExecuteAsync(() => inner.SearchBeatmapsetsAsync(query, mode, category, sort, cursorString, cancellationToken), cancellationToken);
+
     public Task<User> GetUserAsync(string userId, GameMode? mode = null)
         => ExecuteAsync(() => inner.GetUserAsync(userId, mode));
 
