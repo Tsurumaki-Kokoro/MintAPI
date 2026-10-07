@@ -15,6 +15,44 @@ namespace MintAPI.Tests.Integration;
 
 public sealed class HistoryStorageTests
 {
+    [Fact]
+    public async Task Official_map_scores_fill_missing_metadata_without_replacing_existing_details()
+    {
+        var map = new Beatmap { Id = 1949106, Status = RankStatus.Ranked, Beatmapset = new Beatmapset { Id = 1 } };
+        var existingMap = new Beatmap { Id = map.Id, Beatmapset = new Beatmapset { Id = 2 } };
+        var existingSet = new Beatmapset { Id = 3 };
+        var scores = new List<Score>
+        {
+            new() { BeatmapId = map.Id },
+            new() { Beatmap = existingMap },
+            new() { Beatmapset = existingSet }
+        };
+        var api = new RecordingOsuApiService
+        {
+            BeatmapHandler = id => { Assert.Equal(map.Id, id); return map; },
+            BeatmapUserScoresHandler = (id, userId, mode) =>
+            {
+                Assert.Equal(map.Id, id);
+                Assert.Equal(6764156, userId);
+                Assert.Equal(GameMode.Osu, mode);
+                return scores;
+            }
+        };
+        var service = new HistoryService(null!, api, null!, null!, null!, NullLogger<HistoryService>.Instance);
+
+        var result = await service.GetMapScoresAsync(6764156, map.Id, 0, default);
+
+        Assert.Equal("official", result.Source);
+        Assert.Same(scores, result.Scores);
+        Assert.Same(map, scores[0].Beatmap);
+        Assert.Same(map.Beatmapset, scores[0].Beatmapset);
+        Assert.Same(existingMap, scores[1].Beatmap);
+        Assert.Same(existingMap.Beatmapset, scores[1].Beatmapset);
+        Assert.Same(map, scores[2].Beatmap);
+        Assert.Same(existingSet, scores[2].Beatmapset);
+        Assert.Equal(2, api.CallCount);
+    }
+
     private sealed class Factory(HttpStatusCode status, string body) : IHttpClientFactory
     {
         public int Calls { get; private set; }

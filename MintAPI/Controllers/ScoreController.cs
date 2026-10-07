@@ -280,9 +280,9 @@ public class ScoreController(
     /// <response code="200">PNG 成绩图。</response>
     /// <response code="400">取成绩失败。</response>
     /// <response code="404">用户未绑定，或该谱面没有该用户的成绩。</response>
-    /// <response code="500">取用户信息失败。</response>
+    /// <response code="500">取用户信息或渲染成绩失败。</response>
     [HttpGet("user_score")]
-    [Produces("image/png")]
+    [Produces("image/png", "application/json", "text/plain")]
     public async Task<IActionResult> UserScore(
         [FromQuery] string platform,
         [FromQuery] string platform_uid,

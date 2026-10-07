@@ -20,6 +20,7 @@ public sealed class RecordingOsuApiService : IOsuApiService
     public Func<int, ScoreType, GameMode?, int, int, bool?, bool?, List<Score>>? ScoresHandler { get; set; }
 
     public Func<int, Beatmap>? BeatmapHandler { get; set; }
+    public Func<int, int, GameMode?, List<Score>>? BeatmapUserScoresHandler { get; set; }
     public Func<int, Beatmapset>? BeatmapsetHandler { get; set; }
 
     public Func<long?, MatchResponse>? MatchHandler { get; set; }
@@ -54,7 +55,10 @@ public sealed class RecordingOsuApiService : IOsuApiService
     }
 
     public Task<List<Score>> GetBeatmapUserScoresAsync(int beatmapId, int userId, GameMode? mode = null)
-        => Record<List<Score>>();
+    {
+        Interlocked.Increment(ref _callCount);
+        return Task.FromResult(BeatmapUserScoresHandler?.Invoke(beatmapId, userId, mode) ?? default!);
+    }
 
     public Task<SeasonalBackgrounds> GetSeasonalBackgroundsAsync()
         => Record<SeasonalBackgrounds>();

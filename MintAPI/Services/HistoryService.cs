@@ -47,6 +47,11 @@ public sealed class HistoryService(
         if (HasLeaderboard(map.Status))
         {
             var official = await osuApi.GetBeatmapUserScoresAsync(mapId, userId, (GameMode)mode).WaitAsync(ct);
+            foreach (var score in official)
+            {
+                score.Beatmap ??= map;
+                score.Beatmapset ??= score.Beatmap.Beatmapset ?? map.Beatmapset;
+            }
             return new("official", "官网当前保留的各 Mod 最佳成绩，不代表全部历史尝试", official);
         }
         var rows = await db.ScoreHistories.AsNoTracking()
