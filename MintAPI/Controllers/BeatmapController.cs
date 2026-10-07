@@ -1,3 +1,4 @@
+using MintAPI.Errors;
 using Microsoft.AspNetCore.Mvc;
 using MintAPI.Rendering.BeatmapTheme;
 using MintAPI.Services;
@@ -21,13 +22,13 @@ public class BeatmapController(
     /// <response code="400">两个 ID 都没给。</response>
     /// <response code="500">读取失败。</response>
     [HttpGet("cover")]
-    [Produces("image/jpeg")]
+    [Produces("image/jpeg", "application/problem+json")]
     public async Task<IActionResult> GetBeatmapCover(
         [FromQuery] int? beatmap_id = null,
         [FromQuery] int? beatmapset_id = null)
     {
         if (beatmap_id is null && beatmapset_id is null)
-            return BadRequest("Either beatmap_id or beatmapset_id is required");
+            return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "Either beatmap_id or beatmapset_id is required");
 
         Beatmapset beatmapsetInfo;
         int resolvedBeatmapId;
@@ -45,24 +46,26 @@ public class BeatmapController(
                 resolvedBeatmapId = beatmapsetInfo.Beatmaps?.FirstOrDefault()?.Id ?? 0;
             }
         }
-        catch (Exception ex) when (ex is not RetryableException)
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        { return ApiErrors.Result(ErrorCatalog.BeatmapNotFound); }
+        catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to get beatmapset info");
-            return StatusCode(500, $"Internal server error: {ex.Message}");
+            return ApiErrors.Result(ErrorCatalog.InternalError, diagnostic: $"Internal server error: {ex.Message}");
         }
 
         if (resolvedBeatmapId == 0)
-            return StatusCode(500, "Cannot determine beatmap ID");
+            return ApiErrors.Result(ErrorCatalog.InternalError, diagnostic: "Cannot determine beatmap ID");
 
         string osuFilePath;
         try
         {
             osuFilePath = await beatmapFile.GetOsuFilePathAsync(beatmapsetInfo.Id, resolvedBeatmapId);
         }
-        catch (Exception ex) when (ex is not RetryableException)
+        catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to get osu file");
-            return StatusCode(500, $"Internal server error: {ex.Message}");
+            return ApiErrors.Result(ErrorCatalog.InternalError, diagnostic: $"Internal server error: {ex.Message}");
         }
 
         var bgName = beatmapFile.GetBgFilename(osuFilePath);
@@ -71,10 +74,10 @@ public class BeatmapController(
         {
             cover = await beatmapFile.GetMapBgAsync(beatmapsetInfo.Id, resolvedBeatmapId, bgName);
         }
-        catch (Exception ex) when (ex is not RetryableException)
+        catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to get map background");
-            return StatusCode(500, $"Internal server error: {ex.Message}");
+            return ApiErrors.Result(ErrorCatalog.InternalError, diagnostic: $"Internal server error: {ex.Message}");
         }
 
         return File(cover, "image/jpeg");
@@ -87,14 +90,14 @@ public class BeatmapController(
     /// <response code="400">参数或谱面无效。</response>
     /// <response code="500">读取或渲染失败。</response>
     [HttpGet("beatmap")]
-    [Produces("image/png")]
+    [Produces("image/png", "application/problem+json")]
     public async Task<IActionResult> GetBeatmapInfo(
         [FromQuery] int? beatmap_id = null,
         [FromQuery] string theme = "default")
     {
-        if (theme is not ("default" or "yaowan")) return BadRequest("theme 必须为 default 或 yaowan。");
+        if (theme is not ("default" or "yaowan")) return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "theme 必须为 default 或 yaowan。");
         if (beatmap_id is null or <= 0)
-            return BadRequest("beatmap_id 必须为正整数。");
+            return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "beatmap_id 必须为正整数。");
 
         return await RenderBeatmapInfoAsync(beatmap_id.Value, theme);
     }
@@ -106,14 +109,14 @@ public class BeatmapController(
     /// <response code="400">参数或谱面集无效。</response>
     /// <response code="500">读取或渲染失败。</response>
     [HttpGet("beatmapset")]
-    [Produces("image/png")]
+    [Produces("image/png", "application/problem+json")]
     public async Task<IActionResult> GetBeatmapsetInfo(
         [FromQuery] int? beatmapset_id = null,
         [FromQuery] string theme = "default")
     {
-        if (theme is not ("default" or "yaowan")) return BadRequest("theme 必须为 default 或 yaowan。");
+        if (theme is not ("default" or "yaowan")) return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "theme 必须为 default 或 yaowan。");
         if (beatmapset_id is null or <= 0)
-            return BadRequest("beatmapset_id 必须为正整数。");
+            return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "beatmapset_id 必须为正整数。");
 
         return await RenderBeatmapsetInfoAsync(beatmapset_id.Value, theme);
     }
@@ -126,33 +129,36 @@ public class BeatmapController(
     /// <response code="400">参数或谱面无效。</response>
     /// <response code="404">谱面没有可用 BPM 数据。</response>
     /// <response code="500">读取或渲染失败。</response>
+    /// <response code="502">上游服务查询失败；返回统一错误 JSON。</response>
     [HttpGet("bpm")]
-    [Produces("image/png")]
+    [Produces("image/png", "application/problem+json")]
     public async Task<IActionResult> GetBeatmapBpm(
         [FromServices] BeatmapBpmTheme bpmTheme,
         [FromQuery] int? beatmap_id = null,
         [FromQuery] bool include_details = false)
     {
-        if (beatmap_id is null or <= 0) return BadRequest("beatmap_id 必须为正整数。");
+        if (beatmap_id is null or <= 0) return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "beatmap_id 必须为正整数。");
         Beatmap map;
         try { map = await osuApi.GetBeatmapAsync(beatmap_id.Value); }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        { return ApiErrors.Result(ErrorCatalog.BeatmapNotFound); }
         catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to get beatmap {BeatmapId}", beatmap_id);
-            return BadRequest("Failed to get beatmap");
+            return ApiErrors.Result(ErrorCatalog.OsuApiUnavailable, diagnostic: "Failed to get beatmap");
         }
         try
         {
             var path = await beatmapFile.GetOsuFilePathAsync(map.BeatmapsetId, map.Id);
             var segments = BeatmapBpmTimeline.ReadAll(path);
-            if (segments.Length == 0) return NotFound("谱面没有可用 BPM 数据。");
+            if (segments.Length == 0) return ApiErrors.Result(ErrorCatalog.RecordNotFound, diagnostic: "谱面没有可用 BPM 数据。");
             Response.Headers["X-Bpm-Segment-Count"] = segments.Length.ToString();
             return File(await bpmTheme.RenderAsync(map, segments, include_details, HttpContext.RequestAborted), "image/png");
         }
         catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to render BPM details for beatmap {BeatmapId}", beatmap_id);
-            return StatusCode(500, "Failed to read or render BPM details");
+            return ApiErrors.Result(ErrorCatalog.RenderFailed, diagnostic: "Failed to read or render BPM details");
         }
     }
 
@@ -163,10 +169,12 @@ public class BeatmapController(
         {
             beatmap = await osuApi.GetBeatmapAsync(beatmapId);
         }
-        catch (Exception ex) when (ex is not RetryableException)
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        { return ApiErrors.Result(ErrorCatalog.BeatmapNotFound); }
+        catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to get beatmap {BeatmapId}", beatmapId);
-            return BadRequest($"Failed to get beatmap: {ex.Message}");
+            return ApiErrors.Result(ErrorCatalog.OsuApiUnavailable, diagnostic: $"Failed to get beatmap: {ex.Message}");
         }
 
         var beatmapsetId = beatmap.BeatmapsetId;
@@ -176,10 +184,10 @@ public class BeatmapController(
         {
             osuFilePath = await beatmapFile.GetOsuFilePathAsync(beatmapsetId, beatmapId);
         }
-        catch (Exception ex) when (ex is not RetryableException)
+        catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to get osu file for beatmap {BeatmapId}", beatmapId);
-            return StatusCode(500, "Failed to get beatmap file");
+            return ApiErrors.Result(ErrorCatalog.InternalError, diagnostic: "Failed to get beatmap file");
         }
 
         User mapper;
@@ -194,10 +202,10 @@ public class BeatmapController(
             }
             mapper = await osuApi.GetUserAsync(mapperId.ToString());
         }
-        catch (Exception ex) when (ex is not RetryableException)
+        catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to get mapper info for beatmap {BeatmapId}", beatmapId);
-            return StatusCode(500, "Failed to get mapper info");
+            return ApiErrors.Result(ErrorCatalog.OsuApiUnavailable, diagnostic: "Failed to get mapper info");
         }
 
         var bgName = beatmapFile.GetBgFilename(osuFilePath);
@@ -206,10 +214,10 @@ public class BeatmapController(
         {
             mapBg = await beatmapFile.GetMapBgAsync(beatmapsetId, beatmapId, bgName);
         }
-        catch (Exception ex) when (ex is not RetryableException)
+        catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to get map background for beatmap {BeatmapId}", beatmapId);
-            return StatusCode(500, "Failed to get map background");
+            return ApiErrors.Result(ErrorCatalog.InternalError, diagnostic: "Failed to get map background");
         }
 
         byte[] image;
@@ -217,10 +225,10 @@ public class BeatmapController(
         {
             image = await beatmapTheme.RenderBeatmapAsync(beatmap, mapper, mapBg, osuFilePath, theme);
         }
-        catch (Exception ex) when (ex is not RetryableException)
+        catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to render beatmap image");
-            return StatusCode(500, $"Internal server error: {ex.Message}");
+            return ApiErrors.Result(ErrorCatalog.RenderFailed, diagnostic: $"Internal server error: {ex.Message}");
         }
 
         return File(image, "image/png");
@@ -233,25 +241,27 @@ public class BeatmapController(
         {
             beatmapset = await osuApi.GetBeatmapsetAsync(beatmapsetId);
         }
-        catch (Exception ex) when (ex is not RetryableException)
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        { return ApiErrors.Result(ErrorCatalog.BeatmapNotFound); }
+        catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to get beatmapset {BeatmapsetId}", beatmapsetId);
-            return BadRequest($"Failed to get beatmapset: {ex.Message}");
+            return ApiErrors.Result(ErrorCatalog.OsuApiUnavailable, diagnostic: $"Failed to get beatmapset: {ex.Message}");
         }
 
         var firstMap = beatmapset.Beatmaps?.FirstOrDefault();
         if (firstMap is null)
-            return StatusCode(500, "Beatmapset has no beatmaps");
+            return ApiErrors.Result(ErrorCatalog.InternalError, diagnostic: "Beatmapset has no beatmaps");
 
         string osuFilePath;
         try
         {
             osuFilePath = await beatmapFile.GetOsuFilePathAsync(beatmapsetId, firstMap.Id);
         }
-        catch (Exception ex) when (ex is not RetryableException)
+        catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to get osu file for beatmapset {BeatmapsetId}", beatmapsetId);
-            return StatusCode(500, "Failed to get beatmap file");
+            return ApiErrors.Result(ErrorCatalog.InternalError, diagnostic: "Failed to get beatmap file");
         }
 
         var bgName = beatmapFile.GetBgFilename(osuFilePath);
@@ -260,10 +270,10 @@ public class BeatmapController(
         {
             coverBg = await beatmapFile.GetMapBgAsync(beatmapsetId, firstMap.Id, bgName);
         }
-        catch (Exception ex) when (ex is not RetryableException)
+        catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to get cover for beatmapset {BeatmapsetId}", beatmapsetId);
-            return StatusCode(500, "Failed to get beatmapset cover");
+            return ApiErrors.Result(ErrorCatalog.InternalError, diagnostic: "Failed to get beatmapset cover");
         }
 
         byte[] image;
@@ -271,10 +281,10 @@ public class BeatmapController(
         {
             image = await beatmapTheme.RenderBeatmapsetAsync(beatmapset, coverBg, theme);
         }
-        catch (Exception ex) when (ex is not RetryableException)
+        catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to render beatmapset image");
-            return StatusCode(500, $"Internal server error: {ex.Message}");
+            return ApiErrors.Result(ErrorCatalog.RenderFailed, diagnostic: $"Internal server error: {ex.Message}");
         }
 
         return File(image, "image/png");

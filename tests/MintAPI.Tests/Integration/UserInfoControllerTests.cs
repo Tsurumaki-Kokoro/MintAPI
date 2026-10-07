@@ -117,7 +117,7 @@ public sealed class UserInfoControllerTests
         var api = new RecordingOsuApiService { UserHandler = (_, _) => throw new HttpRequestException("missing", null, HttpStatusCode.NotFound) };
         var controller = CreateController(db, api);
         var result = Assert.IsType<NotFoundObjectResult>(await controller.GetUserInfo(user_name: "missing"));
-        Assert.Equal("osu! user not found", result.Value);
+        Assert.Equal("OSU_USER_NOT_FOUND", Assert.IsType<MintAPI.Errors.ApiError>(result.Value).Code);
         api.UserHandler = (_, _) => throw new OsuQuotaExceededException();
         await Assert.ThrowsAsync<OsuQuotaExceededException>(() => controller.GetUserInfo(user_name: "player"));
     }

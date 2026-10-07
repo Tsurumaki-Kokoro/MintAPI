@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Diagnostics;
 using MintAPI.Services;
+using MintAPI.Errors;
 
 namespace MintAPI.Middleware;
 
@@ -17,15 +18,15 @@ public sealed class RetryableExceptionHandler(
         if (exception is not RetryableException retryable)
             return false;
 
-        logger.LogWarning(retryable, "请求被拒（资源繁忙）：{Method} {Path}",
-            httpContext.Request.Method, httpContext.Request.Path);
+        var error = ApiErrors.Create(httpContext, ErrorCatalog.ServiceBusy);
+        logger.LogWarning(retryable, "API retryable {Code} {Status} {Method} {Path} {TraceId} {RequestContext}",
+            error.Code, error.Status, httpContext.Request.Method, httpContext.Request.Path, error.TraceId, ApiErrors.Context(httpContext));
 
         httpContext.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
         httpContext.Response.Headers.RetryAfter = RetryAfterSeconds.ToString();
 
         await httpContext.Response.WriteAsJsonAsync(
-            new { error = retryable.Message, retry_after = RetryAfterSeconds },
-            cancellationToken);
+            error, options: null, contentType: "application/problem+json", cancellationToken: cancellationToken);
 
         return true;
     }

@@ -1,3 +1,4 @@
+using MintAPI.Errors;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MintAPI.Data;
@@ -33,8 +34,9 @@ public class UserInfoController(
     /// <response code="400">主题、模式或查询身份无效。</response>
     /// <response code="404">用户未绑定或指定 osu! 用户不存在。</response>
     /// <response code="500">取用户信息或渲染失败。</response>
+    /// <response code="502">上游服务查询失败；返回统一错误 JSON。</response>
     [HttpGet]
-    [Produces("image/png")]
+    [Produces("image/png", "application/problem+json")]
     public async Task<IActionResult> GetUserInfo(
         [FromQuery] string? platform = null,
         [FromQuery] string? platform_uid = null,
@@ -44,24 +46,24 @@ public class UserInfoController(
         [FromQuery] string theme = "default")
     {
         if (theme is not ("default" or "yaowan"))
-            return BadRequest("Unsupported user info theme. Use default or yaowan.");
+            return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "Unsupported user info theme. Use default or yaowan.");
         if (game_mode is < 0 or > 3)
-            return BadRequest("game_mode must be between 0 and 3.");
+            return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "game_mode must be between 0 and 3.");
 
         var target = user_name?.Trim();
         var hasBindingIdentity = !string.IsNullOrWhiteSpace(platform) && !string.IsNullOrWhiteSpace(platform_uid);
         if (string.IsNullOrWhiteSpace(target) && !hasBindingIdentity)
-            return BadRequest("Provide user_name or both platform and platform_uid.");
+            return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "Provide user_name or both platform and platform_uid.");
         var userModel = hasBindingIdentity
             ? await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Platform == platform && u.PlatformUid == platform_uid)
             : null;
         if (string.IsNullOrWhiteSpace(target) && userModel is null)
-            return NotFound("User not found");
+            return ApiErrors.Result(ErrorCatalog.UserNotBound, diagnostic: "User not found");
 
         target = string.IsNullOrWhiteSpace(target) ? userModel!.OsuUid : target;
         var gameModeInt = game_mode ?? userModel?.GameMode ?? 0;
         if (gameModeInt is < 0 or > 3)
-            return BadRequest("Invalid bound game mode.");
+            return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "Invalid bound game mode.");
         var mode = (GameMode)gameModeInt;
         var modeStr = GameModeToString(gameModeInt);
 
@@ -72,12 +74,12 @@ public class UserInfoController(
         }
         catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
-            return NotFound("osu! user not found");
+            return ApiErrors.Result(ErrorCatalog.OsuUserNotFound, diagnostic: "osu! user not found");
         }
-        catch (Exception ex) when (ex is not RetryableException)
+        catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to get user info for {User}", target);
-            return StatusCode(500, "Failed to get user info");
+            return ApiErrors.Result(ErrorCatalog.OsuApiUnavailable, diagnostic: "Failed to get user info");
         }
 
         UserOsuInfoHistory? history = null;
@@ -98,10 +100,10 @@ public class UserInfoController(
         {
             image = await userInfoTheme.RenderAsync(userInfo, history, modeStr.ToUpper(), theme);
         }
-        catch (Exception ex) when (ex is not RetryableException)
+        catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to render user info image");
-            return StatusCode(500, $"Internal server error: {ex.Message}");
+            return ApiErrors.Result(ErrorCatalog.RenderFailed, diagnostic: $"Internal server error: {ex.Message}");
         }
 
         return File(image, "image/png");
@@ -124,10 +126,10 @@ public class UserInfoController(
         var userModel = await db.Users
             .FirstOrDefaultAsync(u => u.Platform == platform && u.PlatformUid == platform_uid);
         if (userModel is null)
-            return NotFound("User not found");
+            return ApiErrors.Result(ErrorCatalog.UserNotBound, diagnostic: "User not found");
 
         if (background_file.Length == 0)
-            return BadRequest("No file provided");
+            return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "No file provided");
 
         using var ms = new MemoryStream();
         await background_file.CopyToAsync(ms);
@@ -137,10 +139,10 @@ public class UserInfoController(
         {
             await imageCache.SaveUserBackgroundAsync(int.Parse(userModel.OsuUid), data);
         }
-        catch (Exception ex) when (ex is not RetryableException)
+        catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to save background for user {OsuUid}", userModel.OsuUid);
-            return StatusCode(500, "Failed to save background");
+            return ApiErrors.Result(ErrorCatalog.InternalError, diagnostic: "Failed to save background");
         }
 
         return Ok(new { message = "Background updated successfully" });
@@ -151,9 +153,10 @@ public class UserInfoController(
     /// <param name="platform_uid">平台用户 ID。</param>
     /// <param name="pp">目标 pp 值。</param>
     /// <response code="200">JSON：required_pp 与 position。</response>
-    /// <response code="400">取成绩失败。</response>
+    /// <response code="400">请求参数无效。</response>
     /// <response code="404">用户未绑定，或没有成绩记录。</response>
-    /// <response code="500">取用户信息失败。</response>
+    /// <response code="500">内部处理或渲染失败。</response>
+    /// <response code="502">上游服务查询失败；返回统一错误 JSON。</response>
     [HttpGet("extra/performance_control")]
     public async Task<IActionResult> PerformanceControl(
         [FromQuery] string platform,
@@ -163,7 +166,7 @@ public class UserInfoController(
         var userModel = await db.Users
             .FirstOrDefaultAsync(u => u.Platform == platform && u.PlatformUid == platform_uid);
         if (userModel is null)
-            return NotFound("User not found");
+            return ApiErrors.Result(ErrorCatalog.UserNotBound, diagnostic: "User not found");
 
         var mode = (GameMode)userModel.GameMode;
 
@@ -172,10 +175,14 @@ public class UserInfoController(
         {
             userInfo = await osuApi.GetUserAsync(userModel.OsuUid, mode);
         }
-        catch (Exception ex) when (ex is not RetryableException)
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return ApiErrors.Result(ErrorCatalog.OsuUserNotFound);
+        }
+        catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to get user info for {OsuUid}", userModel.OsuUid);
-            return StatusCode(500, "Failed to get user info");
+            return ApiErrors.Result(ErrorCatalog.OsuApiUnavailable, diagnostic: "Failed to get user info");
         }
 
         List<MintOsuApi.Models.Score> scores;
@@ -183,14 +190,14 @@ public class UserInfoController(
         {
             scores = await osuApi.GetUserScoresAsync(userInfo.Id, MintOsuApi.Enums.ScoreType.Best, mode, limit: 100);
         }
-        catch (Exception ex) when (ex is not RetryableException)
+        catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to get best scores for user {UserId}", userInfo.Id);
-            return BadRequest($"Failed to get scores: {ex.Message}");
+            return ApiErrors.Result(ErrorCatalog.OsuApiUnavailable, diagnostic: $"Failed to get scores: {ex.Message}");
         }
 
         if (scores.Count == 0)
-            return NotFound("No play record found");
+            return ApiErrors.Result(ErrorCatalog.BestPlayNotFound, diagnostic: "No play record found");
 
         var ppList = scores.Select(s => s.Pp ?? 0.0).ToList();
         var (requiredPp, position) = ppCalc.FindOptimalNewPp(ppList, pp);
@@ -207,8 +214,9 @@ public class UserInfoController(
     /// <response code="400">主题、模式无效或取成绩失败。</response>
     /// <response code="404">用户未绑定，或没有成绩记录。</response>
     /// <response code="500">取用户信息或渲染失败。</response>
+    /// <response code="502">上游服务查询失败；返回统一错误 JSON。</response>
     [HttpGet("extra/performance_analyze")]
-    [Produces("image/png")]
+    [Produces("image/png", "application/problem+json")]
     public async Task<IActionResult> PerformanceAnalyze(
         [FromQuery] string platform,
         [FromQuery] string platform_uid,
@@ -216,28 +224,32 @@ public class UserInfoController(
         [FromQuery] int? game_mode = null)
     {
         if (theme != "default")
-            return BadRequest("Unsupported performance analysis theme. Use default.");
+            return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "Unsupported performance analysis theme. Use default.");
         if (game_mode is < 0 or > 3)
-            return BadRequest("game_mode must be between 0 and 3.");
+            return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "game_mode must be between 0 and 3.");
 
         var userModel = await db.Users
             .FirstOrDefaultAsync(u => u.Platform == platform && u.PlatformUid == platform_uid);
         if (userModel is null)
-            return NotFound("User not found");
+            return ApiErrors.Result(ErrorCatalog.UserNotBound, diagnostic: "User not found");
 
         var gameModeInt = game_mode ?? userModel.GameMode;
         if (gameModeInt is < 0 or > 3)
-            return BadRequest("Invalid bound game mode.");
+            return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "Invalid bound game mode.");
         var mode = (GameMode)gameModeInt;
         MintOsuApi.Models.User userInfo;
         try
         {
             userInfo = await osuApi.GetUserAsync(userModel.OsuUid, mode);
         }
-        catch (Exception ex) when (ex is not RetryableException)
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return ApiErrors.Result(ErrorCatalog.OsuUserNotFound);
+        }
+        catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to get user info for {OsuUid}", userModel.OsuUid);
-            return StatusCode(500, "Failed to get user info");
+            return ApiErrors.Result(ErrorCatalog.OsuApiUnavailable, diagnostic: "Failed to get user info");
         }
 
         List<MintOsuApi.Models.Score> scores;
@@ -245,14 +257,14 @@ public class UserInfoController(
         {
             scores = await osuApi.GetUserScoresAsync(userInfo.Id, ScoreType.Best, mode, limit: 100);
         }
-        catch (Exception ex) when (ex is not RetryableException)
+        catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to get best scores for user {UserId}", userInfo.Id);
-            return BadRequest($"Failed to get scores: {ex.Message}");
+            return ApiErrors.Result(ErrorCatalog.OsuApiUnavailable, diagnostic: $"Failed to get scores: {ex.Message}");
         }
 
         if (scores.Count == 0)
-            return NotFound("No play record found");
+            return ApiErrors.Result(ErrorCatalog.BestPlayNotFound, diagnostic: "No play record found");
 
         try
         {
@@ -260,10 +272,10 @@ public class UserInfoController(
                 GameModeToString(gameModeInt).ToUpperInvariant());
             return File(image, "image/png");
         }
-        catch (Exception ex) when (ex is not RetryableException)
+        catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to render BP analysis image for user {UserId}", userInfo.Id);
-            return StatusCode(500, "Failed to render BP analysis image");
+            return ApiErrors.Result(ErrorCatalog.RenderFailed, diagnostic: "Failed to render BP analysis image");
         }
     }
 

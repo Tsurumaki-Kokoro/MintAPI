@@ -21,7 +21,7 @@ Log.Logger = new LoggerConfiguration()
     .WriteTo.File(
         path: Path.Combine("logs", ".log"),
         rollingInterval: RollingInterval.Day,
-        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss} [{Level:u3}] [{TraceId}] {Message:lj}{NewLine}{Exception}")
     .CreateLogger();
 
 try
@@ -108,7 +108,7 @@ try
     builder.Services.AddExceptionHandler<RetryableExceptionHandler>();
     builder.Services.AddProblemDetails();
 
-    builder.Services.AddControllers();
+    builder.Services.AddControllers(options => options.Filters.Add<MintAPI.Errors.ApiErrorFilter>());
     builder.Services.AddOpenApi(options =>
     {
         options.AddXmlComments(typeof(Program).Assembly);
@@ -144,6 +144,14 @@ try
         });
     }
 
+    app.Use(async (context, next) =>
+    {
+        using var scope = app.Logger.BeginScope(new Dictionary<string, object>
+        {
+            ["TraceId"] = System.Diagnostics.Activity.Current?.Id ?? context.TraceIdentifier
+        });
+        await next(context);
+    });
     app.UseExceptionHandler();
     app.UseStaticFiles();
     app.UseMiddleware<ApiKeyMiddleware>();

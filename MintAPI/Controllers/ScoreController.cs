@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MintAPI.Data;
+using MintAPI.Errors;
 using MintAPI.Rendering.ScoreTheme;
 using MintAPI.Services;
 using MintOsuApi.Enums;
@@ -29,11 +30,12 @@ public class ScoreController(
     /// <param name="include_fails">包含失败成绩。</param>
     /// <param name="theme">渲染主题：default 或 yaowan。</param>
     /// <response code="200">PNG 成绩图。</response>
-    /// <response code="400">取成绩失败。</response>
+    /// <response code="400">请求参数无效。</response>
     /// <response code="404">用户未绑定，或没有游玩记录。</response>
-    /// <response code="500">取用户信息失败。</response>
+    /// <response code="500">内部处理或渲染失败。</response>
+    /// <response code="502">上游服务查询失败；返回统一错误 JSON。</response>
     [HttpGet("recent_play")]
-    [Produces("image/png")]
+    [Produces("image/png", "application/problem+json")]
     public async Task<IActionResult> RecentPlay(
         [FromQuery] string platform,
         [FromQuery] string platform_uid,
@@ -44,17 +46,17 @@ public class ScoreController(
         [FromQuery] bool? legacy_only = null,
         [FromQuery] int? recent_end = null)
     {
-        if (theme is not ("default" or "yaowan")) return BadRequest("theme 必须为 default 或 yaowan。");
-        if (game_mode is < 0 or > 3) return BadRequest("game_mode 必须为 0–3。");
-        if (recent_index is < 1 or > 100) return BadRequest("recent_index 必须为 1–100。");
+        if (theme is not ("default" or "yaowan")) return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "theme 必须为 default 或 yaowan。");
+        if (game_mode is < 0 or > 3) return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "game_mode 必须为 0–3。");
+        if (recent_index is < 1 or > 100) return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "recent_index 必须为 1–100。");
         if (recent_end.HasValue && (recent_end < recent_index || recent_end > 100 || recent_end - recent_index >= 20))
-            return BadRequest("recent_end 必须不小于 recent_index、不超过 100，每次最多 20 条。");
-        if (recent_end.HasValue && theme != "default") return BadRequest("最近游玩列表仅支持 default 主题。");
+            return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "recent_end 必须不小于 recent_index、不超过 100，每次最多 20 条。");
+        if (recent_end.HasValue && theme != "default") return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "最近游玩列表仅支持 default 主题。");
 
         var userModel = await db.Users
             .FirstOrDefaultAsync(u => u.Platform == platform && u.PlatformUid == platform_uid);
         if (userModel is null)
-            return NotFound("User not found");
+            return ApiErrors.Result(ErrorCatalog.UserNotBound, diagnostic: "User not found");
 
         GameMode? mode = game_mode.HasValue ? (GameMode)game_mode.Value : (GameMode)userModel.GameMode;
 
@@ -63,10 +65,14 @@ public class ScoreController(
         {
             userInfo = await osuApi.GetUserAsync(userModel.OsuUid, mode);
         }
-        catch (Exception ex) when (ex is not RetryableException)
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return ApiErrors.Result(ErrorCatalog.OsuUserNotFound);
+        }
+        catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to get user info for {OsuUid}", userModel.OsuUid);
-            return StatusCode(500, "Failed to get user info");
+            return ApiErrors.Result(ErrorCatalog.OsuApiUnavailable, diagnostic: "Failed to get user info");
         }
 
         List<Score> scores;
@@ -74,14 +80,14 @@ public class ScoreController(
         {
             scores = await osuApi.GetUserScoresAsync(userInfo.Id, ScoreType.Recent, mode, limit: (recent_end ?? recent_index) - recent_index + 1, offset: recent_index - 1, includeFails: include_fails, legacyOnly: legacy_only, cancellationToken: HttpContext.RequestAborted);
         }
-        catch (Exception ex) when (ex is not RetryableException)
+        catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to get recent scores for user {UserId}", userInfo.Id);
-            return BadRequest($"Failed to get scores: {ex.Message}");
+            return ApiErrors.Result(ErrorCatalog.OsuApiUnavailable, diagnostic: $"Failed to get scores: {ex.Message}");
         }
 
         if (scores.Count == 0)
-            return NotFound("No recent play record found");
+            return ApiErrors.Result(ErrorCatalog.RecentPlayNotFound, diagnostic: "No recent play record found");
 
         if (recent_end.HasValue)
             return await RenderScoreListAsync(scores, userInfo, recent_index, recent: true);
@@ -97,11 +103,11 @@ public class ScoreController(
     /// <param name="best_index">第几个 BP，从 1 开始。</param>
     /// <param name="theme">渲染主题：default 或 yaowan。</param>
     /// <response code="200">PNG 成绩图。</response>
-    /// <response code="400">取成绩失败。</response>
+    /// <response code="400">请求参数无效。</response>
     /// <response code="404">用户未绑定，或 BP 序号超出成绩数量。</response>
-    /// <response code="500">取用户信息失败。</response>
+    /// <response code="500">内部处理或渲染失败。</response>
     [HttpGet("best_play")]
-    [Produces("image/png")]
+    [Produces("image/png", "application/problem+json")]
     public async Task<IActionResult> BestPlay(
         [FromQuery] string platform,
         [FromQuery] string platform_uid,
@@ -121,8 +127,9 @@ public class ScoreController(
     /// <response code="200">PNG 列表图。</response>
     /// <response code="400">无效区间或取成绩失败。</response>
     /// <response code="404">用户未绑定或没有 BP。</response>
+    /// <response code="502">上游服务查询失败；返回统一错误 JSON。</response>
     [HttpGet("best_plays")]
-    [Produces("image/png")]
+    [Produces("image/png", "application/problem+json")]
     public Task<IActionResult> BestPlays(
         [FromQuery] string platform, [FromQuery] string platform_uid,
         [FromQuery] int? game_mode = null, [FromQuery] int best_index = 1,
@@ -132,18 +139,18 @@ public class ScoreController(
     private async Task<IActionResult> GetBestPlayAsync(string platform, string platform_uid,
         int? game_mode, int best_index, string theme, bool? legacy_only, int? best_end)
     {
-        if (theme is not ("default" or "yaowan")) return BadRequest("theme 必须为 default 或 yaowan。");
-        if (game_mode is < 0 or > 3) return BadRequest("game_mode 必须为 0–3。");
-        if (best_index is < 1 or > 100) return BadRequest("best_index 必须为 1–100。");
+        if (theme is not ("default" or "yaowan")) return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "theme 必须为 default 或 yaowan。");
+        if (game_mode is < 0 or > 3) return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "game_mode 必须为 0–3。");
+        if (best_index is < 1 or > 100) return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "best_index 必须为 1–100。");
 
         if (best_end.HasValue && (best_end < best_index || best_end > 100 || best_end - best_index >= 20))
-            return BadRequest("best_end 必须不小于 best_index、不超过 100，每次最多 20 条。");
-        if (best_end.HasValue && theme != "default") return BadRequest("BP 列表仅支持 default 主题。");
+            return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "best_end 必须不小于 best_index、不超过 100，每次最多 20 条。");
+        if (best_end.HasValue && theme != "default") return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "BP 列表仅支持 default 主题。");
 
         var userModel = await db.Users
             .FirstOrDefaultAsync(u => u.Platform == platform && u.PlatformUid == platform_uid);
         if (userModel is null)
-            return NotFound("User not found");
+            return ApiErrors.Result(ErrorCatalog.UserNotBound, diagnostic: "User not found");
 
         GameMode? mode = game_mode.HasValue ? (GameMode)game_mode.Value : (GameMode)userModel.GameMode;
 
@@ -152,10 +159,14 @@ public class ScoreController(
         {
             userInfo = await osuApi.GetUserAsync(userModel.OsuUid, mode);
         }
-        catch (Exception ex) when (ex is not RetryableException)
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return ApiErrors.Result(ErrorCatalog.OsuUserNotFound);
+        }
+        catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to get user info for {OsuUid}", userModel.OsuUid);
-            return StatusCode(500, "Failed to get user info");
+            return ApiErrors.Result(ErrorCatalog.OsuApiUnavailable, diagnostic: "Failed to get user info");
         }
 
         List<Score> scores;
@@ -163,14 +174,14 @@ public class ScoreController(
         {
             scores = await osuApi.GetUserScoresAsync(userInfo.Id, ScoreType.Best, mode, limit: (best_end ?? best_index) - best_index + 1, offset: best_index - 1, legacyOnly: legacy_only, cancellationToken: HttpContext.RequestAborted);
         }
-        catch (Exception ex) when (ex is not RetryableException)
+        catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to get best scores for user {UserId}", userInfo.Id);
-            return BadRequest($"Failed to get scores: {ex.Message}");
+            return ApiErrors.Result(ErrorCatalog.OsuApiUnavailable, diagnostic: $"Failed to get scores: {ex.Message}");
         }
 
         if (scores.Count == 0)
-            return NotFound("No best play record found");
+            return ApiErrors.Result(ErrorCatalog.BestPlayNotFound, diagnostic: "No best play record found");
 
         if (best_end.HasValue)
             return await RenderScoreListAsync(scores, userInfo, best_index, recent: false);
@@ -193,23 +204,23 @@ public class ScoreController(
     /// <response code="500">查询或渲染失败。</response>
     [HttpGet("new_best_plays")]
     [HttpGet("nb")]
-    [Produces("image/png")]
+    [Produces("image/png", "application/problem+json")]
     public async Task<IActionResult> NewBestPlays([FromQuery] string platform, [FromQuery] string platform_uid,
         [FromQuery] int days = 1, [FromQuery] int? game_mode = null, [FromQuery] bool? legacy_only = null,
         [FromQuery] string? mods = null, [FromQuery] int first = 1, [FromQuery] int last = 20)
     {
-        if (game_mode is < 0 or > 3) return BadRequest("game_mode 必须为 0–3。");
-        if (days is < 1 or > 365) return BadRequest("days 必须为 1–365。");
+        if (game_mode is < 0 or > 3) return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "game_mode 必须为 0–3。");
+        if (days is < 1 or > 365) return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "days 必须为 1–365。");
         if (first < 1 || last < first || last > 200 || last - first >= 20)
-            return BadRequest("first/last 必须为 1–200，每次最多 20 条。");
+            return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "first/last 必须为 1–200，每次最多 20 条。");
         var requiredMods = (mods ?? "").Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
             .Select(mod => mod.ToUpperInvariant()).Distinct().ToArray();
         if (requiredMods.Any(mod => mod.Length is < 2 or > 4 || !mod.All(char.IsAsciiLetterOrDigit)) ||
             (requiredMods.Contains("NM") && requiredMods.Length > 1))
-            return BadRequest("mods 使用逗号分隔的 Mods 缩写；NM 必须单独使用。");
+            return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "mods 使用逗号分隔的 Mods 缩写；NM 必须单独使用。");
         var cancellationToken = HttpContext.RequestAborted;
         var binding = await db.Users.FirstOrDefaultAsync(u => u.Platform == platform && u.PlatformUid == platform_uid, cancellationToken);
-        if (binding is null) return NotFound("User not found");
+        if (binding is null) return ApiErrors.Result(ErrorCatalog.UserNotBound, diagnostic: "User not found");
         var now = DateTimeOffset.UtcNow;
         var mode = (GameMode)(game_mode ?? binding.GameMode);
         try
@@ -221,13 +232,13 @@ public class ScoreController(
                 scores.AddRange(await osuApi.GetUserScoresAsync(user.Id, ScoreType.Best, mode, limit: 100,
                     offset: 100, legacyOnly: legacy_only, cancellationToken: cancellationToken));
             var report = NewBestPlayData.Select(scores, now, days, first, last, requiredMods);
-            if (report.Entries.Count == 0) return NotFound("未查询到指定时间范围内的新增 BP");
+            if (report.Entries.Count == 0) return ApiErrors.Result(ErrorCatalog.RecordNotFound, diagnostic: "未查询到指定时间范围内的新增 BP");
             return File(await scoreTheme.RenderNewBestListAsync(report, user, cancellationToken), "image/png");
         }
         catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to render new BP for {OsuUid}", binding.OsuUid);
-            return StatusCode(500, "Failed to get or render new best plays");
+            return ApiErrors.Result(ErrorCatalog.RenderFailed, diagnostic: "Failed to get or render new best plays");
         }
     }
 
@@ -242,32 +253,32 @@ public class ScoreController(
     /// <response code="404">用户未绑定、没有 BP 或没有可修复成绩。</response>
     /// <response code="500">查询、计算或渲染失败。</response>
     [HttpGet("fix")]
-    [Produces("image/png")]
+    [Produces("image/png", "application/problem+json")]
     public async Task<IActionResult> Fix([FromQuery] string platform, [FromQuery] string platform_uid,
         [FromServices] BpFixService fixService, [FromQuery] int? game_mode = null,
         [FromQuery] bool? legacy_only = null)
     {
-        if (game_mode is < 0 or > 3) return BadRequest("game_mode 必须为 0–3。");
+        if (game_mode is < 0 or > 3) return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "game_mode 必须为 0–3。");
         var binding = await db.Users.FirstOrDefaultAsync(u => u.Platform == platform && u.PlatformUid == platform_uid,
             HttpContext.RequestAborted);
-        if (binding is null) return NotFound("User not found");
+        if (binding is null) return ApiErrors.Result(ErrorCatalog.UserNotBound, diagnostic: "User not found");
         var mode = (GameMode)(game_mode ?? binding.GameMode);
         try
         {
             var user = await osuApi.GetUserAsync(binding.OsuUid, mode);
             var scores = await osuApi.GetUserScoresAsync(user.Id, ScoreType.Best, mode, limit: 100,
                 legacyOnly: legacy_only, cancellationToken: HttpContext.RequestAborted);
-            if (scores.Count == 0) return NotFound("No best play record found");
+            if (scores.Count == 0) return ApiErrors.Result(ErrorCatalog.BestPlayNotFound, diagnostic: "No best play record found");
             var report = await fixService.AnalyzeAsync(user, scores, HttpContext.RequestAborted);
             if (report.Entries.Count == 0)
-                return report.SkippedCount > 0 ? StatusCode(500, "Failed to calculate BP Fix")
-                    : NotFound("BP 中没有符合条件的可修复掉连成绩");
+                return report.SkippedCount > 0 ? ApiErrors.Result(ErrorCatalog.InternalError, diagnostic: "Failed to calculate BP Fix")
+                    : ApiErrors.Result(ErrorCatalog.RecordNotFound, message: "BP 中没有符合条件的可修复掉连成绩");
             return File(await scoreTheme.RenderFixAsync(report, user, HttpContext.RequestAborted), "image/png");
         }
         catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to render BP Fix for {OsuUid}", binding.OsuUid);
-            return StatusCode(500, "Failed to analyze BP Fix");
+            return ApiErrors.Result(ErrorCatalog.InternalError, diagnostic: "Failed to analyze BP Fix");
         }
     }
 
@@ -278,11 +289,12 @@ public class ScoreController(
     /// <param name="game_mode">模式 0–3，默认使用绑定模式。</param>
     /// <param name="theme">渲染主题：default 或 yaowan。</param>
     /// <response code="200">PNG 成绩图。</response>
-    /// <response code="400">取成绩失败。</response>
+    /// <response code="400">请求参数无效。</response>
     /// <response code="404">用户未绑定，或该谱面没有该用户的成绩。</response>
     /// <response code="500">取用户信息或渲染成绩失败。</response>
+    /// <response code="502">上游服务查询失败；返回统一错误 JSON。</response>
     [HttpGet("user_score")]
-    [Produces("image/png", "application/json", "text/plain")]
+    [Produces("image/png", "application/json", "text/plain", "application/problem+json")]
     public async Task<IActionResult> UserScore(
         [FromQuery] string platform,
         [FromQuery] string platform_uid,
@@ -290,13 +302,13 @@ public class ScoreController(
         [FromQuery] int? game_mode = null,
         [FromQuery] string theme = "default")
     {
-        if (theme is not ("default" or "yaowan")) return BadRequest("theme 必须为 default 或 yaowan。");
-        if (game_mode is < 0 or > 3) return BadRequest("game_mode 必须为 0–3。");
+        if (theme is not ("default" or "yaowan")) return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "theme 必须为 default 或 yaowan。");
+        if (game_mode is < 0 or > 3) return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "game_mode 必须为 0–3。");
 
         var userModel = await db.Users
             .FirstOrDefaultAsync(u => u.Platform == platform && u.PlatformUid == platform_uid);
         if (userModel is null)
-            return NotFound("User not found");
+            return ApiErrors.Result(ErrorCatalog.UserNotBound, diagnostic: "User not found");
 
         GameMode? mode = game_mode.HasValue ? (GameMode)game_mode.Value : (GameMode)userModel.GameMode;
 
@@ -305,25 +317,35 @@ public class ScoreController(
         {
             userInfo = await osuApi.GetUserAsync(userModel.OsuUid, mode);
         }
-        catch (Exception ex) when (ex is not RetryableException)
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return ApiErrors.Result(ErrorCatalog.OsuUserNotFound);
+        }
+        catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to get user info for {OsuUid}", userModel.OsuUid);
-            return StatusCode(500, "Failed to get user info");
+            return ApiErrors.Result(ErrorCatalog.OsuApiUnavailable, diagnostic: "Failed to get user info");
         }
 
         List<Score> userScores;
         try
         {
-            userScores = (await history.GetMapScoresAsync(userInfo.Id, beatmap_id, (int)mode!.Value, HttpContext.RequestAborted)).Scores;
+            var result = await history.GetMapScoresAsync(userInfo.Id, beatmap_id, (int)mode!.Value, HttpContext.RequestAborted);
+            userScores = result.Scores;
+            if (userScores.Count == 0)
+                return result.Source == "local"
+                    ? ApiErrors.Result(ErrorCatalog.LocalScoreNotCollected)
+                    : ApiErrors.Result(ErrorCatalog.ScoreNotFound);
         }
-        catch (Exception ex) when (ex is not RetryableException)
+        catch (ApiLookupException) { throw; }
+        catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to get user score for beatmap {BeatmapId}", beatmap_id);
-            return BadRequest($"Failed to get user score: {ex.Message}");
+            return ApiErrors.Result(ErrorCatalog.OsuApiUnavailable, diagnostic: $"Failed to get user score: {ex.Message}");
         }
 
         if (userScores.Count == 0)
-            return NotFound("No score found for this beatmap");
+            return ApiErrors.Result(ErrorCatalog.ScoreNotFound, diagnostic: "No score found for this beatmap");
 
         return await RenderScoreAsync(userScores[0], userInfo, mode, theme, "MAP SCORE");
     }
@@ -340,7 +362,7 @@ public class ScoreController(
         catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to render {ListType} list", recent ? "recent play" : "BP");
-            return StatusCode(500, recent ? "Failed to render recent play list" : "Failed to render BP list");
+            return ApiErrors.Result(ErrorCatalog.RenderFailed, diagnostic: recent ? "Failed to render recent play list" : "Failed to render BP list");
         }
     }
 
@@ -350,7 +372,7 @@ public class ScoreController(
         var beatmapset = score.Beatmapset ?? beatmap?.Beatmapset;
 
         if (beatmap is null)
-            return StatusCode(500, "Score has no beatmap info");
+            return ApiErrors.Result(ErrorCatalog.InternalError, diagnostic: "Score has no beatmap info");
 
         int setId = beatmapset?.Id ?? beatmap.BeatmapsetId;
 
@@ -359,10 +381,10 @@ public class ScoreController(
         {
             osuFilePath = await beatmapFile.GetOsuFilePathAsync(setId, beatmap.Id);
         }
-        catch (Exception ex) when (ex is not RetryableException)
+        catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to get osu file for beatmap {BeatmapId}", beatmap.Id);
-            return StatusCode(500, "Failed to get beatmap file");
+            return ApiErrors.Result(ErrorCatalog.InternalError, diagnostic: "Failed to get beatmap file");
         }
 
         var bgName = beatmapFile.GetBgFilename(osuFilePath);
@@ -371,10 +393,10 @@ public class ScoreController(
         {
             mapBg = await beatmapFile.GetMapBgAsync(setId, beatmap.Id, bgName);
         }
-        catch (Exception ex) when (ex is not RetryableException)
+        catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to get map background for beatmap {BeatmapId}", beatmap.Id);
-            return StatusCode(500, "Failed to get map background");
+            return ApiErrors.Result(ErrorCatalog.InternalError, diagnostic: "Failed to get map background");
         }
 
         BeatmapDifficultyAttributes? diffAttrs = null;
@@ -384,10 +406,10 @@ public class ScoreController(
         {
             image = await scoreTheme.RenderAsync(score, userInfo, mapBg, osuFilePath, diffAttrs, theme, heading);
         }
-        catch (Exception ex) when (ex is not RetryableException)
+        catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to render score image");
-            return StatusCode(500, $"Internal server error: {ex.Message}");
+            return ApiErrors.Result(ErrorCatalog.RenderFailed, diagnostic: $"Internal server error: {ex.Message}");
         }
 
         return File(image, "image/png");

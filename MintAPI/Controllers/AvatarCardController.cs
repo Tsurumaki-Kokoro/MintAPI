@@ -1,3 +1,4 @@
+using MintAPI.Errors;
 using System.Net;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -23,7 +24,7 @@ public sealed class AvatarCardController(AppDbContext db, IOsuApiService osuApi,
     /// <response code="500">获取头像、外部调用或渲染失败。</response>
     /// <response code="503">API 配额或渲染资源暂时不足。</response>
     [HttpGet]
-    [Produces("image/png")]
+    [Produces("image/png", "application/problem+json")]
     public async Task<IActionResult> GetAvatarCard([FromQuery] string? user = null,
         [FromQuery] string? platform = null, [FromQuery] string? platform_uid = null)
     {
@@ -32,26 +33,26 @@ public sealed class AvatarCardController(AppDbContext db, IOsuApiService osuApi,
         if (string.IsNullOrWhiteSpace(target))
         {
             if (string.IsNullOrWhiteSpace(platform) || string.IsNullOrWhiteSpace(platform_uid))
-                return BadRequest("Provide user or both platform and platform_uid");
+                return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "Provide user or both platform and platform_uid");
             var binding = await db.Users.AsNoTracking().FirstOrDefaultAsync(
                 u => u.Platform == platform && u.PlatformUid == platform_uid, ct);
-            if (binding == null) return NotFound("User binding not found");
+            if (binding == null) return ApiErrors.Result(ErrorCatalog.UserNotBound, diagnostic: "User binding not found");
             target = binding.OsuUid;
         }
         try
         {
             var player = await osuApi.GetUserAsync(target).WaitAsync(ct);
-            if (player.Id <= 0) return StatusCode(500, "Invalid player response");
+            if (player.Id <= 0) return ApiErrors.Result(ErrorCatalog.InternalError, diagnostic: "Invalid player response");
             return File(await theme.RenderAsync(player, ct), "image/png");
         }
         catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
-            return NotFound("osu! user not found");
+            return ApiErrors.Result(ErrorCatalog.OsuUserNotFound, diagnostic: "osu! user not found");
         }
         catch (Exception ex) when (ex is not RetryableException && !ct.IsCancellationRequested)
         {
             logger.LogError(ex, "Failed to generate avatar card for {User}", target);
-            return StatusCode(500, "Failed to generate avatar card");
+            return ApiErrors.Result(ErrorCatalog.RenderFailed, diagnostic: "Failed to generate avatar card");
         }
     }
 }

@@ -1,3 +1,4 @@
+using MintAPI.Errors;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -27,7 +28,7 @@ public sealed class UserRankingController(AppDbContext db, IOsuApiService osuApi
     /// <response code="400">用户列表或模式无效。</response>
     /// <response code="404">列表中存在未绑定用户，返回其平台 ID。</response>
     [HttpPost]
-    [Produces("image/png", "application/json")]
+    [Produces("image/png", "application/json", "application/problem+json")]
     public Task<IActionResult> Ranking([FromBody] UserRankingRequest data, [FromQuery, Required] int? game_mode, [FromQuery] string format = "png")
         => QueryAsync(data, game_mode, false, format);
 
@@ -38,7 +39,7 @@ public sealed class UserRankingController(AppDbContext db, IOsuApiService osuApi
     /// <response code="400">用户列表无效。</response>
     /// <response code="404">列表中存在未绑定用户，返回其平台 ID。</response>
     [HttpPost("top5")]
-    [Produces("image/png", "application/json")]
+    [Produces("image/png", "application/json", "application/problem+json")]
     public Task<IActionResult> TopFive([FromBody] UserRankingRequest data, [FromQuery] string format = "png") => QueryAsync(data, null, true, format);
 
     private async Task<IActionResult> QueryAsync(UserRankingRequest data, int? mode, bool topFive, string format)
@@ -46,7 +47,7 @@ public sealed class UserRankingController(AppDbContext db, IOsuApiService osuApi
         if (format is not ("png" or "json") || (!topFive && mode == null) || mode is < 0 or > 3 || string.IsNullOrWhiteSpace(data.Platform)
             || data.PlatformUids is not { Length: > 0 and <= 100 }
             || data.PlatformUids.Any(string.IsNullOrWhiteSpace))
-            return BadRequest("Invalid platform, user list or game mode");
+            return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "Invalid platform, user list or game mode");
 
         var ct = HttpContext.RequestAborted;
         var ids = data.PlatformUids.Distinct(StringComparer.Ordinal).ToArray();
@@ -55,7 +56,7 @@ public sealed class UserRankingController(AppDbContext db, IOsuApiService osuApi
         // Use exact identity matching even when the database collation is case insensitive.
         var bindings = candidates.Where(u => u.Platform == data.Platform && ids.Contains(u.PlatformUid, StringComparer.Ordinal)).ToList();
         var missing = ids.Except(bindings.Select(u => u.PlatformUid), StringComparer.Ordinal).ToArray();
-        if (missing.Length > 0) return NotFound(new { message = "Users not bound", platform_uids = missing });
+        if (missing.Length > 0) return ApiErrors.Result(ErrorCatalog.UserNotBound, diagnostic: "Users not bound: " + string.Join(",", missing));
 
         var result = new List<UserModeRanking>();
         foreach (var gameMode in topFive ? new[] { 0, 1, 2, 3 } : new[] { mode!.Value })

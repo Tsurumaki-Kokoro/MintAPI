@@ -1,3 +1,4 @@
+using MintAPI.Errors;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MintAPI.Data;
@@ -24,6 +25,7 @@ public class UserController(
     /// <response code="400">按用户名找不到 osu! 用户。</response>
     /// <response code="409">该平台账号已经绑定过。</response>
     /// <response code="500">写库失败。</response>
+    /// <response code="502">上游服务查询失败；返回统一错误 JSON。</response>
     [HttpPost("bind")]
     public async Task<IActionResult> BindUser([FromBody] BindUserRequest data)
     {
@@ -32,16 +34,16 @@ public class UserController(
         {
             osuUser = await osuApi.GetUserAsync(data.OsuUsername);
         }
-        catch (Exception ex) when (ex is not RetryableException)
+        catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to find osu user {Username}", data.OsuUsername);
-            return BadRequest($"Failed to get osu user: {ex.Message}");
+            return ApiErrors.Result(ErrorCatalog.OsuApiUnavailable, diagnostic: $"Failed to get osu user: {ex.Message}");
         }
 
         var existing = await db.Users
             .FirstOrDefaultAsync(u => u.Platform == data.Platform && u.PlatformUid == data.PlatformUid);
         if (existing is not null)
-            return Conflict("User already bound");
+            return ApiErrors.Result(ErrorCatalog.Conflict, diagnostic: "User already bound");
 
         var user = new UserModel
         {
@@ -56,10 +58,10 @@ public class UserController(
         {
             await db.SaveChangesAsync();
         }
-        catch (Exception ex) when (ex is not RetryableException)
+        catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Database error binding user");
-            return StatusCode(500, $"Database error: {ex.Message}");
+            return ApiErrors.Result(ErrorCatalog.InternalError, diagnostic: $"Database error: {ex.Message}");
         }
 
         return Ok(new { message = "bind user success" });
@@ -76,17 +78,17 @@ public class UserController(
         var user = await db.Users
             .FirstOrDefaultAsync(u => u.Platform == data.Platform && u.PlatformUid == data.PlatformUid);
         if (user is null)
-            return NotFound("User not found");
+            return ApiErrors.Result(ErrorCatalog.UserNotBound, diagnostic: "User not found");
 
         db.Users.Remove(user);
         try
         {
             await db.SaveChangesAsync();
         }
-        catch (Exception ex) when (ex is not RetryableException)
+        catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Database error unbinding user");
-            return StatusCode(500, $"Database error: {ex.Message}");
+            return ApiErrors.Result(ErrorCatalog.InternalError, diagnostic: $"Database error: {ex.Message}");
         }
 
         return Ok(new { message = "unbind user success" });
@@ -103,17 +105,17 @@ public class UserController(
         var user = await db.Users
             .FirstOrDefaultAsync(u => u.Platform == data.Platform && u.PlatformUid == data.PlatformUid);
         if (user is null)
-            return NotFound("User not found");
+            return ApiErrors.Result(ErrorCatalog.UserNotBound, diagnostic: "User not found");
 
         user.GameMode = data.GameMode;
         try
         {
             await db.SaveChangesAsync();
         }
-        catch (Exception ex) when (ex is not RetryableException)
+        catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Database error updating game mode");
-            return StatusCode(500, $"Database error: {ex.Message}");
+            return ApiErrors.Result(ErrorCatalog.InternalError, diagnostic: $"Database error: {ex.Message}");
         }
 
         return Ok(new { message = "update user game mode success" });

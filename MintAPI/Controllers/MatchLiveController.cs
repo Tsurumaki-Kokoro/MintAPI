@@ -1,3 +1,4 @@
+using MintAPI.Errors;
 using Microsoft.AspNetCore.Mvc;
 using MintAPI.Rendering.MultiplayerTheme;
 using MintAPI.Services;
@@ -20,12 +21,12 @@ public sealed class MatchLiveController(MatchLiveService live, MultiplayerTheme 
     /// <response code="404">比赛不存在。</response>
     /// <response code="409">订阅或追踪数量达到上限。</response>
     [HttpPost("subscriptions")]
-    [Produces("application/json")]
+    [Produces("application/json", "application/problem+json")]
     public Task<IActionResult> Subscribe([FromBody] CreateLiveSubscription request)
         => RunAsync(async () =>
         {
             if (request.MatchId <= 0 || string.IsNullOrWhiteSpace(request.Scope) || request.Scope.Length > 128)
-                return BadRequest("MatchId 必须为正整数，Scope 必须为 1–128 字符。");
+                return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "MatchId 必须为正整数，Scope 必须为 1–128 字符。");
             return Ok(await live.SubscribeAsync(request.MatchId, request.Scope.Trim(), HttpContext.RequestAborted));
         });
 
@@ -47,7 +48,7 @@ public sealed class MatchLiveController(MatchLiveService live, MultiplayerTheme 
     /// <response code="400">游标无效。</response>
     /// <response code="410">订阅或游标过期，需要重新订阅获取快照。</response>
     [HttpGet("subscriptions/{id}/updates")]
-    [Produces("application/json")]
+    [Produces("application/json", "application/problem+json")]
     public Task<IActionResult> Updates(string id, [FromQuery] long after = 0) => RunAsync(async () =>
         after < 0 ? BadRequest("after 必须非负。") : Ok(await live.UpdatesAsync(id, after, HttpContext.RequestAborted)));
 
@@ -57,12 +58,12 @@ public sealed class MatchLiveController(MatchLiveService live, MultiplayerTheme 
     /// <response code="200">PNG 单局图片。</response>
     /// <response code="404">比赛未追踪或游戏不存在。</response>
     [HttpGet("{mp_id:int}/games/{game_id:int}/image")]
-    [Produces("image/png")]
+    [Produces("image/png", "application/problem+json")]
     public Task<IActionResult> GameImage(int mp_id, int game_id) => RunAsync(async () =>
     {
         var room = await live.GetRoomAsync(mp_id, HttpContext.RequestAborted);
         var game = room.Match.EventList.LastOrDefault(e => e.Game?.Id == game_id)?.Game;
-        if (game is null) return NotFound("没有该对局。");
+        if (game is null) return ApiErrors.Result(ErrorCatalog.RecordNotFound, diagnostic: "没有该对局。");
         Response.Headers["X-MatchLive-Revision"] = room.Revision.ToString();
         Response.Headers["X-MatchLive-Mock"] = room.IsMock ? "true" : "false";
         return File(await renderer.RenderLiveGameAsync(room, game_id, HttpContext.RequestAborted), "image/png");
@@ -72,32 +73,33 @@ public sealed class MatchLiveController(MatchLiveService live, MultiplayerTheme 
     /// <response code="200">模拟比赛快照。</response>
     /// <response code="404">非开发环境、mock 未启用或未订阅。</response>
     [HttpPost("mock/109975520/advance")]
-    [Produces("application/json")]
+    [Produces("application/json", "application/problem+json")]
     public Task<IActionResult> AdvanceMock() => RunAsync(async () =>
         !environment.IsDevelopment() ? NotFound() : Ok(await live.AdvanceMockAsync(HttpContext.RequestAborted)));
 
     /// <summary>仅开发环境：重新开始 mock 重放，订阅和更新游标保持有效。</summary>
     /// <response code="200">重置后的模拟快照。</response>
     /// <response code="404">非开发环境、mock 未启用或未订阅。</response>
+    /// <response code="502">上游服务查询失败；返回统一错误 JSON。</response>
     [HttpPost("mock/109975520/reset")]
-    [Produces("application/json")]
+    [Produces("application/json", "application/problem+json")]
     public Task<IActionResult> ResetMock() => RunAsync(async () =>
         !environment.IsDevelopment() ? NotFound() : Ok(await live.ResetMockAsync(HttpContext.RequestAborted)));
 
     private async Task<IActionResult> RunAsync(Func<Task<IActionResult>> action)
     {
         try { return await action(); }
-        catch (LiveConflictException ex) { return Conflict(ex.Message); }
-        catch (LiveGoneException ex) { return StatusCode(410, ex.Message); }
-        catch (ArgumentException ex) { return BadRequest(ex.Message); }
-        catch (KeyNotFoundException ex) { return NotFound(ex.Message); }
-        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound) { return NotFound("比赛不存在。"); }
+        catch (LiveConflictException ex) { return ApiErrors.Result(ErrorCatalog.Conflict, diagnostic: ex.Message); }
+        catch (LiveGoneException ex) { return ApiErrors.Result(ErrorCatalog.ResourceExpired, diagnostic: ex.Message); }
+        catch (ArgumentException ex) { return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: ex.Message); }
+        catch (KeyNotFoundException ex) { return ApiErrors.Result(ErrorCatalog.RecordNotFound, diagnostic: ex.Message); }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound) { return ApiErrors.Result(ErrorCatalog.RecordNotFound, diagnostic: "比赛不存在。"); }
         catch (HttpRequestException ex) when (ex.StatusCode is System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden)
-        { return StatusCode(403, "比赛不可访问。"); }
+        { return ApiErrors.Result(ErrorCatalog.Forbidden, diagnostic: "比赛不可访问。"); }
         catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Match live request failed");
-            return StatusCode(502, "比赛查询或实时服务暂时不可用。");
+            return ApiErrors.Result(ErrorCatalog.OsuApiUnavailable, diagnostic: "比赛查询或实时服务暂时不可用。");
         }
     }
 }

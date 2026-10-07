@@ -1,3 +1,4 @@
+using MintAPI.Errors;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using MintAPI.Services;
@@ -30,19 +31,19 @@ public sealed class BeatmapSearchController(
     /// <response code="502">osu! 搜索失败。</response>
     /// <response code="503">资源繁忙。</response>
     [HttpGet("image")]
-    [Produces("image/png")]
+    [Produces("image/png", "application/problem+json")]
     public async Task<IActionResult> SearchImage(
         [FromServices] MintAPI.Rendering.BeatmapSearchTheme.BeatmapSearchTheme theme,
         [FromQuery] string? query = null, [FromQuery] string mode = "any",
         [FromQuery] string status = "any", [FromQuery] string? sort = null,
         [FromQuery] string? cursor_string = null, [FromQuery] int page = 1, CancellationToken ct = default)
     {
-        if (page < 1) return BadRequest("page 必须大于等于 1。");
+        if (page < 1) return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "page 必须大于等于 1。");
         var response = await Search(query, mode, status, sort, cursor_string, ct);
         if (response is not ContentResult content) return response;
         var result = JsonConvert.DeserializeObject<BeatmapsetSearchResult>(content.Content!, OsuClient.BuildJsonSettings())!;
         var pages = Math.Max(1, (result.Beatmapsets.Count + 4) / 5);
-        if (page > pages) return BadRequest($"本批搜索结果只有 {pages} 页。");
+        if (page > pages) return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: $"本批搜索结果只有 {pages} 页。");
         Response.Headers["X-Page"] = page.ToString();
         Response.Headers["X-Page-Count"] = pages.ToString();
         Response.Headers["X-Total"] = result.Total.ToString();
@@ -79,7 +80,7 @@ public sealed class BeatmapSearchController(
     /// <response code="502">osu! API 请求失败。</response>
     /// <response code="503">osu! API 配额不足，请稍后重试。</response>
     [HttpGet]
-    [Produces("application/json")]
+    [Produces("application/json", "application/problem+json")]
     [ProducesResponseType(typeof(BeatmapsetSearchResult), StatusCodes.Status200OK)]
     public async Task<IActionResult> Search(
         [FromQuery] string? query = null,
@@ -91,19 +92,19 @@ public sealed class BeatmapSearchController(
     {
         query = query?.Trim();
         if (string.IsNullOrWhiteSpace(query) || query.Length > 500)
-            return BadRequest("query 必须为 1～500 字符的搜索关键词或表达式。");
+            return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "query 必须为 1～500 字符的搜索关键词或表达式。");
         if (!Enum.TryParse<BeatmapsetSearchMode>(mode, true, out var searchMode) || !Enum.IsDefined(searchMode))
-            return BadRequest("mode 必须为 any、osu、taiko、catch 或 mania。");
+            return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "mode 必须为 any、osu、taiko、catch 或 mania。");
         if (!Categories.TryGetValue(status, out var category))
-            return BadRequest("status 必须为 any、leaderboard、ranked、qualified、loved、pending、wip 或 graveyard。");
+            return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "status 必须为 any、leaderboard、ranked、qualified、loved、pending、wip 或 graveyard。");
         BeatmapsetSearchSort? searchSort = null;
         if (sort is not null)
         {
-            if (!Sorts.TryGetValue(sort, out var value)) return BadRequest("sort 不是有效的官方排序值。");
+            if (!Sorts.TryGetValue(sort, out var value)) return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "sort 不是有效的官方排序值。");
             searchSort = value;
         }
         if (cursor_string is not null && (string.IsNullOrWhiteSpace(cursor_string) || cursor_string.Length > 4096))
-            return BadRequest("cursor_string 必须为有效的分页游标，最多 4096 字符。");
+            return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "cursor_string 必须为有效的分页游标，最多 4096 字符。");
 
         var key = ("beatmap-search", query, searchMode, category, searchSort, cursor_string);
         if (cache.TryGetValue<string>(key, out var cached)) return Content(cached!, "application/json");
@@ -111,7 +112,7 @@ public sealed class BeatmapSearchController(
         {
             var result = await osuApi.SearchBeatmapsetsAsync(query, searchMode, category, searchSort, cursor_string, ct);
             if (!string.IsNullOrEmpty(result.Error))
-                return StatusCode(StatusCodes.Status502BadGateway, "osu! 搜索失败，请稍后重试。");
+                return ApiErrors.Result(ErrorCatalog.OsuApiUnavailable, diagnostic: "osu! 搜索失败，请稍后重试。");
             // 保留客户端的 JsonProperty 字段名及枚举转换，避免 ASP.NET 默认序列化改变上游结构。
             var json = JsonConvert.SerializeObject(result, OsuClient.BuildJsonSettings());
             cache.Set(key, json, TimeSpan.FromMinutes(2));
@@ -120,7 +121,7 @@ public sealed class BeatmapSearchController(
         catch (HttpRequestException ex)
         {
             logger.LogWarning(ex, "Failed to search osu! beatmapsets");
-            return StatusCode(StatusCodes.Status502BadGateway, "osu! 搜索请求失败，请稍后重试。");
+            return ApiErrors.Result(ErrorCatalog.OsuApiUnavailable, diagnostic: "osu! 搜索请求失败，请稍后重试。");
         }
     }
 }

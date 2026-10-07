@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using MintAPI.Data;
+using MintAPI.Errors;
 using MintAPI.Models.Entities;
 using Newtonsoft.Json;
 using MintOsuApi.Enums;
@@ -43,10 +44,16 @@ public sealed class HistoryService(
 
     public async Task<MapScoreHistory> GetMapScoresAsync(int userId, int mapId, int mode, CancellationToken ct)
     {
-        var map = await osuApi.GetBeatmapAsync(mapId).WaitAsync(ct);
+        Beatmap map;
+        try { map = await osuApi.GetBeatmapAsync(mapId).WaitAsync(ct); }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        { throw new ApiLookupException(ErrorCatalog.BeatmapNotFound, ex); }
         if (HasLeaderboard(map.Status))
         {
-            var official = await osuApi.GetBeatmapUserScoresAsync(mapId, userId, (GameMode)mode).WaitAsync(ct);
+            List<Score> official;
+            try { official = await osuApi.GetBeatmapUserScoresAsync(mapId, userId, (GameMode)mode).WaitAsync(ct); }
+            catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+            { throw new ApiLookupException(ErrorCatalog.ScoreNotFound, ex); }
             foreach (var score in official)
             {
                 score.Beatmap ??= map;
@@ -56,8 +63,8 @@ public sealed class HistoryService(
         }
         var rows = await db.ScoreHistories.AsNoTracking()
             .Where(s => s.UserId == userId && s.BeatmapId == mapId && s.GameMode == mode)
-            .OrderByDescending(s => s.EndedAt).ToListAsync(ct);
-        var scores = rows.Select(r => RestoreScore(r.Payload)).ToList();
+            .ToListAsync(ct);
+        var scores = rows.OrderByDescending(r => r.EndedAt).Select(r => RestoreScore(r.Payload)).ToList();
         foreach (var score in scores) { score.Beatmap = map; score.Beatmapset ??= map.Beatmapset; }
         return new("local", "本地采集到的无榜谱面历史，未收录不代表没有游玩过", scores);
     }

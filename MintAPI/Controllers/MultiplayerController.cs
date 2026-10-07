@@ -1,3 +1,4 @@
+using MintAPI.Errors;
 using Microsoft.AspNetCore.Mvc;
 using MintAPI.Rendering.MultiplayerTheme;
 using MintAPI.Services;
@@ -20,7 +21,7 @@ public class MultiplayerController(MultiplayerService multiplayer, MultiplayerTh
     /// <response code="404">多人房不存在。</response>
     /// <response code="502">上游 API 读取失败。</response>
     [HttpGet("history")]
-    [Produces("image/png")]
+    [Produces("image/png", "application/problem+json")]
     public Task<IActionResult> GetMatchHistory([FromQuery] int? mp_id = null, [FromQuery] string theme = "default",
         [FromQuery] int page = 1, [FromQuery] string? team_type = null)
         => RenderAsync(mp_id, theme, page, team_type, null);
@@ -36,23 +37,23 @@ public class MultiplayerController(MultiplayerService multiplayer, MultiplayerTh
     /// <response code="404">多人房不存在。</response>
     /// <response code="502">上游 API 读取失败。</response>
     [HttpGet("rating")]
-    [Produces("image/png")]
+    [Produces("image/png", "application/problem+json")]
     public Task<IActionResult> GetRating([FromQuery] int? mp_id = null, [FromQuery] string algorithm = "osuplus",
         [FromQuery] string theme = "default", [FromQuery] int page = 1, [FromQuery] string? team_type = null)
         => RenderAsync(mp_id, theme, page, team_type, algorithm.ToLowerInvariant());
 
     private async Task<IActionResult> RenderAsync(int? id, string theme, int page, string? teamType, string? algorithm)
     {
-        if (id is null or <= 0) return BadRequest("mp_id 必须为正整数。");
-        if (theme != "default") return BadRequest("theme 必须为 default。");
+        if (id is null or <= 0) return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "mp_id 必须为正整数。");
+        if (theme != "default") return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "theme 必须为 default。");
         if (page < 0 || (algorithm != null && page == 0))
-            return BadRequest(algorithm == null ? "page 必须为非负整数，0 表示不分页。" : "page 必须为正整数。");
+            return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: algorithm == null ? "page 必须为非负整数，0 表示不分页。" : "page 必须为正整数。");
         if (algorithm != null && algorithm is not ("osuplus" or "bathbot" or "flashlight"))
-            return BadRequest("algorithm 必须为 osuplus、bathbot 或 flashlight。");
+            return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "algorithm 必须为 osuplus、bathbot 或 flashlight。");
         if (teamType != null)
         {
             try { MultiplayerData.ParseTeamType(teamType); }
-            catch (ArgumentException ex) { return BadRequest(ex.Message); }
+            catch (ArgumentException ex) { return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: ex.Message); }
         }
         MintOsuApi.Models.MatchResponse match;
         try
@@ -61,18 +62,18 @@ public class MultiplayerController(MultiplayerService multiplayer, MultiplayerTh
         }
         catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
-            return NotFound("多人房不存在。");
+            return ApiErrors.Result(ErrorCatalog.RecordNotFound, diagnostic: "多人房不存在。");
         }
         catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to load multiplayer match {MatchId}", id);
-            return StatusCode(502, "读取多人房失败。");
+            return ApiErrors.Result(ErrorCatalog.OsuApiUnavailable, diagnostic: "读取多人房失败。");
         }
         try
         {
             var data = MultiplayerData.Build(match, teamType);
             var pages = algorithm == null ? data.HistoryPages().Count : (data.Rate(algorithm).Count + 23) / 24;
-            if (page > pages) return BadRequest($"page 必须在 1 至 {pages} 之间。");
+            if (page > pages) return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: $"page 必须在 1 至 {pages} 之间。");
             var png = algorithm == null
                 ? await renderer.RenderHistoryAsync(data, page, HttpContext.RequestAborted)
                 : await renderer.RenderRatingAsync(data, algorithm, page, HttpContext.RequestAborted);
@@ -80,11 +81,11 @@ public class MultiplayerController(MultiplayerService multiplayer, MultiplayerTh
             Response.Headers["X-Page"] = page.ToString();
             return File(png, "image/png");
         }
-        catch (ArgumentException ex) { return BadRequest(ex.Message); }
+        catch (ArgumentException ex) { return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: ex.Message); }
         catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to render multiplayer match {MatchId}", id);
-            return StatusCode(500, "生成多人房图片失败。");
+            return ApiErrors.Result(ErrorCatalog.RenderFailed, diagnostic: "生成多人房图片失败。");
         }
     }
 }

@@ -1,3 +1,4 @@
+using MintAPI.Errors;
 using Microsoft.AspNetCore.Mvc;
 using MintAPI.Services.Preview;
 
@@ -22,7 +23,7 @@ public sealed class BeatmapPreviewController(IBeatmapPreviewService preview,
     /// <response code="502">预览引擎或依赖失败。</response>
     /// <response code="503">繁忙或超时，可重试。</response>
     [HttpGet("image")]
-    [Produces("image/gif", "image/png", "application/json")]
+    [Produces("image/gif", "image/png", "application/json", "application/problem+json")]
     public Task<IActionResult> GetImage([FromQuery] int beatmap_id,
         [FromQuery] string format = "gif", [FromQuery] string[]? mods = null,
         [FromQuery] string? convert = null, [FromQuery] string[]? time_points = null,
@@ -46,7 +47,7 @@ public sealed class BeatmapPreviewController(IBeatmapPreviewService preview,
     /// <response code="502">预览引擎或依赖失败。</response>
     /// <response code="503">繁忙或超时，可重试。</response>
     [HttpGet("video")]
-    [Produces("video/mp4", "application/json")]
+    [Produces("video/mp4", "application/json", "application/problem+json")]
     public Task<IActionResult> GetVideo([FromQuery] int beatmap_id,
         [FromQuery] string[]? mods = null, [FromQuery] string? convert = null,
         [FromQuery] string start = "preview", [FromQuery] double duration = 30) =>
@@ -59,11 +60,11 @@ public sealed class BeatmapPreviewController(IBeatmapPreviewService preview,
             var result = await preview.GenerateAsync(request, HttpContext.RequestAborted);
             return PhysicalFile(result.Path, result.ContentType, enableRangeProcessing: request.Format == "mp4");
         }
-        catch (PreviewValidationException ex) { return BadRequest(new { error = ex.Message }); }
+        catch (PreviewValidationException ex) { return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: ex.Message); }
         catch (PreviewFailedException ex)
         {
             logger.LogWarning(ex, "Preview failed for {BeatmapId}", request.BeatmapId);
-            return StatusCode(502, new { error = "Preview service unavailable or generation failed." });
+            return ApiErrors.Result(ErrorCatalog.PreviewUnavailable, diagnostic: "Preview service unavailable or generation failed");
         }
     }
 }

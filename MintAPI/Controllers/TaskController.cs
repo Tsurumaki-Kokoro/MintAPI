@@ -1,3 +1,4 @@
+using MintAPI.Errors;
 using Microsoft.AspNetCore.Mvc;
 using MintAPI.Services;
 using MintAPI.Services.Preview;
@@ -44,10 +45,10 @@ public class TaskController(
                 }
             }
         }
-        catch (Exception ex) when (ex is not RetryableException)
+        catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to clear cache");
-            return StatusCode(500, ex.Message);
+            return ApiErrors.Result(ErrorCatalog.InternalError, diagnostic: ex.Message);
         }
 
         return Ok(new { message = "Cache cleared" });
@@ -58,12 +59,12 @@ public class TaskController(
     /// <response code="404">没有日志目录。</response>
     /// <response code="500">打包失败。</response>
     [HttpPost("pack_logs")]
-    [Produces("application/zip")]
+    [Produces("application/zip", "application/problem+json")]
     public IActionResult PackLogs()
     {
         var logDir = Path.Combine(AppContext.BaseDirectory, "logs");
         if (!Directory.Exists(logDir))
-            return NotFound("No logs directory found");
+            return ApiErrors.Result(ErrorCatalog.RecordNotFound, diagnostic: "No logs directory found");
 
         try
         {
@@ -76,10 +77,10 @@ public class TaskController(
             System.IO.File.Delete(zipPath);
             return File(bytes, "application/zip", "logs.zip");
         }
-        catch (Exception ex) when (ex is not RetryableException)
+        catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to pack logs");
-            return StatusCode(500, ex.Message);
+            return ApiErrors.Result(ErrorCatalog.InternalError, diagnostic: ex.Message);
         }
     }
 }
