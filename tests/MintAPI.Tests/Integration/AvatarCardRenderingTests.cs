@@ -60,7 +60,9 @@ public sealed class AvatarCardRenderingTests
                 var page = await context.NewPageAsync();
                 await page.GotoAsync(new Uri(file).AbsoluteUri);
                 await page.EvaluateAsync("document.fonts.ready");
-                await RenderingAttributionAssertions.CheckAsync(page);
+                Assert.Equal(0, await page.Locator(".mint-attribution").CountAsync());
+                Assert.DoesNotContain("Powered By MintAPI", await page.Locator("body").InnerTextAsync());
+                Assert.DoesNotContain("绘制日期", await page.Locator("body").InnerTextAsync());
                 Assert.Equal("rgb(237, 231, 246)", await page.EvaluateAsync<string>("getComputedStyle(document.body).backgroundColor"));
                 Assert.Equal("400px", await page.Locator(".avatar").EvaluateAsync<string>("e => getComputedStyle(e).width"));
                 Assert.Equal("cover", await page.Locator(".avatar").EvaluateAsync<string>("e => getComputedStyle(e).objectFit"));
