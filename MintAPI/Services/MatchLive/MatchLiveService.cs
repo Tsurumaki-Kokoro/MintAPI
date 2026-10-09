@@ -339,7 +339,10 @@ public sealed class MatchLiveService(IOsuApiService api, IMatchLiveStore store, 
         var game = lastGame?.EndTime is null ? lastGame : null;
         var status = room.ClosedAt.HasValue ? "closed" : game is not null ? "playing" : "waiting";
         return new(room.MatchId, room.Match.MatchInfo.Name, status, room.IsMock, room.Revision,
-            room.LastSuccess, room.Error, Clone(game), room.Match.EventList.Where(e => e.Game?.EndTime.HasValue == true).Select(e => e.Game!.Id).Distinct().Count(), Clone(room.Match.Users));
+            room.LastSuccess, room.Error, Clone(game), room.Match.EventList.Where(e => e.Game?.EndTime.HasValue == true).Select(e => e.Game!.Id).Distinct().Count(), Clone(room.Match.Users),
+            room.Match.EventList.Where(e => e.Game?.EndTime.HasValue == true).Select(e => e.Game!)
+                .DistinctBy(g => g.Id).OrderBy(g => g.StartTime).ThenBy(g => g.Id)
+                .Select(g => new LiveGameState(g.Id, g.Scores.Count > 0)).ToArray());
     }
 }
 

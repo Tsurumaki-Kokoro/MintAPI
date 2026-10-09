@@ -20,8 +20,9 @@ public sealed class MatchLiveOptions
 public sealed record LiveSubscription(string Id, string Scope, DateTimeOffset ExpiresAt);
 public sealed record LiveUpdate(long Revision, string Type, long? EventId, int? GameId,
     string Text, DateTimeOffset Timestamp, MatchEvent? Event);
+public sealed record LiveGameState(int GameId, bool Ready);
 public sealed record LiveSnapshot(int MatchId, string Name, string Status, bool IsMock, long Revision,
-    DateTimeOffset? LastSuccess, string? Error, MatchGame? CurrentGame, int CompletedGames, IReadOnlyList<UserCompact> Users);
+    DateTimeOffset? LastSuccess, string? Error, MatchGame? CurrentGame, int CompletedGames, IReadOnlyList<UserCompact> Users, IReadOnlyList<LiveGameState>? Games = null);
 public sealed record LiveSubscriptionResult(string SubscriptionId, DateTimeOffset ExpiresAt, LiveSnapshot Snapshot, long Cursor);
 public sealed record LiveUpdatesResult(LiveSnapshot Snapshot, long Cursor, IReadOnlyList<LiveUpdate> Updates);
 

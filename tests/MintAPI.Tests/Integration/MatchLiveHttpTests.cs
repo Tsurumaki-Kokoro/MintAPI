@@ -28,7 +28,7 @@ public class MatchLiveHttpTests
         var renderer = new Capture(new PlaywrightRenderer(browser));
         var builder = WebApplication.CreateSlimBuilder(new WebApplicationOptions { EnvironmentName = "Development" });
         builder.Logging.ClearProviders();
-        builder.Services.AddControllers().AddApplicationPart(typeof(MatchLiveController).Assembly);
+        builder.Services.AddControllers(o => o.Filters.Add<MintAPI.Errors.ApiErrorFilter>()).AddApplicationPart(typeof(MatchLiveController).Assembly);
         builder.Services.AddSingleton(MatchLiveTests.Service(new RecordingOsuApiService(), new MatchLiveTests.Store(), new MatchLiveTests.Clock(), true));
         builder.Services.AddSingleton(new MultiplayerTheme(renderer, new EmptyImages(), NullLogger<MultiplayerTheme>.Instance));
         await using var app = builder.Build();
@@ -53,6 +53,9 @@ public class MatchLiveHttpTests
         var endImage = await http.GetAsync(path);
         endImage.EnsureSuccessStatusCode();
         Assert.Contains("对局结算", renderer.Html);
+        var completed = await http.GetFromJsonAsync<JsonElement>($"/multiplayer/live/subscriptions/{id}/updates?after=0");
+        Assert.Equal(gameId, completed.GetProperty("snapshot").GetProperty("games")[0].GetProperty("gameId").GetInt32());
+        Assert.True(completed.GetProperty("snapshot").GetProperty("games")[0].GetProperty("ready").GetBoolean());
         await LayoutAndSave(browser, renderer, await endImage.Content.ReadAsByteArrayAsync(), "matchlive-finished.png", 6);
         (await http.PostAsync("/multiplayer/live/mock/109975520/advance", null)).EnsureSuccessStatusCode();
         var updates = await http.GetFromJsonAsync<JsonElement>($"/multiplayer/live/subscriptions/{id}/updates?after=0");
@@ -62,12 +65,14 @@ public class MatchLiveHttpTests
         var empty = await http.GetFromJsonAsync<JsonElement>($"/multiplayer/live/subscriptions/{id}/updates?after={cursor}");
         Assert.Equal(0, empty.GetProperty("updates").GetArrayLength());
         var invalid = await http.GetAsync($"/multiplayer/live/subscriptions/{id}/updates?after={cursor + 1}");
-        Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
+        await ApiErrorAssertions.AssertAsync(invalid, MintAPI.Errors.ErrorCatalog.InvalidArgument);
         (await http.PostAsync("/multiplayer/live/mock/109975520/reset", null)).EnsureSuccessStatusCode();
         var reset = await http.GetFromJsonAsync<JsonElement>($"/multiplayer/live/subscriptions/{id}/updates?after={cursor}");
         Assert.Equal("mock-reset", reset.GetProperty("updates")[0].GetProperty("type").GetString());
         Assert.Equal(HttpStatusCode.NoContent, (await http.DeleteAsync($"/multiplayer/live/subscriptions/{id}")).StatusCode);
-        Assert.Equal(HttpStatusCode.Gone, (await http.GetAsync($"/multiplayer/live/subscriptions/{id}/updates")).StatusCode);
+        http.DefaultRequestHeaders.Accept.ParseAdd("image/png");
+        using var gone = await http.GetAsync($"/multiplayer/live/subscriptions/{id}/updates");
+        await ApiErrorAssertions.AssertAsync(gone, MintAPI.Errors.ErrorCatalog.ResourceExpired);
     }
 
     private static async Task LayoutAndSave(PlaywrightBrowserProvider browser, Capture renderer, byte[] png, string name, int playerCount)
