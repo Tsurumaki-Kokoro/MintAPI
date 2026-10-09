@@ -1,3 +1,5 @@
+using MintAPI.Configuration;
+using Microsoft.Extensions.Options;
 using MintAPI.Errors;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
@@ -15,7 +17,7 @@ namespace MintAPI.Controllers;
 public sealed class BeatmapSearchController(
     IOsuApiService osuApi,
     IMemoryCache cache,
-    ILogger<BeatmapSearchController> logger) : ControllerBase
+    ILogger<BeatmapSearchController> logger, IOptions<CachePolicyOptions>? cachePolicy = null) : ControllerBase
 {
     /// <summary>搜索谱面集并返回紧凑列表 PNG；每张图片最多显示 5 个谱面集。</summary>
     /// <param name="theme">搜索图片渲染器。</param>
@@ -115,7 +117,7 @@ public sealed class BeatmapSearchController(
                 return ApiErrors.Result(ErrorCatalog.OsuApiUnavailable, diagnostic: "osu! 搜索失败，请稍后重试。");
             // 保留客户端的 JsonProperty 字段名及枚举转换，避免 ASP.NET 默认序列化改变上游结构。
             var json = JsonConvert.SerializeObject(result, OsuClient.BuildJsonSettings());
-            cache.Set(key, json, TimeSpan.FromMinutes(2));
+            cache.Set(key, json, TimeSpan.FromSeconds(cachePolicy?.Value.SearchSeconds ?? 120));
             return Content(json, "application/json");
         }
         catch (HttpRequestException ex)

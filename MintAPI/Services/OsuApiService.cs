@@ -1,3 +1,4 @@
+using MintAPI.Configuration;
 using MintOsuApi;
 using MintOsuApi.Models;
 using MintOsuApi.Enums;
@@ -8,11 +9,11 @@ public class OsuApiService : IOsuApiService, IDisposable
 {
     private readonly OsuClient _client;
 
-    public OsuApiService(IConfiguration config)
+    public OsuApiService(IConfiguration config, StoragePaths? paths = null)
     {
         var clientId = config.GetValue<int>("OsuApi:ClientId");
         var clientSecret = config["OsuApi:ClientSecret"]!;
-        var tokenDir = Path.Combine(AppContext.BaseDirectory, "token_cache");
+        var tokenDir = (paths ?? new StoragePaths(config)).TokenCacheDirectory;
         _client = new OsuClient(clientId, clientSecret, tokenDir);
     }
 

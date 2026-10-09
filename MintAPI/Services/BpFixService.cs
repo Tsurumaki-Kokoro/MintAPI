@@ -1,3 +1,5 @@
+using MintAPI.Configuration;
+using Microsoft.Extensions.Options;
 using MintOsuApi.Models;
 
 namespace MintAPI.Services;
@@ -6,7 +8,7 @@ public record BpFixEntry(Score Score, int OldRank, int NewRank, PpResult Fixed);
 public record BpFixReport(double CurrentPp, double FixedPp, double Gain, int CandidateCount,
     int SkippedCount, List<BpFixEntry> Entries);
 
-public class BpFixService(IBeatmapFileService files, IPpCalculatorService calculator, ILogger<BpFixService> logger)
+public class BpFixService(IBeatmapFileService files, IPpCalculatorService calculator, ILogger<BpFixService> logger, IOptions<ConcurrencyOptions>? concurrency = null)
 {
     public static bool IsCandidate(Score score)
     {
@@ -28,7 +30,7 @@ public class BpFixService(IBeatmapFileService files, IPpCalculatorService calcul
 
     public async Task<BpFixReport> AnalyzeAsync(User user, List<Score> scores, CancellationToken cancellationToken = default)
     {
-        using var semaphore = new SemaphoreSlim(4);
+        using var semaphore = new SemaphoreSlim(concurrency?.Value.PpCalculation ?? 4);
         var candidates = scores.Select((score, index) => (score, index)).Where(x => IsCandidate(x.score)).ToList();
         var results = await Task.WhenAll(candidates.Select(async candidate =>
         {

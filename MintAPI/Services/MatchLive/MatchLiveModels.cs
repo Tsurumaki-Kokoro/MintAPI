@@ -5,6 +5,8 @@ namespace MintAPI.Services.MatchLive;
 public sealed class MatchLiveOptions
 {
     public int PollSeconds { get; set; } = 10;
+    public int PollConcurrency { get; set; } = 2;
+    public int StateTtlHours { get; set; } = 48;
     public int RequestBudgetPerMinute { get; set; } = 24;
     public int MaxMatches { get; set; } = 4;
     public int MaxSubscriptionsPerScope { get; set; } = 3;
@@ -13,7 +15,7 @@ public sealed class MatchLiveOptions
     public int MaxUpdates { get; set; } = 1000;
     public int MockAutoAdvanceSeconds { get; set; } = 30;
     public bool MockEnabled { get; set; }
-    public bool IsValid() => PollSeconds >= 10 && RequestBudgetPerMinute is >= 1 and <= 1000 && MaxMatches is >= 1 and <= 50 &&
+    public bool IsValid() => PollSeconds >= 10 && PollConcurrency is >= 1 and <= 64 && StateTtlHours is >= 1 and <= 87600 && RequestBudgetPerMinute is >= 1 and <= 1000 && MaxMatches is >= 1 and <= 50 &&
         MaxSubscriptionsPerScope is >= 1 and <= 10 && LeaseMinutes >= 1 && RetentionMinutes >= 1 && MaxUpdates >= 100 && (MockAutoAdvanceSeconds == 0 || MockAutoAdvanceSeconds >= 10);
 }
 

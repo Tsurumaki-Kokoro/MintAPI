@@ -1,3 +1,5 @@
+using MintAPI.Configuration;
+using Microsoft.Extensions.Options;
 using System.Globalization;
 using System.Net;
 using System.Text;
@@ -8,12 +10,19 @@ using MintOsuApi.Models;
 namespace MintAPI.Rendering.BeatmapSearchTheme;
 
 public sealed class BeatmapSearchTheme(IRenderService renderer, IHttpClientFactory clients, IMemoryCache cache,
-    ILogger<BeatmapSearchTheme> logger)
+    ILogger<BeatmapSearchTheme> logger, IOptions<DownloadOptions>? downloads = null,
+    IOptions<CachePolicyOptions>? cachePolicy = null, IOptions<ConcurrencyOptions>? concurrency = null)
 {
     public async Task<byte[]> RenderAsync(IReadOnlyList<Beatmapset> sets, string query, string mode, string status,
         int page, int pageCount, int total, CancellationToken ct = default)
     {
-        var backgrounds = await Task.WhenAll(sets.Select(set => BackgroundAsync(set, ct)));
+        using var gate = new SemaphoreSlim(concurrency?.Value.CoverDownload ?? 4);
+        var backgrounds = await Task.WhenAll(sets.Select(async set =>
+        {
+            await gate.WaitAsync(ct);
+            try { return await BackgroundAsync(set, ct); }
+            finally { gate.Release(); }
+        }));
         var rows = new StringBuilder();
         for (var i = 0; i < sets.Count; i++)
         {
@@ -68,15 +77,16 @@ public sealed class BeatmapSearchTheme(IRenderService renderer, IHttpClientFacto
 
     private async Task<string> BackgroundAsync(Beatmapset set, CancellationToken ct)
     {
+        var policy = downloads?.Value ?? new DownloadOptions();
         var url = string.IsNullOrEmpty(set.Covers.Cover2x) ? set.Covers.Cover : set.Covers.Cover2x;
-        if (string.IsNullOrEmpty(url) && set.Id > 0) url = $"https://assets.ppy.sh/beatmaps/{set.Id}/covers/cover@2x.jpg";
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme != "https" || uri.Host != "assets.ppy.sh") return "";
+        if (string.IsNullOrEmpty(url) && set.Id > 0) url = DownloadOptions.Expand(policy.CoverUrlTemplate, setId: set.Id);
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme != "https" || !policy.SearchCoverAllowedHosts.Contains(uri.Host, StringComparer.OrdinalIgnoreCase)) return "";
         if (cache.TryGetValue<string>(("search-cover", url), out var cached)) return cached!;
         try
         {
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            timeout.CancelAfter(TimeSpan.FromSeconds(8));
-            using var client = clients.CreateClient();
+            timeout.CancelAfter(TimeSpan.FromSeconds(policy.SearchCoverTimeoutSeconds));
+            using var client = clients.CreateClient("Downloads");
             using var response = await client.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
             response.EnsureSuccessStatusCode();
             var type = response.Content.Headers.ContentType?.MediaType;
@@ -87,11 +97,11 @@ public sealed class BeatmapSearchTheme(IRenderService renderer, IHttpClientFacto
             int count;
             while ((count = await input.ReadAsync(buffer, timeout.Token)) > 0)
             {
-                if (output.Length + count > 4 * 1024 * 1024) return "";
+                if (output.Length + count > policy.MaxSearchCoverBytes) return "";
                 output.Write(buffer, 0, count);
             }
             var data = $"data:{type};base64,{Convert.ToBase64String(output.ToArray())}";
-            cache.Set(("search-cover", url), data, TimeSpan.FromMinutes(30));
+            cache.Set(("search-cover", url), data, TimeSpan.FromMinutes(cachePolicy?.Value.SearchCoverMinutes ?? 30));
             return data;
         }
         catch (Exception ex) when (ex is HttpRequestException || ex is OperationCanceledException && !ct.IsCancellationRequested)

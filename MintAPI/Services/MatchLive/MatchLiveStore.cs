@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Options;
 using MintOsuApi;
 using Newtonsoft.Json;
 using StackExchange.Redis;
@@ -11,7 +12,7 @@ public interface IMatchLiveStore
     Task DeleteAsync(int matchId, CancellationToken ct);
 }
 
-public sealed class RedisMatchLiveStore(IConnectionMultiplexer redis, IHostEnvironment environment) : IMatchLiveStore
+public sealed class RedisMatchLiveStore(IConnectionMultiplexer redis, IHostEnvironment environment, IOptions<MatchLiveOptions>? options = null) : IMatchLiveStore
 {
     private string Prefix => $"mintapi:matchlive:{environment.EnvironmentName.ToLowerInvariant()}";
     private string Index => $"{Prefix}:rooms";
@@ -37,7 +38,7 @@ public sealed class RedisMatchLiveStore(IConnectionMultiplexer redis, IHostEnvir
     public async Task SaveAsync(LiveRoom room, CancellationToken ct)
     {
         var transaction = redis.GetDatabase().CreateTransaction();
-        _ = transaction.StringSetAsync(Key(room.MatchId), JsonConvert.SerializeObject(room, OsuClient.BuildJsonSettings()), TimeSpan.FromDays(2));
+        _ = transaction.StringSetAsync(Key(room.MatchId), JsonConvert.SerializeObject(room, OsuClient.BuildJsonSettings()), TimeSpan.FromHours(options?.Value.StateTtlHours ?? 48));
         _ = transaction.SetAddAsync(Index, room.MatchId);
         if (!await transaction.ExecuteAsync().WaitAsync(ct)) throw new InvalidOperationException("Could not save match live state.");
     }

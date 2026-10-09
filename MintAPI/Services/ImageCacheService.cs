@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using MintAPI.Configuration;
 
 namespace MintAPI.Services;
 
@@ -8,12 +9,16 @@ public class ImageCacheService : IImageCacheService
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<ImageCacheService> _logger;
     private readonly string _cacheDir;
+    private readonly DownloadOptions _downloads;
+    private readonly CachePolicyOptions _cache;
 
-    public ImageCacheService(IHttpClientFactory httpClientFactory, ILogger<ImageCacheService> logger, IConfiguration config)
+    public ImageCacheService(IHttpClientFactory httpClientFactory, ILogger<ImageCacheService> logger, IConfiguration config, StoragePaths? paths = null)
     {
         _httpClientFactory = httpClientFactory;
         _logger = logger;
-        _cacheDir = config["CacheDir"] ?? "cache";
+        _cacheDir = (paths ?? new StoragePaths(config)).CacheDirectory;
+        _downloads = DownloadOptions.Read(config);
+        _cache = config.GetSection("CachePolicy").Get<CachePolicyOptions>() ?? new();
     }
 
     public async Task<byte[]> GetAvatarAsync(string avatarUrl, int userId)
@@ -25,19 +30,20 @@ public class ImageCacheService : IImageCacheService
         if (string.IsNullOrEmpty(ext)) ext = ".png";
         var filePath = Path.Combine(dir, $"{userId}{ext}");
 
-        if (File.Exists(filePath) && (DateTime.UtcNow - File.GetLastWriteTimeUtc(filePath)).TotalHours < 24)
+        if (CachePolicyOptions.IsFresh(filePath, _cache.AvatarHours))
             return await File.ReadAllBytesAsync(filePath);
 
         try
         {
-            var client = _httpClientFactory.CreateClient();
-            var data = await client.GetByteArrayAsync(avatarUrl);
-            await File.WriteAllBytesAsync(filePath, data);
+            var client = _httpClientFactory.CreateClient("Downloads");
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(_downloads.TimeoutSeconds));
+            var data = await client.GetByteArrayAsync(avatarUrl, timeout.Token);
+            await AtomicCacheFile.WriteAsync(filePath, data, timeout.Token);
             return data;
         }
         catch (Exception ex)
         {
-            _logger.LogWarning("Failed to download avatar for user {UserId}: {Message}", userId, ex.Message);
+            _logger.LogWarning(ex, "Failed to download avatar for user {UserId}", userId);
             if (File.Exists(filePath))
                 return await File.ReadAllBytesAsync(filePath);
             return [];
@@ -70,14 +76,14 @@ public class ImageCacheService : IImageCacheService
         var dir = Path.Combine(_cacheDir, "user_banner", userId.ToString());
         Directory.CreateDirectory(dir);
         var path = Path.Combine(dir, key + ".img");
-        if (File.Exists(path) && DateTime.UtcNow - File.GetLastWriteTimeUtc(path) < TimeSpan.FromHours(24))
+        if (CachePolicyOptions.IsFresh(path, _cache.BannerHours))
             return await File.ReadAllBytesAsync(path);
 
         var temporaryPath = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
         {
-            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(8));
-            var client = _httpClientFactory.CreateClient();
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(_downloads.BannerTimeoutSeconds));
+            var client = _httpClientFactory.CreateClient("Downloads");
             using var response = await client.GetAsync(uri, timeout.Token);
             response.EnsureSuccessStatusCode();
             if (response.Content.Headers.ContentType?.MediaType?.StartsWith("image/", StringComparison.OrdinalIgnoreCase) != true)
@@ -90,7 +96,7 @@ public class ImageCacheService : IImageCacheService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning("Failed to download banner for user {UserId}: {Message}", userId, ex.Message);
+            _logger.LogWarning(ex, "Failed to download banner for user {UserId}", userId);
             return File.Exists(path) ? await File.ReadAllBytesAsync(path) : null;
         }
         finally
@@ -111,7 +117,7 @@ public class ImageCacheService : IImageCacheService
         }
 
         var filePath = Path.Combine(dir, $"{userId}.png");
-        await File.WriteAllBytesAsync(filePath, data);
+        await AtomicCacheFile.WriteAsync(filePath, data);
     }
 
     public async Task<byte[]> GetBadgeAsync(string badgeUrl, int userId, int index)
@@ -120,19 +126,20 @@ public class ImageCacheService : IImageCacheService
         Directory.CreateDirectory(dir);
 
         var filePath = Path.Combine(dir, $"{index}.png");
-        if (File.Exists(filePath))
+        if (CachePolicyOptions.IsFresh(filePath, _cache.BadgeHours))
             return await File.ReadAllBytesAsync(filePath);
 
         try
         {
-            var client = _httpClientFactory.CreateClient();
-            var data = await client.GetByteArrayAsync(badgeUrl);
-            await File.WriteAllBytesAsync(filePath, data);
+            var client = _httpClientFactory.CreateClient("Downloads");
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(_downloads.TimeoutSeconds));
+            var data = await client.GetByteArrayAsync(badgeUrl, timeout.Token);
+            await AtomicCacheFile.WriteAsync(filePath, data, timeout.Token);
             return data;
         }
         catch (Exception ex)
         {
-            _logger.LogWarning("Failed to download badge {Index} for user {UserId}: {Message}", index, userId, ex.Message);
+            _logger.LogWarning(ex, "Failed to download badge {Index} for user {UserId}", index, userId);
             if (File.Exists(filePath))
                 return await File.ReadAllBytesAsync(filePath);
             throw;

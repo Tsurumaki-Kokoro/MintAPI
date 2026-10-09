@@ -1,3 +1,5 @@
+using MintAPI.Configuration;
+using Microsoft.Extensions.Options;
 using System.Text;
 using System.Collections.Concurrent;
 using MintAPI.Services;
@@ -42,15 +44,17 @@ public class DefaultScoreTheme
     private readonly IPpCalculatorService _ppCalc;
     private readonly ILogger<DefaultScoreTheme> _logger;
     private readonly IBeatmapFileService? _beatmapFiles;
+    private readonly int _coverConcurrency;
 
     public DefaultScoreTheme(IRenderService renderer, IImageCacheService imageCache,
-        IPpCalculatorService ppCalc, ILogger<DefaultScoreTheme> logger, IBeatmapFileService? beatmapFiles = null)
+        IPpCalculatorService ppCalc, ILogger<DefaultScoreTheme> logger, IBeatmapFileService? beatmapFiles = null, IOptions<ConcurrencyOptions>? concurrency = null)
     {
         _renderer = renderer;
         _imageCache = imageCache;
         _ppCalc = ppCalc;
         _logger = logger;
         _beatmapFiles = beatmapFiles;
+        _coverConcurrency = concurrency?.Value.CoverDownload ?? 4;
     }
 
     public async Task<byte[]> RenderAsync(Score score, User user, byte[] mapBg,
@@ -272,7 +276,7 @@ public class DefaultScoreTheme
         var covers = new Dictionary<int, string>();
         if (_beatmapFiles is not null)
         {
-            using var concurrency = new SemaphoreSlim(4);
+            using var concurrency = new SemaphoreSlim(_coverConcurrency);
             var images = await Task.WhenAll(scores.Select(SetId).Where(id => id > 0).Distinct().Select(async id =>
             {
                 await concurrency.WaitAsync(cancellationToken);

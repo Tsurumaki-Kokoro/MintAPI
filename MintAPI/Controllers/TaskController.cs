@@ -1,3 +1,4 @@
+using MintAPI.Configuration;
 using MintAPI.Errors;
 using Microsoft.AspNetCore.Mvc;
 using MintAPI.Services;
@@ -10,15 +11,16 @@ namespace MintAPI.Controllers;
 [Route("task")]
 public class TaskController(
     IBeatmapPreviewService preview,
-    ILogger<TaskController> logger) : ControllerBase
+    ILogger<TaskController> logger, StoragePaths paths) : ControllerBase
 {
-    /// <summary>清空谱面 osu! 文件、预览产物、谱包与用户头像、背景缓存。</summary>
+    /// <summary>清空谱面 osu! 文件、预览产物、谱包与下载的头像、Banner、徽章缓存；保留用户上传的背景。</summary>
     /// <response code="200">清理完成。</response>
     /// <response code="500">清理过程中出错。</response>
     [HttpPost("clear_cache")]
+    [Produces("application/json", "application/problem+json")]
     public async Task<IActionResult> ClearCache()
     {
-        var cacheDir = Path.Combine(AppContext.BaseDirectory, "cache");
+        var cacheDir = paths.CacheDirectory;
         try
         {
             await preview.ClearCacheAsync(HttpContext.RequestAborted);
@@ -29,6 +31,12 @@ public class TaskController(
                     Directory.Delete(dir, recursive: true);
             }
 
+            // User-uploaded backgrounds are persistent customizations, not disposable downloads.
+            foreach (var name in new[] { "avatar", "user_banner", "badge" })
+            {
+                var directory = Path.Combine(cacheDir, name);
+                if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
+            }
             var userCacheDir = Path.Combine(cacheDir, "user");
             if (Directory.Exists(userCacheDir))
             {
@@ -62,16 +70,13 @@ public class TaskController(
     [Produces("application/zip", "application/problem+json")]
     public IActionResult PackLogs()
     {
-        var logDir = Path.Combine(AppContext.BaseDirectory, "logs");
+        var logDir = paths.LogDirectory;
         if (!Directory.Exists(logDir))
             return ApiErrors.Result(ErrorCatalog.RecordNotFound, diagnostic: "No logs directory found");
 
+        var zipPath = Path.Combine(Path.GetTempPath(), $"mintapi-logs-{Guid.NewGuid():N}.zip");
         try
         {
-            var zipPath = Path.Combine(Path.GetTempPath(), "logs.zip");
-            if (System.IO.File.Exists(zipPath))
-                System.IO.File.Delete(zipPath);
-
             System.IO.Compression.ZipFile.CreateFromDirectory(logDir, zipPath);
             var bytes = System.IO.File.ReadAllBytes(zipPath);
             System.IO.File.Delete(zipPath);
@@ -81,6 +86,10 @@ public class TaskController(
         {
             logger.LogError(ex, "Failed to pack logs");
             return ApiErrors.Result(ErrorCatalog.InternalError, diagnostic: ex.Message);
+        }
+        finally
+        {
+            if (System.IO.File.Exists(zipPath)) System.IO.File.Delete(zipPath);
         }
     }
 }

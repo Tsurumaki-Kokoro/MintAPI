@@ -1,3 +1,4 @@
+using MintAPI.Configuration;
 using System.Globalization;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
@@ -17,7 +18,7 @@ public sealed record MapScoreHistory(string Source, string Notice, List<Score> S
 
 public sealed class HistoryService(
     AppDbContext db, IOsuApiService osuApi, IHttpClientFactory clients,
-    IMemoryCache cache, IOptions<HistoryOptions> options, ILogger<HistoryService> logger)
+    IMemoryCache cache, IOptions<HistoryOptions> options, ILogger<HistoryService> logger, IOptions<CachePolicyOptions>? cachePolicy = null)
 {
     public static Score RestoreScore(string payload) => JsonConvert.DeserializeObject<Score>(payload,
         new JsonSerializerSettings { DateParseHandling = DateParseHandling.None })!;
@@ -108,7 +109,7 @@ public sealed class HistoryService(
                                 external.Add(new(date, value, ranking, "osutrack"));
                         }
                     }
-                    cache.Set(key, external, TimeSpan.FromMinutes(10));
+                    cache.Set(key, external, TimeSpan.FromMinutes(cachePolicy?.Value.OsuTrackMinutes ?? 10));
                 }
                 catch (Exception ex) when (!ct.IsCancellationRequested)
                 {

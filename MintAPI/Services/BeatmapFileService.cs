@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using MintAPI.Configuration;
 
 namespace MintAPI.Services;
 
@@ -7,12 +8,16 @@ public partial class BeatmapFileService : IBeatmapFileService
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<BeatmapFileService> _logger;
     private readonly string _cacheDir;
+    private readonly DownloadOptions _downloads;
+    private readonly CachePolicyOptions _cache;
 
-    public BeatmapFileService(IHttpClientFactory httpClientFactory, ILogger<BeatmapFileService> logger, IConfiguration config)
+    public BeatmapFileService(IHttpClientFactory httpClientFactory, ILogger<BeatmapFileService> logger, IConfiguration config, StoragePaths? paths = null)
     {
         _httpClientFactory = httpClientFactory;
         _logger = logger;
-        _cacheDir = config["CacheDir"] ?? "cache";
+        _cacheDir = (paths ?? new StoragePaths(config)).CacheDirectory;
+        _downloads = DownloadOptions.Read(config);
+        _cache = config.GetSection("CachePolicy").Get<CachePolicyOptions>() ?? new();
     }
 
     private string OsuFileDir(int setId) =>
@@ -24,18 +29,14 @@ public partial class BeatmapFileService : IBeatmapFileService
         Directory.CreateDirectory(dir);
         var filePath = Path.Combine(dir, $"{beatmapId}.osu");
 
-        if (File.Exists(filePath))
+        if (CachePolicyOptions.IsFresh(filePath, _cache.BeatmapFileHours))
             return filePath;
 
         _logger.LogInformation("Downloading osu file for beatmap {BeatmapId}", beatmapId);
-        var urls = new[]
-        {
-            $"https://osu.ppy.sh/osu/{beatmapId}",
-            $"https://api.osu.direct/osu/{beatmapId}"
-        };
+        var urls = _downloads.BeatmapSources.Select(source => DownloadOptions.Expand(source, beatmapId, beatmapSetId)).ToArray();
 
         var content = await DownloadFirstSuccessfulAsync(urls);
-        await File.WriteAllBytesAsync(filePath, content);
+        await AtomicCacheFile.WriteAsync(filePath, content);
         return filePath;
     }
 
@@ -46,7 +47,7 @@ public partial class BeatmapFileService : IBeatmapFileService
         var fileName = bgName ?? "set.jpg";
         var filePath = Path.Combine(dir, fileName);
 
-        if (File.Exists(filePath))
+        if (CachePolicyOptions.IsFresh(filePath, _cache.BackgroundHours))
             return await File.ReadAllBytesAsync(filePath);
 
         byte[]? content = null;
@@ -66,7 +67,7 @@ public partial class BeatmapFileService : IBeatmapFileService
         }
 
         if (content != null && content.Length > 0)
-            await File.WriteAllBytesAsync(filePath, content);
+            await AtomicCacheFile.WriteAsync(filePath, content);
 
         return content ?? [];
     }
@@ -76,12 +77,12 @@ public partial class BeatmapFileService : IBeatmapFileService
         if (setId <= 0) return null;
         var filePath = Path.Combine(OsuFileDir(setId), "list-cover.jpg");
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(TimeSpan.FromSeconds(5));
+        timeout.CancelAfter(TimeSpan.FromSeconds(_downloads.ListCoverTimeoutSeconds));
         try
         {
-            if (File.Exists(filePath)) return await File.ReadAllBytesAsync(filePath, cancellationToken);
-            using var response = await _httpClientFactory.CreateClient().GetAsync(
-                $"https://assets.ppy.sh/beatmaps/{setId}/covers/cover@2x.jpg",
+            if (CachePolicyOptions.IsFresh(filePath, _cache.ListCoverHours)) return await File.ReadAllBytesAsync(filePath, cancellationToken);
+            using var response = await _httpClientFactory.CreateClient("Downloads").GetAsync(
+                DownloadOptions.Expand(_downloads.CoverUrlTemplate, setId: setId),
                 HttpCompletionOption.ResponseHeadersRead, timeout.Token);
             if (!response.IsSuccessStatusCode || response.Content.Headers.ContentType?.MediaType?.StartsWith("image/") != true)
                 return null;
@@ -121,19 +122,14 @@ public partial class BeatmapFileService : IBeatmapFileService
 
     private async Task<byte[]?> TryDownloadBgAsync(int mapId, int setId, string bgName)
     {
-        var urls = new[]
-        {
-            $"https://api.osu.direct/media/background/{mapId}",
-            $"https://subapi.nerinyan.moe/bg/{mapId}",
-            $"https://dl.sayobot.cn/beatmaps/files/{setId}/{Uri.EscapeDataString(bgName)}"
-        };
+        var urls = _downloads.BackgroundSources.Select(source => DownloadOptions.Expand(source, mapId, setId, bgName)).ToArray();
         try { return await DownloadFirstSuccessfulAsync(urls, imageOnly: true); }
         catch { return null; }
     }
 
     private async Task<byte[]?> TryDownloadSetBgAsync(int setId)
     {
-        var urls = new[] { $"https://assets.ppy.sh/beatmaps/{setId}/covers/cover@2x.jpg" };
+        var urls = new[] { DownloadOptions.Expand(_downloads.CoverUrlTemplate, setId: setId) };
         try { return await DownloadFirstSuccessfulAsync(urls, imageOnly: true); }
         catch { return null; }
     }
@@ -142,36 +138,38 @@ public partial class BeatmapFileService : IBeatmapFileService
     {
         try
         {
-            var client = _httpClientFactory.CreateClient();
-            var resp = await client.GetAsync("https://osu.ppy.sh/api/v2/seasonal-backgrounds");
+            var client = _httpClientFactory.CreateClient("Downloads");
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(_downloads.TimeoutSeconds));
+            using var resp = await client.GetAsync(_downloads.SeasonalBackgroundsUrl, timeout.Token);
             if (!resp.IsSuccessStatusCode) return null;
-            var json = await resp.Content.ReadAsStringAsync();
+            var json = await resp.Content.ReadAsStringAsync(timeout.Token);
             var match = Regex.Match(json, "\"url\"\\s*:\\s*\"([^\"]+)\"");
             if (!match.Success) return null;
-            return await client.GetByteArrayAsync(match.Groups[1].Value);
+            return await client.GetByteArrayAsync(match.Groups[1].Value, timeout.Token);
         }
         catch { return null; }
     }
 
     private async Task<byte[]> DownloadFirstSuccessfulAsync(string[] urls, bool imageOnly = false)
     {
-        var client = _httpClientFactory.CreateClient();
+        var client = _httpClientFactory.CreateClient("Downloads");
         foreach (var url in urls)
         {
             try
             {
-                var resp = await client.GetAsync(url);
+                using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(_downloads.TimeoutSeconds));
+                using var resp = await client.GetAsync(url, timeout.Token);
                 if (!resp.IsSuccessStatusCode) continue;
                 if (imageOnly)
                 {
                     var ct = resp.Content.Headers.ContentType?.MediaType ?? "";
                     if (!ct.StartsWith("image/")) continue;
                 }
-                return await resp.Content.ReadAsByteArrayAsync();
+                return await resp.Content.ReadAsByteArrayAsync(timeout.Token);
             }
             catch (Exception ex)
             {
-                _logger.LogDebug("Failed to download from {Url}: {Message}", url, ex.Message);
+                _logger.LogDebug(ex, "Failed to download from source {Host}", new Uri(url).Host);
             }
         }
         throw new InvalidOperationException($"All download URLs failed: {string.Join(", ", urls)}");

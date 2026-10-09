@@ -1,3 +1,5 @@
+using MintAPI.Configuration;
+using Microsoft.Extensions.Options;
 using System.Globalization;
 using System.Net;
 using MintAPI.Services;
@@ -12,7 +14,7 @@ public sealed class PerformanceAnalyzeTheme(
     IImageCacheService imageCache,
     IBeatmapFileService beatmapFiles,
     IPpCalculatorService ppCalculator,
-    ILogger<PerformanceAnalyzeTheme> logger)
+    ILogger<PerformanceAnalyzeTheme> logger, IOptions<ConcurrencyOptions>? concurrency = null)
 {
     private static readonly string TemplatePath = Path.Combine(
         AppContext.BaseDirectory, "Rendering", "PerformanceAnalyzeTheme", "templates", "default", "index.html");
@@ -142,7 +144,7 @@ public sealed class PerformanceAnalyzeTheme(
             return id > 0 ? id : score.Beatmap?.BeatmapsetId ?? 0;
         }
 
-        using var gate = new SemaphoreSlim(4);
+        using var gate = new SemaphoreSlim(concurrency?.Value.CoverDownload ?? 4);
         var images = await Task.WhenAll(scores.Select(SetId).Where(id => id > 0).Distinct().Select(async id =>
         {
             await gate.WaitAsync();
@@ -195,7 +197,7 @@ public sealed class PerformanceAnalyzeTheme(
     private async Task<double[]> ResolveStarsAsync(IReadOnlyList<Score> scores)
     {
         var stars = new double[scores.Count];
-        using var gate = new SemaphoreSlim(4);
+        using var gate = new SemaphoreSlim(concurrency?.Value.PpCalculation ?? 4);
         await Task.WhenAll(scores.Select(async (score, index) =>
         {
             var fallback = score.Beatmap?.DifficultyRating ?? 0;

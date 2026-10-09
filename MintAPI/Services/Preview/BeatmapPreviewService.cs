@@ -3,6 +3,8 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
 
+using MintAPI.Configuration;
+
 namespace MintAPI.Services.Preview;
 
 public sealed class BeatmapPreviewService : IBeatmapPreviewService
@@ -17,10 +19,11 @@ public sealed class BeatmapPreviewService : IBeatmapPreviewService
     private readonly string _cacheRoot;
     private readonly string _executable;
     private readonly string _engineHash;
+    private readonly CachePolicyOptions _cache;
 
     public BeatmapPreviewService(IOptions<BeatmapPreviewOptions> options, IConfiguration config,
         IOsuApiService osuApi, IBeatmapFileService beatmapFile, IPreviewCliRunner runner,
-        ILogger<BeatmapPreviewService> logger)
+        ILogger<BeatmapPreviewService> logger, StoragePaths? paths = null)
     {
         _options = options.Value;
         _osuApi = osuApi;
@@ -31,7 +34,8 @@ public sealed class BeatmapPreviewService : IBeatmapPreviewService
         var executable = _options.ExecutablePath;
         if (OperatingSystem.IsWindows() && !Path.HasExtension(executable)) executable += ".exe";
         _executable = Path.GetFullPath(executable, AppContext.BaseDirectory);
-        _cacheRoot = Path.GetFullPath(Path.Combine(config["CacheDir"] ?? "cache", "beatmap", "preview"));
+        _cacheRoot = Path.Combine((paths ?? new StoragePaths(config)).CacheDirectory, "beatmap", "preview");
+        _cache = config.GetSection("CachePolicy").Get<CachePolicyOptions>() ?? new();
         _engineHash = File.Exists(_executable) ? Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(_executable))) : "missing";
     }
 
@@ -166,5 +170,5 @@ public sealed class BeatmapPreviewService : IBeatmapPreviewService
         }
     }
 
-    private static bool IsCached(string path) => File.Exists(path) && new FileInfo(path).Length > 0;
+    private bool IsCached(string path) => CachePolicyOptions.IsFresh(path, _cache.PreviewArtifactHours) && new FileInfo(path).Length > 0;
 }

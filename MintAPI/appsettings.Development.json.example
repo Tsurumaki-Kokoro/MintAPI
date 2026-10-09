@@ -17,7 +17,9 @@
     "RetentionMinutes": 60,
     "MaxUpdates": 1000,
     "MockEnabled": false,
-    "MockAutoAdvanceSeconds": 30
+    "MockAutoAdvanceSeconds": 30,
+    "PollConcurrency": 2,
+    "StateTtlHours": 48
   },
   "CacheDir": "cache",
   "Logging": {
@@ -33,5 +35,58 @@
     "VideoTimeoutSeconds": 300,
     "MaxVideoDurationSeconds": 60,
     "MaxGifDurationSeconds": 6
+  },
+  "Storage": {
+    "LogDirectory": "logs",
+    "TokenCacheDirectory": null
+  },
+  "Downloads": {
+    "TimeoutSeconds": 100,
+    "BannerTimeoutSeconds": 8,
+    "ListCoverTimeoutSeconds": 5,
+    "SearchCoverTimeoutSeconds": 8,
+    "OsuTrackTimeoutSeconds": 10,
+    "MaxSearchCoverBytes": 4194304,
+    "OsuTrackBaseUrl": "https://osutrack-api.ameo.dev/",
+    "BeatmapSources": [
+      "https://osu.ppy.sh/osu/{beatmapId}",
+      "https://api.osu.direct/osu/{beatmapId}"
+    ],
+    "BackgroundSources": [
+      "https://api.osu.direct/media/background/{beatmapId}",
+      "https://subapi.nerinyan.moe/bg/{beatmapId}",
+      "https://dl.sayobot.cn/beatmaps/files/{setId}/{backgroundName}"
+    ],
+    "CoverUrlTemplate": "https://assets.ppy.sh/beatmaps/{setId}/covers/cover@2x.jpg",
+    "SeasonalBackgroundsUrl": "https://osu.ppy.sh/api/v2/seasonal-backgrounds",
+    "SearchCoverAllowedHosts": [
+      "assets.ppy.sh"
+    ]
+  },
+  "CachePolicy": {
+    "AvatarHours": 24,
+    "BannerHours": 24,
+    "SearchSeconds": 120,
+    "SearchCoverMinutes": 30,
+    "OsuTrackMinutes": 10,
+    "BeatmapFileHours": 0,
+    "BackgroundHours": 0,
+    "BadgeHours": 0,
+    "ListCoverHours": 0,
+    "PreviewArtifactHours": 0
+  },
+  "Concurrency": {
+    "PpCalculation": 4,
+    "CoverDownload": 4
+  },
+  "LogFiles": {
+    "Enabled": true,
+    "ConsoleEnabled": true,
+    "FileName": ".log",
+    "RollingInterval": "Day",
+    "RetainedFileCountLimit": 31,
+    "FileSizeLimitBytes": 1073741824,
+    "RollOnFileSizeLimit": false,
+    "OutputTemplate": "{Timestamp:yyyy-MM-dd HH:mm:ss} [{Level:u3}] [{TraceId}] {Message:lj}{NewLine}{Exception}"
   }
 }

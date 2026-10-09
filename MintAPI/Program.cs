@@ -1,3 +1,5 @@
+using MintAPI.Configuration;
+using Microsoft.Extensions.Options;
 using MintAPI.Services.Preview;
 using MintAPI.Services.MatchLive;
 using MintAPI.Data;
@@ -10,23 +12,14 @@ using Serilog;
 using StackExchange.Redis;
 using System.Threading.RateLimiting;
 
-Log.Logger = new LoggerConfiguration()
-    .ReadFrom.Configuration(new ConfigurationBuilder()
-        .AddJsonFile("appsettings.json")
-        .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", optional: true)
-        .AddEnvironmentVariables()
-        .Build())
-    .Enrich.FromLogContext()
-    .WriteTo.Console()
-    .WriteTo.File(
-        path: Path.Combine("logs", ".log"),
-        rollingInterval: RollingInterval.Day,
-        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss} [{Level:u3}] [{TraceId}] {Message:lj}{NewLine}{Exception}")
-    .CreateLogger();
+Log.Logger = new LoggerConfiguration().WriteTo.Console().CreateBootstrapLogger();
 
 try
 {
     var builder = WebApplication.CreateBuilder(args);
+    builder.Services.AddOperationalConfiguration(builder.Configuration, builder.Environment);
+    Log.Logger = OperationalConfiguration.CreateLogger(builder.Configuration,
+        new StoragePaths(builder.Configuration, builder.Environment));
 
     builder.Host.UseSerilog();
     var config = builder.Configuration;
@@ -39,10 +32,13 @@ try
         ConnectionMultiplexer.Connect(redisConnStr));
 
     builder.Services.AddHttpClient();
-    builder.Services.AddHttpClient("OsuTrack", client =>
+    // Each download supplies its own total deadline, including response body reads.
+    builder.Services.AddHttpClient("Downloads", client => client.Timeout = Timeout.InfiniteTimeSpan);
+    builder.Services.AddHttpClient("OsuTrack", (services, client) =>
     {
-        client.BaseAddress = new Uri("https://osutrack-api.ameo.dev/");
-        client.Timeout = TimeSpan.FromSeconds(10);
+        var downloads = services.GetRequiredService<IOptions<DownloadOptions>>().Value;
+        client.BaseAddress = new Uri(downloads.OsuTrackBaseUrl);
+        client.Timeout = TimeSpan.FromSeconds(downloads.OsuTrackTimeoutSeconds);
     });
     builder.Services.AddMemoryCache();
     builder.Services.AddOptions<HistoryOptions>().Bind(config.GetSection("History"))

@@ -150,7 +150,7 @@ public sealed class MatchLiveService(IOsuApiService api, IMatchLiveStore store, 
     {
         await RestoreAsync(ct);
         // Each match has its own lock. No global lock is held while awaiting upstream requests.
-        await Parallel.ForEachAsync(_rooms.Values, new ParallelOptions { MaxDegreeOfParallelism = 2, CancellationToken = ct }, async (entry, _) =>
+        await Parallel.ForEachAsync(_rooms.Values, new ParallelOptions { MaxDegreeOfParallelism = Settings.PollConcurrency, CancellationToken = ct }, async (entry, _) =>
         {
             ct.ThrowIfCancellationRequested();
             if (!await entry.Gate.WaitAsync(0, ct)) return;
