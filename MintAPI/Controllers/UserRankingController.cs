@@ -10,8 +10,8 @@ using MintOsuApi.Enums;
 namespace MintAPI.Controllers;
 
 public sealed record UserRankingRequest(
-    [property: Required] string Platform,
-    [property: Required, MinLength(1), MaxLength(100)] string[] PlatformUids);
+    [Required] string Platform,
+    [Required, MinLength(1), MaxLength(100)] string[] PlatformUids);
 public sealed record UserRankingEntry(string PlatformUid, string OsuUid, string Username, int? Rank, double? Pp, double? Acc, string AvatarUrl = "", string CountryCode = "");
 public sealed record UserModeRanking(int GameMode, IReadOnlyList<UserRankingEntry> Users);
 
@@ -20,6 +20,25 @@ public sealed record UserModeRanking(int GameMode, IReadOnlyList<UserRankingEntr
 [Route("users/ranking")]
 public sealed class UserRankingController(AppDbContext db, IOsuApiService osuApi, UserRankingRenderer renderer) : ControllerBase
 {
+    /// <summary>从调用方提供的平台用户列表中筛出已绑定用户，不查询 osu!；每批最多 100 人。</summary>
+    /// <param name="data">平台和候选用户 ID；群成员列表由调用方获取。</param>
+    /// <response code="200">platform_uids 为已绑定的候选 ID；没有绑定时返回空列表。</response>
+    /// <response code="400">候选列表或平台无效。</response>
+    /// <response code="500">绑定查询失败。</response>
+    [HttpPost("/users/bindings")]
+    [Produces("application/json", "application/problem+json")]
+    public async Task<IActionResult> BoundUsers([FromBody] UserRankingRequest data)
+    {
+        if (string.IsNullOrWhiteSpace(data.Platform) || data.PlatformUids is not { Length: > 0 and <= 100 }
+            || data.PlatformUids.Any(string.IsNullOrWhiteSpace))
+            return ApiErrors.Result(ErrorCatalog.InvalidArgument);
+        var ids = data.PlatformUids.Distinct(StringComparer.Ordinal).ToArray();
+        var candidates = await db.Users.AsNoTracking().Where(u => u.Platform == data.Platform && ids.Contains(u.PlatformUid))
+            .ToListAsync(HttpContext.RequestAborted);
+        var found = candidates.Where(u => u.Platform == data.Platform).Select(u => u.PlatformUid).ToHashSet(StringComparer.Ordinal);
+        return Ok(new { platform_uids = ids.Where(found.Contains).ToArray() });
+    }
+
     /// <summary>返回指定模式的 rank、PP 和百分制 acc，全球排名数字升序，无排名者置后。</summary>
     /// <param name="data">绑定平台及平台用户 ID 列表，最多 100 个，重复 ID 只返回一次。</param>
     /// <param name="game_mode">模式：0 osu!、1 taiko、2 catch、3 mania。</param>

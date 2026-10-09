@@ -64,3 +64,5 @@ return ApiErrors.Result(ErrorCatalog.InternalError,
 `ApiErrorContractTests` 覆盖公共传输和日志机制；`ScoreErrorContractTests` 示例覆盖真实成绩接口的未绑定、官方空成绩、本地未收录、谱面缺失及上游故障。两层均应保留，公共测试不能代替接口业务分类测试。
 
 预览生成服务使用 `502 / PREVIEW_UNAVAILABLE`，以区别 osu! 上游查询失败。
+
+`POST /users/bindings` 用于筛选调用方提供的候选账号，每批最多 100 人：无绑定为成功的空列表；无效候选列表使用 `INVALID_ARGUMENT`，数据库失败由全局错误处理返回 `INTERNAL_ERROR`。不把数据库故障当作未绑定。
