@@ -172,21 +172,35 @@ public class DefaultUserInfoTheme
 
         if (theme == "default")
         {
+            scriptObj["has_stats"] = stats is not null;
+            scriptObj["global_rank"] = stats?.GlobalRank is > 0 ? $"#{stats.GlobalRank:N0}" : "—";
+            scriptObj["pp"] = stats?.Pp is double currentPp ? $"{currentPp:N0}" : "—";
+            scriptObj["ranked_score"] = stats is not null ? $"{stats.RankedScore:N0}" : "—";
+            scriptObj["total_score"] = stats is not null ? $"{stats.TotalScore:N0}" : "—";
+            scriptObj["level"] = stats is not null ? $"{level}" : "—";
+            scriptObj["play_time"] = stats is not null ? playTime : "—";
+            if (avatarBytes.Length == 0)
+                scriptObj["avatar_data_url"] = AssetDataUrl(Path.Combine("osu-web", "public", "images", "layout", "avatar-guest.png"));
             scriptObj["history_text"] = historyText.TrimStart('|', ' ');
             foreach (var key in new[] { "grade_ssh", "grade_ss", "grade_sh", "grade_s", "grade_a" })
-                scriptObj[key] = $"{(int)scriptObj[key]:N0}";
+                scriptObj[key] = grades is not null ? $"{(int)scriptObj[key]:N0}" : "—";
             scriptObj["country_rank"] = stats?.CountryRank is > 0 ? $"#{stats.CountryRank:N0}" : "—";
+            scriptObj["pp_size"] = scriptObj["pp"].ToString()!.Length <= 7 ? 74 : 54;
+            scriptObj["global_rank_size"] = scriptObj["global_rank"].ToString()!.Length <= 8 ? 58 : 46;
+            scriptObj["country_rank_size"] = scriptObj["country_rank"].ToString()!.Length <= 7 ? 58 : 46;
+            scriptObj["grade_size"] = new[] { "grade_ssh", "grade_ss", "grade_sh", "grade_s", "grade_a" }
+                .Max(key => scriptObj[key].ToString()!.Length) <= 6 ? 34 : 24;
             var (countryDelta, countryDeltaClass) = CalcRankDelta(stats?.CountryRank, history?.CountryRank);
             scriptObj["country_rank_delta"] = countryDelta;
             scriptObj["country_rank_delta_class"] = countryDeltaClass;
-            scriptObj["accuracy_value"] = $"{stats?.HitAccuracy ?? 0:0.00}%";
+            scriptObj["accuracy_value"] = stats is not null ? $"{stats.HitAccuracy:0.00}%" : "—";
             scriptObj["accuracy_delta"] = ComparisonSuffix(accuracy);
-            scriptObj["play_count_value"] = $"{stats?.PlayCount ?? 0:N0}";
+            scriptObj["play_count_value"] = stats is not null ? $"{stats.PlayCount:N0}" : "—";
             scriptObj["play_count_delta"] = ComparisonSuffix(playCount);
-            scriptObj["total_hits_value"] = $"{stats?.TotalHits ?? 0:N0}";
+            scriptObj["total_hits_value"] = stats is not null ? $"{stats.TotalHits:N0}" : "—";
             scriptObj["total_hits_delta"] = ComparisonSuffix(totalHits);
             var time = TimeSpan.FromSeconds(stats?.PlayTime ?? 0);
-            scriptObj["play_time_short"] = $"{(int)time.TotalHours:N0}";
+            scriptObj["play_time_short"] = stats is not null ? $"{(int)time.TotalHours:N0}" : "—";
             scriptObj["country_code"] = WebUtility.HtmlEncode(user.CountryCode);
             scriptObj["game_mode"] = WebUtility.HtmlEncode(gameMode);
             foreach (var name in new[] { "world", "trophy", "bolt", "target", "clock", "music", "list-details", "star", "heart" })
@@ -194,12 +208,6 @@ public class DefaultUserInfoTheme
             var flag = user.CountryCode.Length == 2 && user.CountryCode.All(char.IsAsciiLetter)
                 ? AssetDataUrl(Path.Combine("flags", user.CountryCode.ToUpperInvariant() + ".png")) : "";
             scriptObj["country_flag"] = flag;
-            var badgeRows = (int)Math.Ceiling(badges.Count / 9.0);
-            var badgeSpace = badgeRows > 0 ? 56 + (badgeRows - 1) * 44 : 0;
-            scriptObj["badge_space"] = badgeSpace;
-            var extraHeight = Math.Max(0, badgeRows - 1) * 44;
-            scriptObj["profile_height"] = 280 + extraHeight;
-            scriptObj["canvas_height"] = 1220 + extraHeight;
         }
 
         var templateCtx = new TemplateContext();
@@ -209,10 +217,9 @@ public class DefaultUserInfoTheme
         var template = Template.Parse(templateSrc);
         var html = await template.RenderAsync(templateCtx);
 
-        var height = theme == "default" ? (int)scriptObj["canvas_height"] : 1350;
         return theme == "default"
-            ? await RenderAttribution.RenderAsync(_renderer, html, 1000, height)
-            : await _renderer.RenderHtmlAsync(html, 1000, height);
+            ? await RenderAttribution.RenderAsync(_renderer, html, 1500, 0)
+            : await _renderer.RenderHtmlAsync(html, 1000, 1350);
     }
 
     private static string ComparisonSuffix(string value) => value.Contains('(') ? value[(value.IndexOf('(') + 1)..^1] : "";

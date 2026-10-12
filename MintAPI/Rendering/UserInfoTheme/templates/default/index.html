@@ -1,109 +1,45 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<style>
-@font-face { font-family: Harmony; src: url('{{ base_url }}/fonts/HarmonyOS_Sans_SC_Regular.ttf'); }
-@font-face { font-family: Harmony; src: url('{{ base_url }}/fonts/HarmonyOS_Sans_SC_Bold.ttf'); font-weight: 700; }
-* { box-sizing: border-box; }
-html, body { margin: 0; width: 1000px; height: {{ canvas_height }}px; }
-body { position: relative; padding: 38px 48px; background: #fafafa; color: #1d1d1f; font-family: Harmony, -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }
-.masthead { height: 44px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-.masthead-title { font-size: 27px; font-weight: 700; }
-.masthead-mode { font-size: 25px; font-weight: 700; color: #6e6e73; }
-.profile { height: {{ profile_height }}px; position: relative; overflow: hidden; border-radius: 8px; background: #28384c; color: #fff; }
-.profile-cover { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.profile-wash { position: absolute; inset: 0; background: #0008; }
-.profile-content { position: absolute; inset: 0; bottom: {{ badge_space }}px; display: flex; align-items: center; gap: 28px; padding: 38px; }
-.profile-content.has-badges { padding: 32px 38px 0; }
-.avatar { flex: none; width: 134px; height: 134px; object-fit: cover; border-radius: 50%; border: 3px solid #ffffffbf; }
-.identity { min-width: 0; flex: 1; }
-.eyebrow { display: flex; align-items: center; gap: 12px; font-size: 24px; color: #ffffffd9; }
-.flag { width: 32px; height: 24px; object-fit: contain; }
-.username { margin: 7px 0 12px; font-size: 52px; line-height: 1.18; font-weight: 700; letter-spacing: -.025em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.identity-meta { display: flex; align-items: center; gap: 24px; font-size: 22px; color: #ffffffde; }
-.supporter { display: inline-flex; align-items: center; gap: 8px; }
-.supporter img { width: 24px; height: 24px; filter: brightness(0) invert(1); }
-.progress-track { position: absolute; bottom: 0; left: 0; right: 0; height: 5px; background: #ffffff30; }
-.progress-fill { width: {{ level_progress }}%; height: 100%; background: #8cc7ff; }
-.performance { display: grid; grid-template-columns: 1.2fr 1fr .82fr; padding: 30px 0; border-bottom: 1px solid #d6d6db; }
-.metric { min-width: 0; padding-left: 24px; border-left: 1px solid #dedee3; }
-.metric:first-child { padding-left: 0; border: 0; }
-.label { display: flex; align-items: center; gap: 9px; font-size: 23px; color: #6e6e73; }
-.icon { width: 25px; height: 25px; object-fit: contain; opacity: .6; }
-.metric-value { margin-top: 8px; font-size: 47px; font-weight: 700; line-height: 1.2; white-space: nowrap; letter-spacing: -.03em; }
-.metric.pp .metric-value { font-size: 65px; color: #0066cc; }
-.metric-value small { font-size: 26px; font-weight: 400; letter-spacing: 0; }
-.metric-delta { font-size: 22px; line-height: 28px; min-height: 28px; margin-top: 4px; }
-.delta-up { color: #24835c; }
-.delta-down { color: #c64c50; }
-.section-head { margin: 0 0 21px; display: flex; align-items: center; gap: 10px; font-size: 26px; font-weight: 700; }
-.section-head .icon { opacity: .8; }
-.activity { padding: 28px 0 25px; border-bottom: 1px solid #d6d6db; }
-.activity-main { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 26px; }
-.activity-value { margin-top: 8px; font-size: 39px; font-weight: 700; white-space: nowrap; line-height: 1.15; letter-spacing: -.02em; }
-.activity-value small { font-size: 24px; color: #6e6e73; font-weight: 400; }
-.detail { font-size: 20px; color: #86868b; min-height: 28px; margin-top: 7px; }
-.activity-secondary { display: grid; grid-template-columns: 1fr 1fr; column-gap: 36px; row-gap: 15px; margin-top: 23px; padding-top: 21px; border-top: 1px solid #e5e5ea; }
-.secondary-item { display: flex; justify-content: space-between; gap: 14px; font-size: 22px; align-items: baseline; }
-.secondary-item .name { color: #6e6e73; white-space: nowrap; }
-.secondary-item .value { text-align: right; font-weight: 700; font-size: 25px; white-space: nowrap; }
-.hits-change { font-size: 18px; color: #86868b; font-weight: 400; }
-.grades { padding: 27px 0; border-bottom: 1px solid #d6d6db; }
-.grades-list { display: grid; grid-template-columns: repeat(5, 1fr); gap: 20px; }
-.grade-symbol { font-size: 26px; font-weight: 700; }
-.grade-count { margin-top: 6px; font-size: 34px; font-weight: 700; }
-.silver { color: #7777a1; } .gold { color: #a78126; } .blue { color: #0066cc; } .green { color: #24835c; }
-.badges { position: absolute; left: 38px; right: 38px; bottom: 18px; display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 8px 12px; }
-.badges img { width: 100%; max-width: 80px; height: 36px; object-fit: contain; }
-.footer { position: absolute; bottom: 28px; left: 48px; right: 48px; border-top: 1px solid #dedee3; padding-top: 17px; display: flex; justify-content: space-between; gap: 16px; font-size: 19px; color: #86868b; }
-</style>
-</head>
-<body>
-  <header class="masthead"><div class="masthead-title">玩家信息</div><div class="masthead-mode">{{ game_mode }}</div></header>
-  <section class="profile">
-    {{ if bg_data_url != "" }}<img class="profile-cover" src="{{ bg_data_url }}" alt="" />{{ end }}
-    <div class="profile-wash"></div>
-    <div class="profile-content{{ if badges.size > 0 }} has-badges{{ end }}">
-      <img class="avatar" src="{{ avatar_data_url }}" alt="" />
-      <div class="identity">
-        <div class="eyebrow">{{ if country_flag != "" }}<img class="flag" src="{{ country_flag }}" alt="" />{{ end }}<span>{{ country_code }} · {{ game_mode }}</span></div>
-        <div class="username">{{ username }}</div>
-        <div class="identity-meta"><span>等级 {{ level }} · {{ level_progress }}%</span>{{ if is_supporter }}<span class="supporter"><img src="{{ icon_heart }}" alt="" />Supporter</span>{{ end }}</div>
-      </div>
-    </div>
-    {{ if badges.size > 0 }}<div class="badges">{{ for badge in badges }}<img src="{{ badge.data_url }}" title="{{ badge.desc }}" alt="{{ badge.desc }}" />{{ end }}</div>{{ end }}
-    <div class="progress-track"><div class="progress-fill"></div></div>
-  </section>
-  <section class="performance">
-    <div class="metric pp"><div class="label"><img class="icon" src="{{ icon_bolt }}" alt="" />表现 PP</div><div class="metric-value">{{ pp }} <small>pp</small></div><div class="metric-delta {{ pp_delta_class }}">{{ pp_delta }}</div></div>
-    <div class="metric"><div class="label"><img class="icon" src="{{ icon_world }}" alt="" />世界排名</div><div class="metric-value">{{ global_rank }}</div><div class="metric-delta {{ global_rank_delta_class }}">{{ global_rank_delta }}</div></div>
-    <div class="metric"><div class="label"><img class="icon" src="{{ icon_trophy }}" alt="" />国家排名</div><div class="metric-value">{{ country_rank }}</div><div class="metric-delta {{ country_rank_delta_class }}">{{ country_rank_delta }}</div></div>
-  </section>
-  <section class="activity">
-    <h2 class="section-head"><img class="icon" src="{{ icon_music }}" alt="" />游玩数据</h2>
-    <div class="activity-main">
-      <div><div class="label"><img class="icon" src="{{ icon_target }}" alt="" />准确率</div><div class="activity-value">{{ accuracy_value }}</div><div class="detail">{{ accuracy_delta }}</div></div>
-      <div><div class="label"><img class="icon" src="{{ icon_list_details }}" alt="" />游戏次数</div><div class="activity-value">{{ play_count_value }}</div><div class="detail">{{ play_count_delta }}</div></div>
-      <div><div class="label"><img class="icon" src="{{ icon_clock }}" alt="" />游玩时间</div><div class="activity-value">{{ play_time_short }} <small>小时</small></div><div class="detail">{{ play_time }}</div></div>
-    </div>
-    <div class="activity-secondary">
-      <div class="secondary-item"><span class="name">Ranked 总分</span><span class="value">{{ ranked_score }}</span></div>
-      <div class="secondary-item"><span class="name">总命中次数</span><span class="value">{{ total_hits_value }}</span></div>
-      <div class="secondary-item"><span class="name">总分</span><span class="value">{{ total_score }}</span></div>
-      <div class="secondary-item"><span class="name">命中变化</span><span class="value hits-change">{{ if total_hits_delta != "" }}{{ total_hits_delta }}{{ else }}—{{ end }}</span></div>
-    </div>
-  </section>
-  <section class="grades">
-    <h2 class="section-head"><img class="icon" src="{{ icon_star }}" alt="" />评级分布</h2>
-    <div class="grades-list">
-      <div><div class="grade-symbol silver">SSH</div><div class="grade-count">{{ grade_ssh }}</div></div>
-      <div><div class="grade-symbol gold">SS</div><div class="grade-count">{{ grade_ss }}</div></div>
-      <div><div class="grade-symbol blue">SH</div><div class="grade-count">{{ grade_sh }}</div></div>
-      <div><div class="grade-symbol blue">S</div><div class="grade-count">{{ grade_s }}</div></div>
-      <div><div class="grade-symbol green">A</div><div class="grade-count">{{ grade_a }}</div></div>
-    </div>
-  </section>
-  <footer class="footer"><span>更新于 {{ timestamp_text }}</span><span>{{ if history_text != "" }}{{ history_text }} · {{ end }}MintAPI</span></footer>
-</body>
-</html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><style>
+@font-face{font-family:Harmony;src:url('{{ base_url }}/fonts/HarmonyOS_Sans_SC_Regular.ttf')}
+@font-face{font-family:Harmony;src:url('{{ base_url }}/fonts/HarmonyOS_Sans_SC_Bold.ttf');font-weight:700}
+:root{--paper:#fafaf9;--ink:#1d1d1f;--muted:#65656e;--line:#d2d2d7;--blue:#0066ed}
+*{box-sizing:border-box;margin:0}html,body{width:1500px}body{background:var(--paper);color:var(--ink);font-family:Harmony,-apple-system,BlinkMacSystemFont,sans-serif;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}main{padding:0 44px}.label{font-size:24px;line-height:1.3;color:var(--muted)}.icon{width:24px;height:24px;object-fit:contain;opacity:.65}
+.profile{position:relative;padding:24px 44px 30px;isolation:isolate}.profile.with-banner{min-height:320px}.profile-cover{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;object-position:center bottom;z-index:-2;mask-image:linear-gradient(0deg,transparent 0%,#000 35%);-webkit-mask-image:linear-gradient(0deg,transparent 0%,#000 35%)}.profile-wash{position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(250,250,249,.76) 0%,rgba(250,250,249,.12) 30%,transparent 55%),linear-gradient(90deg,rgba(250,250,249,.84) 0%,rgba(250,250,249,.76) 35%,rgba(250,250,249,.16) 55%,rgba(250,250,249,.8) 80%,rgba(250,250,249,.8) 100%),linear-gradient(0deg,#fafaf9 0%,rgba(250,250,249,.76) 20%,transparent 70%)}
+.masthead{display:flex;justify-content:space-between;align-items:center;gap:24px;margin-bottom:26px;font-size:24px;color:var(--muted)}.profile.with-banner .masthead{margin-bottom:60px}.masthead-mode{font-weight:700;color:var(--ink)}.profile-content{display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:40px;align-items:center}.player{display:flex;align-items:center;gap:28px;min-width:0}.avatar{width:128px;height:128px;object-fit:cover;border-radius:50%;flex-shrink:0;border:2px solid rgba(255,255,255,.9)}.identity{min-width:0}.username{font-size:52px;font-weight:700;line-height:1.2;letter-spacing:-1px;overflow-wrap:anywhere;margin-bottom:14px}.identity-meta{display:flex;align-items:center;flex-wrap:wrap;gap:12px 24px;color:var(--muted);font-size:24px}.country,.supporter{display:flex;align-items:center;gap:8px}.flag{width:32px;height:24px;object-fit:contain}.supporter img{width:24px;height:24px}.level{min-width:0}.level-line{display:flex;justify-content:space-between;align-items:baseline;gap:18px;font-size:24px}.level-value{font-size:42px;font-weight:700;line-height:1.2}.level-percent{font-size:24px;color:var(--muted)}.progress-track{height:6px;margin-top:16px;background:#d8dbe0}.progress-fill{height:100%;width:{{ level_progress }}%;background:var(--blue)}
+.performance{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr) minmax(0,.85fr) minmax(0,1fr);padding:24px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);align-items:center;gap:24px}.metric{min-width:0;border-left:1px solid var(--line);padding-left:24px}.metric:first-child{border:0;padding-left:0}.metric-value{font-size:58px;font-weight:700;line-height:1.2;margin-top:8px;letter-spacing:-1px;overflow-wrap:anywhere}.metric.pp .metric-value{font-size:{{ pp_size }}px;color:var(--blue)}.metric-value small{font-size:27px;color:var(--muted);font-weight:400;letter-spacing:0}.metric-delta:empty{display:none}.metric-delta{font-size:23px;line-height:1.4;margin-top:6px;min-height:32px}.delta-up{color:#24835c}.delta-down{color:#c64c50}
+.details{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:32px;padding:26px 0}.section-head{font-size:27px;font-weight:700;line-height:1.3;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;gap:16px}.section-count{font-size:22px;font-weight:400;color:var(--muted)}.activity{min-width:0}.activity-main{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:28px}.activity-value{font-size:44px;font-weight:700;line-height:1.2;margin-top:8px;overflow-wrap:anywhere}.activity-value small{font-size:25px;font-weight:400;color:var(--muted)}.detail{font-size:22px;color:var(--muted);line-height:1.4;min-height:31px;margin-top:6px;overflow-wrap:anywhere}.activity-secondary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 28px;border-top:1px solid var(--line);margin-top:22px;padding-top:20px}.secondary-item{min-width:0}.secondary-item .name{display:block;font-size:23px;color:var(--muted);line-height:1.3}.secondary-item .value{display:block;margin-top:7px;font-size:31px;line-height:1.25;font-weight:700;overflow-wrap:anywhere}.secondary-item .hits-change{font-size:24px;font-weight:400;color:var(--muted)}
+.achievements{min-width:0;border-left:1px solid var(--line);padding-left:32px}.grades-list{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px}.grade-symbol{font-size:26px;font-weight:700}.grade-count{margin-top:8px;font-size:{{ grade_size }}px;font-weight:700;line-height:1.2;overflow-wrap:anywhere}.silver{color:#7777a1}.gold{color:#a78126}.blue{color:var(--blue)}.green{color:#24835c}.badge-section{border-top:1px solid var(--line);padding-top:20px;margin-top:22px}.badges{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px 16px}.badges img{width:100%;height:44px;object-fit:contain}.footer{border-top:1px solid var(--line);padding-top:16px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px 24px;font-size:21px;line-height:1.4;color:var(--muted)}
+</style></head><body>
+<header class="profile{{ if bg_data_url != "" }} with-banner{{ end }}">
+{{ if bg_data_url != "" }}<img class="profile-cover" src="{{ bg_data_url }}" alt="">{{ end }}<div class="profile-wash"></div>
+<div class="masthead"><span>玩家信息</span><span class="masthead-mode">{{ game_mode }}</span></div>
+<div class="profile-content"><div class="player"><img class="avatar" src="{{ avatar_data_url }}" alt=""><div class="identity"><h1 class="username">{{ username }}</h1><div class="identity-meta"><span class="country">{{ if country_flag != "" }}<img class="flag" src="{{ country_flag }}" alt="">{{ end }}{{ country_code }}</span>{{ if is_supporter }}<span class="supporter"><img src="{{ icon_heart }}" alt="">Supporter</span>{{ end }}</div></div></div><div class="level"><div class="label">等级</div><div class="level-line"><span class="level-value">{{ level }}</span><span class="level-percent">{{ if has_stats }}{{ level_progress }}%{{ else }}—{{ end }}</span></div>{{ if has_stats }}<div class="progress-track"><div class="progress-fill"></div></div>{{ end }}</div></div>
+</header>
+<main>
+<section class="performance">
+<div class="metric pp"><div class="label">表现 PP</div><div class="metric-value">{{ pp }} <small>pp</small></div><div class="metric-delta {{ pp_delta_class }}">{{ pp_delta }}</div></div>
+<div class="metric"><div class="label">世界排名</div><div class="metric-value" style="font-size:{{ global_rank_size }}px">{{ global_rank }}</div><div class="metric-delta {{ global_rank_delta_class }}">{{ global_rank_delta }}</div></div>
+<div class="metric"><div class="label">国家排名</div><div class="metric-value" style="font-size:{{ country_rank_size }}px">{{ country_rank }}</div><div class="metric-delta {{ country_rank_delta_class }}">{{ country_rank_delta }}</div></div>
+<div class="metric"><div class="label">准确率</div><div class="metric-value">{{ accuracy_value }}</div><div class="metric-delta">{{ accuracy_delta }}</div></div>
+</section>
+<div class="details">
+<section class="activity"><h2 class="section-head">游玩数据</h2><div class="activity-main">
+<div><div class="label">游戏次数</div><div class="activity-value">{{ play_count_value }}</div><div class="detail">{{ play_count_delta }}</div></div>
+<div><div class="label">游玩时间</div><div class="activity-value">{{ play_time_short }} <small>小时</small></div><div class="detail">{{ play_time }}</div></div>
+</div><div class="activity-secondary">
+<div class="secondary-item"><span class="name">Ranked 总分</span><span class="value">{{ ranked_score }}</span></div>
+<div class="secondary-item"><span class="name">总分</span><span class="value">{{ total_score }}</span></div>
+<div class="secondary-item"><span class="name">总命中次数</span><span class="value">{{ total_hits_value }}</span></div>
+<div class="secondary-item"><span class="name">命中变化</span><span class="value hits-change">{{ if total_hits_delta != "" }}{{ total_hits_delta }}{{ else }}—{{ end }}</span></div>
+</div></section>
+<aside class="achievements"><section class="grades"><h2 class="section-head">评级分布</h2><div class="grades-list">
+<div><div class="grade-symbol silver">SSH</div><div class="grade-count">{{ grade_ssh }}</div></div>
+<div><div class="grade-symbol gold">SS</div><div class="grade-count">{{ grade_ss }}</div></div>
+<div><div class="grade-symbol blue">SH</div><div class="grade-count">{{ grade_sh }}</div></div>
+<div><div class="grade-symbol blue">S</div><div class="grade-count">{{ grade_s }}</div></div>
+<div><div class="grade-symbol green">A</div><div class="grade-count">{{ grade_a }}</div></div>
+</div></section>
+{{ if badges.size > 0 }}<section class="badge-section"><h2 class="section-head">玩家徽章<span class="section-count">{{ badges.size }}</span></h2><div class="badges">{{ for badge in badges }}<img src="{{ badge.data_url }}" title="{{ badge.desc }}" alt="{{ badge.desc }}">{{ end }}</div></section>{{ end }}
+</aside></div>
+<footer class="footer"><span>更新于 {{ timestamp_text }}</span><span>{{ if history_text != "" }}{{ history_text }} · {{ end }}MintAPI</span></footer>
+</main></body></html>
