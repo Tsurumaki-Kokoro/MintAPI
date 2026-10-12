@@ -13,6 +13,105 @@ namespace MintAPI.Tests.Integration;
 [Trait("Category", "Integration")]
 public class BeatmapInfoRenderingTests
 {
+    [Fact]
+    public async Task Curve_subdivision_adapts_to_duration_without_moving_original_samples()
+    {
+        var file = Path.Combine(AppContext.BaseDirectory, "Fixtures", "3881559.osu");
+        var original = new BeatmapAnalysisService().Calculate(file)!;
+        await using var browser = new PlaywrightBrowserProvider(NullLogger<PlaywrightBrowserProvider>.Instance);
+        await browser.StartAsync();
+        var densities = new List<double>();
+        foreach (var count in new[] { 10, 1000 })
+        {
+            var values = Enumerable.Range(0, count).Select(i => (double)(i % 4 + 1)).ToArray();
+            var points = values.Select((value, i) => new MintAPI.rosu_pp.OsuStrainPoint
+            { EndTimeMs = (i + 1) * 400, Aim = value, Speed = value }).ToArray();
+            var analysis = original with
+            {
+                Strains = new MintAPI.rosu_pp.OsuStrainTimeline(400, count * 400, 400, points),
+                Curves = [new BeatmapStrainSeries("Aim", "#0066cc", values)], BpmSegments = []
+            };
+            var capture = new Capture(new PlaywrightRenderer(browser));
+            var map = Map(0, 0);
+            map.Beatmapset = Set();
+            var theme = new DefaultBeatmapTheme(capture, new AvatarCardImageCache(Pixel), new Calculator(),
+                NullLogger<DefaultBeatmapTheme>.Instance, new FixedAnalysis(analysis));
+            await theme.RenderBeatmapAsync(map, new User { Id = 1, Username = "Adaptive" }, Pixel, file);
+            await Inspect(browser, capture, async page =>
+            {
+                var path = (await page.Locator(".strain-curve").GetAttributeAsync("d"))!;
+                densities.Add((path.Split(" C ").Length - 1d) / (count - 1));
+                var coordinates = path.Split(" C ").Select(part => part.StartsWith("M ") ? part[2..] : part)
+                    .Select(part => part.Split(' ').Select(v => double.Parse(v, System.Globalization.CultureInfo.InvariantCulture)).ToArray())
+                    .Select(v => (X: v[^2], Y: v[^1])).ToArray();
+                // All original sample endpoints remain present after adaptive subdivision.
+                for (var i = 0; i < count; i++)
+                {
+                    var x = 64 + 1314d * (i + 1) / count;
+                    var y = 196 - 162 * values[i] / 4;
+                    Assert.Contains(coordinates, p => Math.Abs(p.X - x) < .001 && Math.Abs(p.Y - y) < .001);
+                }
+            });
+        }
+        Assert.True(densities[0] > densities[1]);
+    }
+
+    [Theory]
+    [InlineData(.09, "rgb(170, 170, 170)", "rgb(0, 0, 0)")]
+    [InlineData(.1, "rgb(66, 144, 251)", "rgb(0, 0, 0)")]
+    [InlineData(1.25, "rgb(79, 192, 255)", "rgb(0, 0, 0)")]
+    [InlineData(5.35, "rgb(229, 74, 153)", "rgb(0, 0, 0)")]
+    [InlineData(6.49, null, "rgb(0, 0, 0)")]
+    [InlineData(6.5, null, "rgb(246, 240, 92)")]
+    [InlineData(7.7, "rgb(24, 21, 142)", "rgb(246, 240, 92)")]
+    [InlineData(9, "rgb(0, 0, 0)", "rgb(246, 240, 92)")]
+    [InlineData(9.9, "rgb(0, 0, 0)", "rgb(255, 128, 104)")]
+    [InlineData(10.6, "rgb(0, 0, 0)", "rgb(255, 78, 111)")]
+    [InlineData(12.4, "rgb(0, 0, 0)", "rgb(101, 99, 222)")]
+    public async Task Star_badge_uses_official_background_and_shared_text_symbol_colour(double stars, string? background, string foreground)
+    {
+        await using var browser = new PlaywrightBrowserProvider(NullLogger<PlaywrightBrowserProvider>.Instance);
+        await browser.StartAsync();
+        var capture = new Capture(new PlaywrightRenderer(browser));
+        var map = Map(0, 3);
+        map.Beatmapset = Set();
+        var theme = new DefaultBeatmapTheme(capture, new AvatarCardImageCache(Pixel), new Calculator(stars),
+            NullLogger<DefaultBeatmapTheme>.Instance, new BeatmapAnalysisService());
+        await theme.RenderBeatmapAsync(map, new User { Id = 1, Username = "Palette" }, Pixel,
+            Path.Combine(AppContext.BaseDirectory, "Fixtures", "3881559.osu"));
+        await Inspect(browser, capture, async page =>
+        {
+            if (background is not null)
+                Assert.Equal(background, await page.Locator(".star-number").EvaluateAsync<string>("e => getComputedStyle(e).backgroundColor"));
+            Assert.Equal(foreground, await page.Locator(".star-number").EvaluateAsync<string>("e => getComputedStyle(e).color"));
+            Assert.Equal(foreground, await page.Locator(".star-number small").EvaluateAsync<string>("e => getComputedStyle(e).color"));
+        });
+    }
+
+    [Fact]
+    public async Task Landscape_fallback_preserves_unknown_bpm_and_combo()
+    {
+        await using var browser = new PlaywrightBrowserProvider(NullLogger<PlaywrightBrowserProvider>.Instance);
+        await browser.StartAsync();
+        var capture = new Capture(new PlaywrightRenderer(browser));
+        var map = Map(0, 3);
+        map.Beatmapset = Set();
+        map.Bpm = null;
+        map.MaxCombo = null;
+        var theme = new DefaultBeatmapTheme(capture, new AvatarCardImageCache(Pixel),
+            new Calculator(), NullLogger<DefaultBeatmapTheme>.Instance, new BeatmapAnalysisService());
+        await theme.RenderBeatmapAsync(map, new User { Id = 1, Username = "谱师 <Test>" }, Pixel,
+            Path.Combine(AppContext.BaseDirectory, "Fixtures", "3881559.osu"));
+        await Inspect(browser, capture, async page =>
+        {
+            Assert.Equal(2000, capture.Width);
+            Assert.True(capture.Width > capture.Height);
+            Assert.Contains("—", await page.Locator(".metric").Nth(2).InnerTextAsync());
+            Assert.Equal("—", await page.Locator(".rhythm .small-value").Nth(1).InnerTextAsync());
+            Assert.Equal(0, await page.Locator(".curve-panel").CountAsync());
+        });
+    }
+
     [Theory]
     [InlineData(4313549)]
     [InlineData(5148257)]
@@ -37,13 +136,13 @@ public class BeatmapInfoRenderingTests
             await Asset("bg.jpg"), file);
         await Inspect(browser, capture, async page =>
         {
-            Assert.Equal(2, await page.Locator(".curve-panel polyline").CountAsync());
+            Assert.Equal(2, await page.Locator(".curve-panel .strain-curve").CountAsync());
             Assert.Equal(analysis.BpmSegments.Length, await page.Locator(".bpm-band rect").CountAsync());
             Assert.Contains(beatmapId == 4313549 ? "BPM 66–200" : "BPM 17–333",
                 await page.Locator(".curve-panel .legend").InnerTextAsync());
             Assert.True(await page.Locator(".bpm-band").EvaluateAsync<bool>("e => { const labels = [...e.querySelectorAll('text')].filter(t => t.getAttribute('y') === '235').slice(1).map(t => t.getBoundingClientRect()); return labels.every((r, i) => i === 0 || r.left >= labels[i - 1].right); }"));
             Assert.True(await page.Locator(".curve-panel").EvaluateAsync<bool>("e => e.querySelector('svg').getBoundingClientRect().bottom <= e.getBoundingClientRect().bottom"));
-            Assert.Equal(1802, capture.Height);
+            Assert.True(capture.Width > capture.Height);
             Assert.Equal(0, await page.Locator(".bpm-details, .bpm-detail-marker").CountAsync());
             var starts = await page.Locator(".bpm-band rect").EvaluateAllAsync<double[]>("els => els.map(e => Number(e.getAttribute('x')))");
             for (var i = 0; i < starts.Length; i++)
@@ -165,11 +264,11 @@ public class BeatmapInfoRenderingTests
                 new PpCalculatorService(), NullLogger<DefaultBeatmapTheme>.Instance, new BeatmapAnalysisService());
             var map = Map(0, 0); map.Beatmapset = Set();
             await theme.RenderBeatmapAsync(map, new User { Username = "BPM preview" }, Pixel, path);
-            Assert.Equal(1802, capture.Height);
+            Assert.True(capture.Width > capture.Height);
             await Inspect(browser, capture, async page =>
             {
                 Assert.Equal(1, await page.Locator(".bpm-band").CountAsync());
-                Assert.Equal(2, await page.Locator(".curve-panel polyline").CountAsync());
+                Assert.Equal(2, await page.Locator(".curve-panel .strain-curve").CountAsync());
                 Assert.Contains("150", await page.Locator(".bpm-band").TextContentAsync());
                 Assert.Contains("120", await page.Locator(".bpm-band").TextContentAsync());
                 Assert.True(await page.Locator(".curve-panel").EvaluateAsync<bool>("e => e.querySelector('svg').getBoundingClientRect().bottom <= e.getBoundingClientRect().bottom"));
@@ -193,7 +292,7 @@ public class BeatmapInfoRenderingTests
             Assert.DoesNotContain("bpm-band", capture.Html);
             Assert.DoesNotContain("bpm-details", capture.Html);
             Assert.DoesNotContain("BPM 120–120", capture.Html);
-            Assert.Equal(1768, capture.Height);
+            Assert.True(capture.Width > capture.Height);
             await new BeatmapBpmTheme(capture).RenderAsync(map, BeatmapBpmTimeline.ReadAll(path), includeDetails: true);
             Assert.Contains("恒定 BPM", capture.Html);
             await Inspect(browser, capture, async page =>
@@ -238,16 +337,16 @@ public class BeatmapInfoRenderingTests
             Assert.Contains("1,861", capture.Html); Assert.Contains("417", capture.Html); Assert.Contains("2,900", capture.Html);
             foreach (var field in new[] { "SS PP", "Circles", "Sliders", "CS", "HP", "OD", "AR", "Ranked", "MAP", "SET", "来源", "谱师", "总时长" })
                 Assert.Contains(field, capture.Html);
-            Assert.DoesNotContain("gradient(", capture.Html);
+            Assert.Contains("mask-image:linear-gradient", capture.Html);
             await Inspect(browser, capture, async page =>
             {
                 Assert.True(await page.Locator(".identity > *").EvaluateAllAsync<bool>("els => els.every(e => {const b=e.getBoundingClientRect(),p=e.closest('.identity').getBoundingClientRect(); return b.top>=p.top && b.bottom<=p.bottom;})"));
                 Assert.True(await page.Locator(".small-value, .attribute").EvaluateAllAsync<bool>("els => els.every(e => e.getBoundingClientRect().bottom <= document.querySelector('footer').getBoundingClientRect().top)"));
                 Assert.Equal(4, await page.Locator(".attribute").CountAsync());
-                Assert.Equal(mode == 0 ? "56px" : "52px", await page.Locator(".title").EvaluateAsync<string>("e => getComputedStyle(e).fontSize"));
+                Assert.Equal("56px", await page.Locator(".title").EvaluateAsync<string>("e => getComputedStyle(e).fontSize"));
                 if (mode == 0)
                 {
-                    Assert.Equal(1802, capture.Height);
+                    Assert.True(capture.Width > capture.Height);
                     Assert.Equal(4, await page.Locator(".fc-panel .analysis-cell").CountAsync());
                     Assert.Equal(3, await page.Locator(".component-cell").CountAsync());
                     Assert.Equal(5, await page.Locator(".mod-table tbody tr").CountAsync());
@@ -256,14 +355,16 @@ public class BeatmapInfoRenderingTests
                     Assert.DoesNotContain("秒采样", capture.Html);
                     Assert.Contains("683.83", capture.Html);
                     Assert.Contains("792.13", capture.Html);
-                    Assert.Contains("3.7887", capture.Html);
+                    Assert.Equal(0, await page.Locator(".skills-panel").CountAsync());
                     Assert.True(await page.EvaluateAsync<bool>("document.querySelector('.performance').nextElementSibling.classList.contains('details')"));
-                    Assert.True(await page.Locator(".pp-row, .analysis-row, .fc-panel, .component-panel, .mods-panel, .skills-panel, .details, .a-value, .mod-table td").EvaluateAllAsync<bool>("els => els.every(e => e.scrollHeight <= e.clientHeight + 1 && e.scrollWidth <= e.clientWidth + 1)"));
-                    Assert.Equal(2, await page.Locator(".curve-panel polyline").CountAsync());
+                    var overflowing = await page.Locator(".pp-row, .analysis-row, .fc-panel, .component-panel, .mods-panel, .skills-panel, .details, .a-value, .mod-table td").EvaluateAllAsync<string[]>("els => els.filter(e => e.scrollHeight > e.clientHeight + 1 || e.scrollWidth > e.clientWidth + 1).map(e => e.className + ': ' + e.textContent + ' [' + e.scrollWidth + '/' + e.clientWidth + ']')");
+                    Assert.True(overflowing.Length == 0, string.Join("; ", overflowing));
+                    Assert.Equal(2, await page.Locator(".curve-panel .strain-curve").CountAsync());
+                    Assert.True(await page.Locator(".mod-icon-slot").EvaluateAllAsync<bool>("slots => slots.every(e => { const r = e.getBoundingClientRect(); const icon = e.firstElementChild.getBoundingClientRect(); return Math.abs((r.top + r.bottom) / 2 - (icon.top + icon.bottom) / 2) < 1; })"));
                 }
                 else
                 {
-                    Assert.Equal(900, capture.Height);
+                    Assert.True(capture.Width > capture.Height);
                     Assert.Equal(0, await page.Locator(".mod-table").CountAsync());
                 }
             });
@@ -307,14 +408,31 @@ public class BeatmapInfoRenderingTests
         }
         Assert.Equal(mode, map.ModeInt);
         Assert.Equal(new byte[] { 137, 80, 78, 71 }, png[..4]);
-        Assert.DoesNotContain("gradient(", capture.Html);
+        Assert.Contains("mask-image:linear-gradient", capture.Html);
         Assert.DoesNotContain("秒采样", capture.Html);
         Assert.DoesNotContain("速率", capture.Html);
         Assert.Contains(map.Beatmapset.Title, capture.Html);
         await Inspect(browser, capture, async page =>
         {
-            Assert.Equal(1768, capture.Height);
-            Assert.Equal(curves, await page.Locator(".curve-panel polyline").CountAsync());
+            Assert.True(capture.Width > capture.Height);
+            Assert.Equal(curves, await page.Locator(".curve-panel .strain-curve").CountAsync());
+            // Each cubic's control points stay inside its endpoint range, so smoothing
+            // cannot introduce a higher peak or lower trough than the plotted data.
+            Assert.True(await page.Locator(".strain-curve").EvaluateAllAsync<bool>("""
+                curves => curves.every(e => {
+                    const parts = e.getAttribute('d').split(' C ');
+                    let previousY = Number(parts[0].split(' ')[2]);
+                    return parts.slice(1).every(part => {
+                        const v = part.split(' ').map(Number);
+                        const low = Math.min(previousY, v[5]) - .001;
+                        const high = Math.max(previousY, v[5]) + .001;
+                        previousY = v[5];
+                        return v.every(Number.isFinite) && v[0] < v[2] && v[2] < v[4]
+                            && v[1] >= low && v[1] <= high && v[3] >= low && v[3] <= high;
+                    });
+                })
+                """));
+            Assert.True(await page.Locator(".mod-symbol").EvaluateAllAsync<bool>("els => els.every(e => e.clientWidth >= 44 && e.clientHeight >= 44)"));
             Assert.Equal(components, await page.Locator(".component-cell").CountAsync());
             Assert.Equal(4, await page.Locator(".fc-panel .analysis-cell").CountAsync());
             Assert.Equal(5, await page.Locator(".mod-table tbody tr").CountAsync());
@@ -443,10 +561,14 @@ public class BeatmapInfoRenderingTests
             return png;
         }
     }
-    private sealed class Calculator : IPpCalculatorService
+    private sealed class FixedAnalysis(BeatmapAnalysis analysis) : IBeatmapAnalysisService
+    {
+        public BeatmapAnalysis? Calculate(string osuFilePath) => analysis;
+    }
+    private sealed class Calculator(double stars = 7.69) : IPpCalculatorService
     {
         public PpResult CalculateFixed(Score score, string osuFilePath) => throw new NotSupportedException();
-        public PpResult CalculateSs(string osuFilePath, int rulesetId, uint mods = 0) => new(792, 7.69, 2900);
+        public PpResult CalculateSs(string osuFilePath, int rulesetId, uint mods = 0) => new(792, stars, 2900);
         public PpResult Calculate(Score score, string osuFilePath) => throw new NotSupportedException();
         public (double IfPp, double SsPp) CalculateIfFcAndSs(Score score, string osuFilePath) => throw new NotSupportedException();
         public (double NewPp, int Position) FindOptimalNewPp(List<double> ppList, double desiredIncrease) => throw new NotSupportedException();

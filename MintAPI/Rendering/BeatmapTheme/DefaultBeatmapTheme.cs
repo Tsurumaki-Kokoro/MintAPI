@@ -36,7 +36,7 @@ public class DefaultBeatmapTheme
         var analysis = theme == "default" ? _analysis.Calculate(osuFilePath) : null;
         if (analysis is not null && analysis.Mode != beatmap.ModeInt) analysis = null;
         var bpmExtraHeight = analysis?.BpmSegments.Length > 1 ? 34 : 0;
-        var imageHeight = theme == "default" ? analysis is not null ? 1768 + bpmExtraHeight : 900 : 600;
+        var imageHeight = theme == "default" ? 0 : 600;
         var ppResult = analysis?.Ss ?? _ppCalc.CalculateSs(osuFilePath, beatmap.ModeInt);
         var stars = ppResult.Stars;
 
@@ -70,7 +70,7 @@ public class DefaultBeatmapTheme
         var diffInfo = new object[]
         {
             $"{length / 60}:{length % 60:00}",
-            $"{beatmap.Bpm ?? 0:0}",
+            beatmap.Bpm is { } bpm ? $"{bpm:0}" : theme == "default" ? "—" : "0",
             beatmap.CountCircles,
             beatmap.CountSliders
         };
@@ -115,9 +115,11 @@ public class DefaultBeatmapTheme
             scriptObj["map_title"] = WebUtility.HtmlEncode(beatmapsetCompact?.Title ?? "");
             scriptObj["mode_name"] = ModeName(beatmap.ModeInt);
             scriptObj["mode_image"] = ModeImage(beatmap.ModeInt);
+            scriptObj["stars_bg_color"] = OsuDifficultyColour.Background(stars);
+            scriptObj["stars_color"] = OsuDifficultyColour.Text(stars);
             scriptObj["stars_text"] = $"{stars:0.00}";
             scriptObj["star_percent"] = Math.Clamp(stars, 0, 10) * 10;
-            scriptObj["combo_text"] = $"{analysis?.Ss.MaxCombo ?? (uint)(beatmap.MaxCombo ?? 0):N0}";
+            scriptObj["combo_text"] = analysis is not null ? $"{analysis.Ss.MaxCombo:N0}" : beatmap.MaxCombo is { } combo ? $"{combo:N0}" : "—";
             scriptObj["pp_text"] = analysis is not null ? $"{ppResult.Pp:N2}" : $"{Math.Round(ppResult.Pp):N0}";
             scriptObj["circles_text"] = $"{beatmap.CountCircles:N0}";
             scriptObj["sliders_text"] = $"{beatmap.CountSliders:N0}";
@@ -135,7 +137,7 @@ public class DefaultBeatmapTheme
         var html = await template.RenderAsync(templateCtx);
 
         return theme == "default"
-            ? await RenderAttribution.RenderAsync(_renderer, html, 1500, imageHeight)
+            ? await RenderAttribution.RenderAsync(_renderer, html, 2000, imageHeight)
             : await _renderer.RenderHtmlAsync(html, 1200, imageHeight);
     }
 
@@ -258,8 +260,7 @@ public class DefaultBeatmapTheme
             accuracy = analysis.Mode == 2 ? FormattableString.Invariant($"{row.Accuracy:0.00}%") : "",
             detail = WebUtility.HtmlEncode(row.Detail ?? ""),
             pp = FormattableString.Invariant($"{row.Pp:0.00}"),
-            font_size = analysis.Mode <= 1 ? row.Pp < 1000 ? 41 : row.Pp < 10000 ? 36 : 32
-                : row.Pp < 1000 ? 55 : row.Pp < 10000 ? 49 : 43
+            font_size = row.Pp < 1000 ? 32 : row.Pp < 10000 ? 28 : 24
         }).ToArray();
         values["pp_components"] = analysis.Mode == 1 ? new[]
         {
@@ -273,7 +274,8 @@ public class DefaultBeatmapTheme
         };
         values["mod_references"] = analysis.Mods.Select(row => new
         {
-            name = row.Name, stars = $"{row.Stars:0.00}", pp = $"{row.Pp:N2}", ar = $"{row.Ar:0.00}", od = $"{row.Od:0.00}",
+            name = row.Name, stars = $"{row.Stars:0.00}",
+            stars_bg = OsuDifficultyColour.Background(row.Stars), stars_color = OsuDifficultyColour.Text(row.Stars), pp = $"{row.Pp:N2}", ar = $"{row.Ar:0.00}", od = $"{row.Od:0.00}",
             great_window = $"±{row.GreatHitWindow:0.0}", ok_window = $"±{row.OkHitWindow:0.0}",
             icon = row.Name == "NM" ? "" : AssetDataUrl(Path.Combine("osu-web", "public", "images", "badges", "mods",
                 row.Name switch { "HD" => "mod-hidden.svg", "HR" => "mod-hard-rock.svg", "HT" => "mod-half-time.svg",

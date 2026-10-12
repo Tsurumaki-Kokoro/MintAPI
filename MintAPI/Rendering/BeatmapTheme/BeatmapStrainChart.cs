@@ -62,10 +62,10 @@ internal static class BeatmapStrainChart
         {
             var skill = i;
             var plotted = points.GroupBy(p => (int)X(p.EndTimeMs))
-                .Select(g => g.MaxBy(p => p.Values[skill])!).OrderBy(p => p.EndTimeMs);
-            svg.Append($"<polyline fill=\"none\" stroke=\"{series[i].Color}\" stroke-width=\"2.7\" stroke-linejoin=\"round\" points=\"");
-            foreach (var point in plotted)
-                svg.Append(FormattableString.Invariant($"{X(point.EndTimeMs):0.##},{Y(point.Values[i]):0.##} "));
+                .Select(g => g.MaxBy(p => p.Values[skill])!).OrderBy(p => p.EndTimeMs)
+                .Select(p => (X: X(p.EndTimeMs), Y: Y(p.Values[skill]))).ToArray();
+            svg.Append($"<path class=\"strain-curve\" fill=\"none\" stroke=\"{series[i].Color}\" stroke-width=\"2.7\" stroke-linecap=\"round\" d=\"");
+            svg.Append(SmoothPath(plotted, end - start, right - left));
             svg.Append("\"/>");
         }
         var peaks = new List<int>();
@@ -88,4 +88,68 @@ internal static class BeatmapStrainChart
         }
         return svg.Append("</svg>").ToString();
     }
+    // Monotone cubic Hermite interpolation: keep every plotted sample and prevent
+    // control points from creating artificial peaks between neighbouring samples.
+    private static string SmoothPath((double X, double Y)[] points, double durationMs, double plotWidth)
+    {
+        if (points.Length == 0) return "";
+        var path = new StringBuilder(FormattableString.Invariant($"M {points[0].X:0.####} {points[0].Y:0.####}"));
+        if (points.Length == 1) return path.ToString();
+        // Short maps get finer temporal subdivision; long maps use fewer segments
+        // once they occupy about two output pixels. Subdivision preserves the same
+        // cubic geometry, rather than averaging away short-lived peaks.
+        var intervalMs = Math.Max(100, durationMs / plotWidth * 2);
+        var slopes = new double[points.Length - 1];
+        var tangents = new double[points.Length];
+        for (var i = 0; i < slopes.Length; i++)
+            slopes[i] = (points[i + 1].Y - points[i].Y) / (points[i + 1].X - points[i].X);
+        tangents[0] = slopes[0];
+        tangents[^1] = slopes[^1];
+        for (var i = 1; i < points.Length - 1; i++)
+        {
+            if (slopes[i - 1] == 0 || slopes[i] == 0 || Math.Sign(slopes[i - 1]) != Math.Sign(slopes[i])) continue;
+            var previousWidth = points[i].X - points[i - 1].X;
+            var nextWidth = points[i + 1].X - points[i].X;
+            var w1 = 2 * nextWidth + previousWidth;
+            var w2 = nextWidth + 2 * previousWidth;
+            tangents[i] = (w1 + w2) / (w1 / slopes[i - 1] + w2 / slopes[i]);
+        }
+        for (var i = 0; i < slopes.Length; i++)
+        {
+            var from = points[i];
+            var to = points[i + 1];
+            var thirdWidth = (to.X - from.X) / 3;
+            var lower = Math.Min(from.Y, to.Y);
+            var upper = Math.Max(from.Y, to.Y);
+            var c1 = Math.Clamp(from.Y + thirdWidth * tangents[i], lower, upper);
+            var c2 = Math.Clamp(to.Y - thirdWidth * tangents[i + 1], lower, upper);
+            var intervalDuration = (to.X - from.X) / plotWidth * durationMs;
+            var subdivisions = Math.Clamp((int)Math.Ceiling(intervalDuration / intervalMs), 1, 8);
+            double Value(double t)
+            {
+                var u = 1 - t;
+                return u * u * u * from.Y + 3 * u * u * t * c1 + 3 * u * t * t * c2 + t * t * t * to.Y;
+            }
+            double Derivative(double t)
+            {
+                var u = 1 - t;
+                return 3 * u * u * (c1 - from.Y) + 6 * u * t * (c2 - c1) + 3 * t * t * (to.Y - c2);
+            }
+            for (var j = 0; j < subdivisions; j++)
+            {
+                var t0 = (double)j / subdivisions;
+                var t1 = (double)(j + 1) / subdivisions;
+                var dt = t1 - t0;
+                var y0 = Value(t0);
+                var y1 = Value(t1);
+                var control1 = y0 + Derivative(t0) * dt / 3;
+                var control2 = y1 - Derivative(t1) * dt / 3;
+                var x0 = from.X + (to.X - from.X) * t0;
+                var x1 = from.X + (to.X - from.X) * t1;
+                path.Append(FormattableString.Invariant($" C {x0 + (x1 - x0) / 3:0.####} {control1:0.####} {x1 - (x1 - x0) / 3:0.####} {control2:0.####} {x1:0.####} {y1:0.####}"));
+            }
+        }
+        return path.ToString();
+    }
+
 }
