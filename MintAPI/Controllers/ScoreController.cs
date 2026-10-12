@@ -203,7 +203,6 @@ public class ScoreController(
     /// <response code="404">未绑定或没有符合条件的成绩。</response>
     /// <response code="500">查询或渲染失败。</response>
     [HttpGet("new_best_plays")]
-    [HttpGet("nb")]
     [Produces("image/png", "application/problem+json")]
     public async Task<IActionResult> NewBestPlays([FromQuery] string platform, [FromQuery] string platform_uid,
         [FromQuery] int days = 1, [FromQuery] int? game_mode = null, [FromQuery] bool? legacy_only = null,

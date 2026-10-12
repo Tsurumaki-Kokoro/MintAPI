@@ -45,11 +45,11 @@ FC 计算支持 Stable/Lazer 及四种模式转换、自定义速度；其余非
 
 ## 近 N 日新增 BP（NB）
 
-参考 [osubot `/nb`（`tbp` / `todaybp`）](https://github.com/yaowan233/nonebot-plugin-osubot/blob/master/src/nonebot_plugin_osubot/matcher/bp.py)，新增 `GET /score/new_best_plays`，别名 `GET /score/nb`。返回 default 风格 PNG 列表，保留原 BP 排名、谱面/Mods/评级/PP/准确率/加权信息，并显示游玩时间（UTC）。
+参考 [osubot `/nb`（`tbp` / `todaybp`）](https://github.com/yaowan233/nonebot-plugin-osubot/blob/master/src/nonebot_plugin_osubot/matcher/bp.py)，新增 `GET /score/new_best_plays`。返回 default 风格 PNG 列表，保留原 BP 排名、谱面/Mods/评级/PP/准确率/加权信息，并显示游玩时间（UTC）。
 
 ```text
 /score/new_best_plays?platform=qq&platform_uid=123
-/score/nb?platform=qq&platform_uid=123&days=7&game_mode=0&legacy_only=true&mods=HD,HR&first=1&last=10
+/score/new_best_plays?platform=qq&platform_uid=123&days=7&game_mode=0&legacy_only=true&mods=HD,HR&first=1&last=10
 ```
 
 - `days`：1–365，默认 1，按请求开始时刻向前滚动 24 小时计算；不按日历日期截断。成绩时间必须严格晚于窗口起点，不晚于请求时刻。

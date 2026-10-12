@@ -1,3 +1,9 @@
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using MintAPI.Errors;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
@@ -17,6 +23,33 @@ namespace MintAPI.Tests.Integration;
 
 public class NewBestPlaysControllerTests
 {
+    [Fact]
+    public async Task Only_full_new_best_plays_route_is_available()
+    {
+        var builder = WebApplication.CreateSlimBuilder();
+        builder.Logging.ClearProviders();
+        builder.Services.AddControllers(options => options.Filters.Add<ApiErrorFilter>())
+            .AddApplicationPart(typeof(ScoreController).Assembly).AddControllersAsServices();
+        builder.Services.AddTransient(_ => new ScoreController(null!, null!, null!, null!, null!,
+            NullLogger<ScoreController>.Instance));
+        await using var app = builder.Build();
+        app.MapControllers();
+        app.Urls.Add("http://127.0.0.1:0");
+        await app.StartAsync();
+        try
+        {
+            var address = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.First();
+            using var http = new HttpClient { BaseAddress = new Uri(address) };
+            http.DefaultRequestHeaders.Accept.ParseAdd("image/png");
+            // Invalid days exercises the real action without invoking external dependencies.
+            using var full = await http.GetAsync("/score/new_best_plays?platform=qq&platform_uid=1&days=0");
+            await ApiErrorAssertions.AssertAsync(full, ErrorCatalog.InvalidArgument);
+            using var alias = await http.GetAsync("/score/nb?platform=qq&platform_uid=1&days=0");
+            Assert.Equal(System.Net.HttpStatusCode.NotFound, alias.StatusCode);
+        }
+        finally { await app.StopAsync(); }
+    }
+
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
