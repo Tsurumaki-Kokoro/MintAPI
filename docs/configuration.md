@@ -8,7 +8,7 @@
 |---|---|---|
 | `CacheDir` | `cache` | 保留已有配置键，下载服务、预览和清缓存接口共用 |
 | `Storage:LogDirectory` | `logs` | 文件日志与 `/task/pack_logs` 共用 |
-| `Storage:TokenCacheDirectory` | `null` | 未指定或为 null 时沿用程序目录下 `token_cache`；可显式指定目录 |
+| `Storage:TokenCacheDirectory` | `null` | 未指定、为 null 或空字符串时沿用程序目录下 `token_cache`；可显式指定目录 |
 
 相对路径以应用 **ContentRootPath** 为基准；绝对路径原样使用。程序随附的模板、字体、图标和预览 CLI 仍按程序目录定位。浏览器路径没有新增配置。
 

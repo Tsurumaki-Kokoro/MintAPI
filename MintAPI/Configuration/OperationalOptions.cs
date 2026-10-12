@@ -3,7 +3,13 @@ namespace MintAPI.Configuration;
 public sealed class StorageOptions
 {
     public string LogDirectory { get; set; } = "logs";
-    public string? TokenCacheDirectory { get; set; }
+    private string? _tokenCacheDirectory;
+    public string? TokenCacheDirectory
+    {
+        get => _tokenCacheDirectory;
+        // .NET 9's JSON provider represents JSON null as an empty string.
+        set => _tokenCacheDirectory = string.IsNullOrEmpty(value) ? null : value;
+    }
     public bool IsValid() => !string.IsNullOrWhiteSpace(LogDirectory) && (TokenCacheDirectory is null || !string.IsNullOrWhiteSpace(TokenCacheDirectory));
 }
 

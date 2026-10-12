@@ -24,6 +24,25 @@ public sealed class OperationalConfigurationTests
     }
 
     [Theory]
+    [InlineData("null")]
+    [InlineData("\"\"")]
+    public void Json_null_or_empty_token_directory_uses_legacy_default(string jsonValue)
+    {
+        using var json = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(
+            "{\"Storage\":{\"LogDirectory\":\"logs\",\"TokenCacheDirectory\":" + jsonValue + "}}"));
+        var config = new ConfigurationBuilder().AddJsonStream(json).Build();
+        var paths = new StoragePaths(config);
+        Assert.Equal(Path.Combine(AppContext.BaseDirectory, "token_cache"), paths.TokenCacheDirectory);
+    }
+
+    [Fact]
+    public void Whitespace_token_directory_is_rejected()
+    {
+        Assert.Throws<ArgumentException>(() => new StoragePaths(Config(new()
+        { ["Storage:TokenCacheDirectory"] = "   " })));
+    }
+
+    [Theory]
     [InlineData("cache", "cache")]
     [InlineData("cache", "cache/logs")]
     [InlineData("data/cache", "data")]
