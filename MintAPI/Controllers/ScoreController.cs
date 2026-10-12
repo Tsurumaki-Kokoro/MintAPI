@@ -20,7 +20,7 @@ public class ScoreController(
     HistoryService history,
     ILogger<ScoreController> logger) : ControllerBase
 {
-    /// <summary>渲染最近游玩的单条成绩或区间列表。</summary>
+    /// <summary>渲染最近游玩的单条成绩或区间列表；default 单成绩使用紧凑横版，列表使用竖版。</summary>
     /// <param name="platform">平台。</param>
     /// <param name="platform_uid">平台用户 ID。</param>
     /// <param name="game_mode">模式 0–3，默认使用绑定模式。</param>
@@ -92,10 +92,10 @@ public class ScoreController(
         if (recent_end.HasValue)
             return await RenderScoreListAsync(scores, userInfo, recent_index, recent: true);
 
-        return await RenderScoreAsync(scores[0], userInfo, mode, theme, $"RECENT PLAY · #{recent_index}");
+        return await RenderScoreAsync(scores[0], userInfo, mode, theme, $"RECENT PLAY · #{recent_index}", compact: true);
     }
 
-    /// <summary>渲染第 N 个最好成绩（BP）。</summary>
+    /// <summary>渲染第 N 个最好成绩（BP）；default 使用紧凑横版。</summary>
     /// <param name="platform">平台。</param>
     /// <param name="platform_uid">平台用户 ID。</param>
     /// <param name="game_mode">模式 0–3，默认使用绑定模式。</param>
@@ -186,7 +186,7 @@ public class ScoreController(
         if (best_end.HasValue)
             return await RenderScoreListAsync(scores, userInfo, best_index, recent: false);
 
-        return await RenderScoreAsync(scores[0], userInfo, mode, theme, $"BEST PLAY · #{best_index}");
+        return await RenderScoreAsync(scores[0], userInfo, mode, theme, $"BEST PLAY · #{best_index}", compact: true);
     }
 
     /// <summary>渲染近 N 日新增 BP，筛选当前前 200 BP，保留原 BP 排名。</summary>
@@ -282,7 +282,7 @@ public class ScoreController(
         }
     }
 
-    /// <summary>渲染指定用户在指定谱面上的成绩图。</summary>
+    /// <summary>渲染指定用户在指定谱面上的成绩图；default 使用紧凑横版。</summary>
     /// <param name="platform">平台。</param>
     /// <param name="platform_uid">平台用户 ID。</param>
     /// <param name="beatmap_id">谱面 ID。</param>
@@ -347,7 +347,7 @@ public class ScoreController(
         if (userScores.Count == 0)
             return ApiErrors.Result(ErrorCatalog.ScoreNotFound, diagnostic: "No score found for this beatmap");
 
-        return await RenderScoreAsync(userScores[0], userInfo, mode, theme, "MAP SCORE");
+        return await RenderScoreAsync(userScores[0], userInfo, mode, theme, "MAP SCORE", compact: true);
     }
 
     private async Task<IActionResult> RenderScoreListAsync(List<Score> scores, User user, int firstIndex, bool recent)
@@ -366,7 +366,8 @@ public class ScoreController(
         }
     }
 
-    private async Task<IActionResult> RenderScoreAsync(Score score, User userInfo, GameMode? mode, string theme, string heading)
+    private async Task<IActionResult> RenderScoreAsync(Score score, User userInfo, GameMode? mode, string theme, string heading,
+        bool compact = false)
     {
         var beatmap = score.Beatmap;
         var beatmapset = score.Beatmapset ?? beatmap?.Beatmapset;
@@ -404,7 +405,7 @@ public class ScoreController(
         byte[] image;
         try
         {
-            image = await scoreTheme.RenderAsync(score, userInfo, mapBg, osuFilePath, diffAttrs, theme, heading);
+            image = await scoreTheme.RenderAsync(score, userInfo, mapBg, osuFilePath, diffAttrs, theme, heading, compact);
         }
         catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {

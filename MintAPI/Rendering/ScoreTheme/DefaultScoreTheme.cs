@@ -58,7 +58,8 @@ public class DefaultScoreTheme
     }
 
     public async Task<byte[]> RenderAsync(Score score, User user, byte[] mapBg,
-        string osuFilePath, BeatmapDifficultyAttributes? diffAttrs, string theme = "default", string heading = "成绩")
+        string osuFilePath, BeatmapDifficultyAttributes? diffAttrs, string theme = "default", string heading = "成绩",
+        bool compact = false)
     {
         if (theme is not ("default" or "yaowan"))
             throw new ArgumentOutOfRangeException(nameof(theme));
@@ -184,6 +185,7 @@ public class DefaultScoreTheme
         var ppText = $"{score.Pp ?? ppResult.Pp:0.00}";
         scriptObj["pp"] = ppText;
         scriptObj["pp_size"] = ppText.Length <= 6 ? 124 : ppText.Length == 7 ? 96 : 82;
+        scriptObj["compact_pp_size"] = ppText.Length <= 6 ? 96 : ppText.Length == 7 ? 82 : 64;
         scriptObj["fc_pp"] = $"{ifPp:0.00}";
         scriptObj["ss_pp"] = $"{ssPp:0.00}";
         scriptObj["combo"] = $"{score.MaxCombo:N0} / {ppResult.MaxCombo:N0}";
@@ -231,7 +233,10 @@ public class DefaultScoreTheme
         var templateCtx = new TemplateContext();
         templateCtx.PushGlobal(scriptObj);
 
-        var templateSrc = await File.ReadAllTextAsync(TemplatePath(theme));
+        var compactLayout = compact && theme == "default";
+        var templateSrc = await File.ReadAllTextAsync(compactLayout
+            ? Path.Combine(AppContext.BaseDirectory, "Rendering", "ScoreTheme", "templates", "default", "single.html")
+            : TemplatePath(theme));
         var template = Template.Parse(templateSrc);
         if (template.HasErrors) throw new InvalidOperationException(template.Messages.ToString());
         // Escape API text before inserting it into HTML; generated SVG/stats remain markup.
@@ -241,7 +246,7 @@ public class DefaultScoreTheme
         var html = await template.RenderAsync(templateCtx);
 
         return theme == "default"
-            ? await RenderAttribution.RenderAsync(_renderer, html, 1500, (int)scriptObj["image_height"])
+            ? await RenderAttribution.RenderAsync(_renderer, html, 1500, compactLayout ? 0 : (int)scriptObj["image_height"])
             : await _renderer.RenderHtmlAsync(html, 1500, (int)scriptObj["image_height"]);
     }
 

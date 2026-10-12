@@ -10,6 +10,109 @@ namespace MintAPI.Tests.Integration;
 public class ScoreRenderingTests
 {
     [Theory]
+    [InlineData(0, false)]
+    [InlineData(1, false)]
+    [InlineData(2, false)]
+    [InlineData(3, false)]
+    [InlineData(0, true)]
+    [InlineData(1, true)]
+    [InlineData(2, true)]
+    [InlineData(3, true)]
+    public async Task Compact_single_scores_render_landscape_and_keep_boundary_content(int mode, bool best)
+    {
+        await using var browser = new PlaywrightBrowserProvider(NullLogger<PlaywrightBrowserProvider>.Instance);
+        await browser.StartAsync();
+        var capture = new Capture(new PlaywrightRenderer(browser));
+        var pixel = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aWZsAAAAASUVORK5CYII=");
+        var avatarPath = Environment.GetEnvironmentVariable("SCORE_PREVIEW_AVATAR");
+        var imagePath = Environment.GetEnvironmentVariable("SCORE_PREVIEW_IMAGE");
+        var avatar = avatarPath == null ? pixel : await File.ReadAllBytesAsync(avatarPath);
+        var cover = imagePath == null ? pixel : await File.ReadAllBytesAsync(imagePath);
+        var theme = new DefaultScoreTheme(capture, new AvatarCardImageCache(avatar), new Calculator(), NullLogger<DefaultScoreTheme>.Instance);
+        var user = new User { Id = 1, Username = "Aster", CountryCode = "CN", IsSupporter = true, Statistics = new UserStatistics { CountryRank = 27 } };
+        var score = new Score
+        {
+            RulesetId = mode, Rank = MintOsuApi.Enums.Grade.A, Pp = 321.45, Accuracy = .9876, MaxCombo = 1234,
+            TotalScore = 987654321, EndedAt = DateTimeOffset.Parse("2026-09-30T08:00:00Z"), RankGlobal = 5,
+            Beatmap = new Beatmap { Id = 123, Version = "Another [Long Difficulty Name]", Cs = 4, Ar = 9.5, Accuracy = 8, Drain = 6, Bpm = 180, TotalLength = 215 },
+            Beatmapset = new BeatmapsetCompact { Title = "星の世界 / A song for the end of a very long journey", Artist = "Lumen & 月白", Creator = "Aster" },
+            Mods = [new NonLegacyMod { Acronym = "HD" }, new NonLegacyMod { Acronym = "NC" }, new NonLegacyMod { Acronym = "DT" }],
+            Statistics = new Statistics { Great = 1200, Ok = 23, Meh = 3, Miss = 2, Perfect = 800, Good = 16, LargeTickHit = 200, SmallTickHit = 350, SmallTickMiss = 8 }
+        };
+        await using var context = await browser.Browser.NewContextAsync(new BrowserNewContextOptions { ViewportSize = new ViewportSize { Width = 1500, Height = 720 } });
+        var page = await context.NewPageAsync();
+        var tempHtml = Path.Combine(Path.GetTempPath(), $"recent-layout-{Guid.NewGuid():N}.html");
+        try
+        {
+            foreach (var sample in new[] { "normal", "long", "missing" })
+            {
+                if (sample == "long")
+                {
+                    user.Username = "Aster <script>alert(1)</script> " + new string('星', 40);
+                    score.Beatmapset.Title = string.Concat(Enumerable.Repeat("星の世界 / Journey & <end> ", 6));
+                    score.Beatmap.Version = string.Concat(Enumerable.Repeat("長い難度 [Another] ", 6));
+                    score.Pp = 12345.67;
+                    score.MaxCombo = 1234567;
+                    score.TotalScore = 987654321012;
+                    score.Rank = MintOsuApi.Enums.Grade.SSH;
+                    score.Mods.AddRange(new[] { "HR", "FL", "SD", "NF", "SO", "DA" }.Select(acronym => new NonLegacyMod { Acronym = acronym }));
+                }
+                else if (sample == "missing")
+                {
+                    user.Username = "Aster";
+                    user.Statistics = null;
+                    score.Beatmapset.Title = "Epitaph";
+                    score.Beatmap.Version = "Elegy";
+                    score.Pp = null;
+                    score.Statistics = null;
+                    score.RankGlobal = null;
+                    score.Rank = MintOsuApi.Enums.Grade.F;
+                    score.Mods = [];
+                }
+                var png = await theme.RenderAsync(score, user, cover, "fixture.osu", null, heading: $"{(best ? "BEST PLAY" : "RECENT PLAY")} · #2", compact: true);
+                Assert.Equal(0, capture.Height);
+                Assert.Equal(new byte[] { 137, 80, 78, 71 }, png[..4]);
+                var width = System.Buffers.Binary.BinaryPrimitives.ReadInt32BigEndian(png.AsSpan(16, 4));
+                var height = System.Buffers.Binary.BinaryPrimitives.ReadInt32BigEndian(png.AsSpan(20, 4));
+                Assert.Equal(1500, width);
+                if (sample == "normal") Assert.InRange(height, 650, 950);
+                await page.SetViewportSizeAsync(width, height);
+                await File.WriteAllTextAsync(tempHtml, capture.Html);
+                await page.GotoAsync(new Uri(tempHtml).AbsoluteUri);
+                await page.EvaluateAsync("document.fonts.ready");
+                await RenderingAttributionAssertions.CheckAsync(page);
+                Assert.Equal($"{width}x{height}", await page.EvaluateAsync<string>("`${document.documentElement.scrollWidth}x${document.documentElement.scrollHeight}`"));
+                Assert.True(await page.Locator("img").EvaluateAllAsync<bool>("els => els.every(e => e.complete && e.naturalWidth > 0)"));
+                Assert.Equal(mode == 0, await page.Locator(".components").CountAsync() == 1);
+                Assert.True(await page.Locator(".performance, .metric, .song, .hits, .pp-details, .metadata, .judgement, .component, .prediction").EvaluateAllAsync<bool>("els => els.every(e => e.scrollWidth <= e.clientWidth + 1)"));
+                Assert.True(await page.Locator(".pp, .grade").EvaluateAllAsync<bool>("els => els.every(e => {const r=e.getBoundingClientRect(), p=e.closest('.performance').getBoundingClientRect(); return r.left>=p.left-1 && r.right<=p.right+1;})"));
+                if (sample == "long")
+                {
+                    Assert.Contains("&lt;script&gt;", capture.Html);
+                    Assert.DoesNotContain("<script>", capture.Html);
+                    Assert.Equal(user.Username, await page.Locator(".username").InnerTextAsync());
+                    Assert.Equal(score.Beatmapset.Title.Trim(), (await page.Locator("h1").InnerTextAsync()).Trim());
+                }
+                if (sample == "missing")
+                {
+                    Assert.Equal("—", await page.Locator(".miss strong").InnerTextAsync());
+                    Assert.All(await page.Locator(".judgement strong").AllInnerTextsAsync(), value => Assert.Equal("—", value));
+                    Assert.Contains("Global — · Country —", capture.Html);
+                    Assert.Contains("300.00", capture.Html);
+                }
+                var output = Environment.GetEnvironmentVariable("SCORE_PREVIEW_DIR");
+                if (output != null)
+                {
+                    Directory.CreateDirectory(output);
+                    await File.WriteAllBytesAsync(Path.Combine(output, $"{(best ? "best" : "recent")}-{mode}-{sample}.png"), png);
+                    await File.WriteAllTextAsync(Path.Combine(output, $"{(best ? "best" : "recent")}-{mode}-{sample}.html"), capture.Html);
+                }
+            }
+        }
+        finally { File.Delete(tempHtml); }
+    }
+
+    [Theory]
     [InlineData(0, "default")]
     [InlineData(1, "default")]
     [InlineData(2, "default")]
@@ -135,12 +238,25 @@ public class ScoreRenderingTests
             {
                 await File.WriteAllBytesAsync(Path.Combine(output, "3881559-combo.png"), realPng);
                 await File.WriteAllTextAsync(Path.Combine(output, "3881559-combo.html"), capture.Html);
+                var recentNormal = await realTheme.RenderAsync(score, user, realCover,
+                    Path.Combine(AppContext.BaseDirectory, "Fixtures", "3881559.osu"), null, "default", "RECENT PLAY · #1", compact: true);
+                await File.WriteAllBytesAsync(Path.Combine(output, "recent-3881559-nm.png"), recentNormal);
+                await File.WriteAllTextAsync(Path.Combine(output, "recent-3881559-nm.html"), capture.Html);
+                var bestNormal = await realTheme.RenderAsync(score, user, realCover,
+                    Path.Combine(AppContext.BaseDirectory, "Fixtures", "3881559.osu"), null, "default", "BEST PLAY · #1", compact: true);
+                await File.WriteAllBytesAsync(Path.Combine(output, "best-3881559-nm.png"), bestNormal);
+                await File.WriteAllTextAsync(Path.Combine(output, "best-3881559-nm.html"), capture.Html);
+                var mapScore = await realTheme.RenderAsync(score, user, realCover,
+                    Path.Combine(AppContext.BaseDirectory, "Fixtures", "3881559.osu"), null, "default", "MAP SCORE", compact: true);
+                await File.WriteAllBytesAsync(Path.Combine(output, "map-score-3881559.png"), mapScore);
+                await File.WriteAllTextAsync(Path.Combine(output, "map-score-3881559.html"), capture.Html);
                 score.Mods = [new NonLegacyMod { Acronym = "HD" }, new NonLegacyMod { Acronym = "NC" }, new NonLegacyMod { Acronym = "DT" }];
                 var apiPp = score.Pp;
                 score.Pp = null;
                 var recentPng = await realTheme.RenderAsync(score, user, realCover,
-                    Path.Combine(AppContext.BaseDirectory, "Fixtures", "3881559.osu"), null, "default", "RECENT PLAY · #2");
+                    Path.Combine(AppContext.BaseDirectory, "Fixtures", "3881559.osu"), null, "default", "RECENT PLAY · #2", compact: true);
                 await File.WriteAllBytesAsync(Path.Combine(output, "recent-3881559-mods.png"), recentPng);
+                await File.WriteAllTextAsync(Path.Combine(output, "recent-3881559-mods.html"), capture.Html);
                 score.Pp = apiPp;
                 score.Mods = [];
             }
