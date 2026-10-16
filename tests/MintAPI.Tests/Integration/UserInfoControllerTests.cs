@@ -1,3 +1,8 @@
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.Extensions.DependencyInjection;
+using MintAPI.Errors;
 using System.Net;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -122,22 +127,105 @@ public sealed class UserInfoControllerTests
         await Assert.ThrowsAsync<OsuQuotaExceededException>(() => controller.GetUserInfo(user_name: "player"));
     }
 
+    [Theory]
+    [InlineData(null, true)]
+    [InlineData(0, true)]
+    [InlineData(null, false)]
+    [InlineData(0, false)]
+    [InlineData(7, true)]
+    [InlineData(int.MaxValue, true)]
+    [InlineData(int.MaxValue, false)]
+    public async Task Comparison_defaults_to_today_without_falling_back_to_other_days(int? days, bool hasToday)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = CreateDb(connection);
+        await db.Database.EnsureCreatedAsync();
+        var today = new HistoryOptions().Today(DateTimeOffset.UtcNow);
+        db.UserOsuInfoHistories.Add(new UserOsuInfoHistory
+        {
+            OsuUid = "123", GameMode = 0, Date = today.AddDays(-7), Pp = 100
+        });
+        if (hasToday)
+            db.UserOsuInfoHistories.Add(new UserOsuInfoHistory
+            {
+                OsuUid = "123", GameMode = 0, Date = today, Pp = 200
+            });
+        await db.SaveChangesAsync();
+        var renderer = new Renderer();
+        var api = new RecordingOsuApiService
+        {
+            UserHandler = (_, _) => new User
+            {
+                Id = 123, Username = "player", CountryCode = "CN",
+                Statistics = new UserStatistics { Pp = 250 }
+            }
+        };
+        Assert.IsType<FileContentResult>(await CreateController(db, api, renderer)
+            .GetUserInfo(user_name: "player", compare_with: days));
+        if (days > 0)
+        {
+            Assert.Contains("数据对比于 7 天前", renderer.Html);
+            Assert.Contains("↑150", renderer.Html);
+        }
+        else if (hasToday)
+            Assert.Contains("数据对比于当日凌晨", renderer.Html);
+        else
+            Assert.DoesNotContain("数据对比于", renderer.Html);
+    }
+
+    [Theory]
+    [InlineData("-1", false, "INVALID_ARGUMENT", 400)]
+    [InlineData("2147483648", false, "INVALID_ARGUMENT", 400)]
+    [InlineData("7", true, "OSU_API_UNAVAILABLE", 502)]
+    public async Task Comparison_errors_keep_image_accept_http_contract(string days, bool upstreamFails, string code, int status)
+    {
+        await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().Options);
+        var api = new RecordingOsuApiService
+        {
+            UserHandler = (_, _) => throw new HttpRequestException("private-upstream-failure")
+        };
+        var builder = WebApplication.CreateSlimBuilder();
+        builder.Services.AddControllers(options => options.Filters.Add<ApiErrorFilter>())
+            .AddApplicationPart(typeof(UserInfoController).Assembly).AddControllersAsServices();
+        builder.Services.AddTransient<UserInfoController>(_ => CreateController(db, api));
+        await using var app = builder.Build();
+        app.MapControllers();
+        app.Urls.Add("http://127.0.0.1:0");
+        await app.StartAsync();
+        try
+        {
+            var address = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.First();
+            using var http = new HttpClient { BaseAddress = new Uri(address) };
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"/user_info?user_name=player&compare_with={days}");
+            request.Headers.Accept.ParseAdd("image/png");
+            using var response = await http.SendAsync(request);
+            await ApiErrorAssertions.AssertAsync(response, new(status, code, ""), "private-upstream-failure");
+            Assert.Equal(upstreamFails ? 1 : 0, api.CallCount);
+        }
+        finally { await app.StopAsync(); }
+    }
+
     private static AppDbContext CreateDb(SqliteConnection connection) =>
         new(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options);
 
-    private static UserInfoController CreateController(AppDbContext db, IOsuApiService api)
+    private static UserInfoController CreateController(AppDbContext db, IOsuApiService api, Renderer? renderer = null)
     {
         var cache = new ImageCache();
         return new UserInfoController(db, Options.Create(new HistoryOptions()), api, cache,
-            new DefaultUserInfoTheme(new Renderer(), cache, NullLogger<DefaultUserInfoTheme>.Instance),
+            new DefaultUserInfoTheme(renderer ?? new Renderer(), cache, NullLogger<DefaultUserInfoTheme>.Instance),
             null!, null!, NullLogger<UserInfoController>.Instance)
         { ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() } };
     }
 
     private sealed class Renderer : IRenderService
     {
+        public string Html { get; private set; } = "";
         public Task<byte[]> RenderHtmlAsync(string html, int width, int height, CancellationToken cancellationToken = default)
-            => Task.FromResult(new byte[] { 137, 80, 78, 71 });
+        {
+            Html = html;
+            return Task.FromResult(new byte[] { 137, 80, 78, 71 });
+        }
     }
 
     private sealed class ImageCache : IImageCacheService

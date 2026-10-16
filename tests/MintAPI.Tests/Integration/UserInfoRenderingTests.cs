@@ -12,6 +12,30 @@ namespace MintAPI.Tests.Integration;
 public class UserInfoRenderingTests
 {
     [Theory]
+    [InlineData("default")]
+    [InlineData("yaowan")]
+    public async Task Same_day_comparison_label_renders(string themeName)
+    {
+        await using var browser = new PlaywrightBrowserProvider(NullLogger<PlaywrightBrowserProvider>.Instance);
+        await browser.StartAsync();
+        var renderer = new Capture(new PlaywrightRenderer(browser));
+        var theme = new DefaultUserInfoTheme(renderer, new Images([], null, null), NullLogger<DefaultUserInfoTheme>.Instance);
+        var today = new DateOnly(2026, 10, 16);
+        var png = await theme.RenderAsync(new User
+        {
+            Username = "当日对比 Preview", CountryCode = "CN",
+            Statistics = new UserStatistics { Pp = 12345, GlobalRank = 1234 }
+        }, new UserOsuInfoHistory { Date = today, Pp = 12300, GlobalRank = 1250 }, "OSU", themeName, today);
+        Assert.Contains("数据对比于当日凌晨", renderer.Html);
+        var directory = Environment.GetEnvironmentVariable("USER_INFO_PREVIEW_DIR");
+        if (directory is not null)
+        {
+            Directory.CreateDirectory(directory);
+            await File.WriteAllBytesAsync(Path.Combine(directory, $"same-day-{themeName}.png"), png);
+        }
+    }
+
+    [Theory]
     [InlineData("OSU", true, 4)]
     [InlineData("TAIKO", false, 0)]
     [InlineData("FRUITS", true, 30)]

@@ -24,7 +24,7 @@ public class DefaultUserInfoTheme
         _logger = logger;
     }
 
-    public async Task<byte[]> RenderAsync(User user, UserOsuInfoHistory? history, string gameMode, string theme = "default")
+    public async Task<byte[]> RenderAsync(User user, UserOsuInfoHistory? history, string gameMode, string theme = "default", DateOnly? comparisonToday = null)
     {
         if (theme is not ("default" or "yaowan"))
             throw new ArgumentOutOfRangeException(nameof(theme), theme, "Unsupported user info theme");
@@ -119,12 +119,13 @@ public class DefaultUserInfoTheme
         int timestampX;
 
         var now = DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss");
-        if (history != null && history.Date < DateOnly.FromDateTime(DateTime.Today))
+        var today = comparisonToday ?? DateOnly.FromDateTime(DateTime.Today);
+        if (history != null && history.Date <= today)
         {
-            var dayDelta = DateTime.Today - history.Date.ToDateTime(TimeOnly.MinValue);
+            var days = today.DayNumber - history.Date.DayNumber;
             timestampX = 260;
             timestampText = now;
-            historyText = $"| 数据对比于 {dayDelta.Days} 天前";
+            historyText = days == 0 ? "| 数据对比于当日凌晨" : $"| 数据对比于 {days} 天前";
         }
         else
         {

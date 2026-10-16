@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using MintAPI.Errors;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -28,10 +29,10 @@ public class UserInfoController(
     /// <param name="platform_uid">绑定平台用户 ID；指定用户名时用于选择调用者的默认模式，可省略。</param>
     /// <param name="game_mode">模式 0–3，默认使用绑定模式，没有绑定时使用 0。</param>
     /// <param name="user_name">直接指定 osu! 用户名或 UID，无需绑定。</param>
-    /// <param name="compare_with">对比 N 天前的最近记录。</param>
+    /// <param name="compare_with">对比 N 天前的最近记录；省略或传 0 时仅对比当日凌晨快照，当日无快照则不显示对比；天数超出历史范围时使用最早可用快照。</param>
     /// <param name="theme">渲染主题：default 或 yaowan。</param>
     /// <response code="200">PNG 资料卡。</response>
-    /// <response code="400">主题、模式或查询身份无效。</response>
+    /// <response code="400">主题、模式、对比天数或查询身份无效。</response>
     /// <response code="404">用户未绑定或指定 osu! 用户不存在。</response>
     /// <response code="500">取用户信息或渲染失败。</response>
     /// <response code="502">上游服务查询失败；返回统一错误 JSON。</response>
@@ -42,7 +43,7 @@ public class UserInfoController(
         [FromQuery] string? platform_uid = null,
         [FromQuery] int? game_mode = null,
         [FromQuery] string? user_name = null,
-        [FromQuery] int? compare_with = null,
+        [FromQuery, Range(0, int.MaxValue)] int? compare_with = null,
         [FromQuery] string theme = "default")
     {
         if (theme is not ("default" or "yaowan"))
@@ -83,22 +84,30 @@ public class UserInfoController(
         }
 
         UserOsuInfoHistory? history = null;
-        if (compare_with.HasValue)
+        var today = historyOptions.Value.Today(DateTimeOffset.UtcNow);
+        if (compare_with.GetValueOrDefault() == 0)
         {
-            var compareDate = historyOptions.Value.Today(DateTimeOffset.UtcNow).AddDays(-compare_with.Value);
+            history = await db.UserOsuInfoHistories.AsNoTracking()
+                .FirstOrDefaultAsync(h => h.OsuUid == userInfo.Id.ToString()
+                    && h.GameMode == gameModeInt && h.Date == today);
+        }
+        else
+        {
+            // Use a day number to support large lookback values without DateOnly overflow.
+            var compareDay = (long)today.DayNumber - compare_with!.Value;
             // Try to find the record closest to the target date
-            var candidates = await db.UserOsuInfoHistories
+            var candidates = await db.UserOsuInfoHistories.AsNoTracking()
                 .Where(h => h.OsuUid == userInfo.Id.ToString() && h.GameMode == gameModeInt)
                 .ToListAsync();
             history = candidates
-                .OrderBy(h => Math.Abs(h.Date.DayNumber - compareDate.DayNumber))
+                .OrderBy(h => Math.Abs(h.Date.DayNumber - compareDay))
                 .FirstOrDefault();
         }
 
         byte[] image;
         try
         {
-            image = await userInfoTheme.RenderAsync(userInfo, history, modeStr.ToUpper(), theme);
+            image = await userInfoTheme.RenderAsync(userInfo, history, modeStr.ToUpper(), theme, today);
         }
         catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
