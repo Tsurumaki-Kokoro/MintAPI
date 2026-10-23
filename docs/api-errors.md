@@ -70,3 +70,5 @@ return ApiErrors.Result(ErrorCatalog.InternalError,
 玩家周报、同图对比及动态订阅的错误分支见 [玩家功能](player-features.md#错误契约)。订阅无变化是成功空结果；已取消、已过期或超出保留窗口使用 `RESOURCE_EXPIRED`，不返回“没有成绩”。
 
 群订阅管理沿用原有错误码：群身份缺失、不完整或与 scope 冲突为 `INVALID_ARGUMENT`；单条查询/取消的群归属不匹配为 `RECORD_NOT_FOUND`；空列表及群内取消零条为成功结果。数据库故障不能转换为空列表。详见 [订阅查询与群内取消](player-features.md#3-按群分组与查询订阅)。
+
+`GET /help/image`：帮助海报生成失败使用 `RENDER_FAILED`；渲染繁忙使用 `SERVICE_BUSY` 和 `Retry-After`，即使 `Accept: image/png` 也返回 `application/problem+json`。无需玩家绑定或 osu! 上游查询。

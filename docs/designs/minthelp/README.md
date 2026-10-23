@@ -8,7 +8,7 @@
 
 运行时模板位于 `MintAPI/Rendering/HelpTheme/`，使用现有 PlaywrightRenderer、PlaywrightBrowserProvider 和 RenderAttribution。原始插画与将 LOG 替换为 HELP 的编辑版本保存在 `MintAPI/wwwroot/assets/help/`；编辑版本由内置图片编辑工具生成，人物局部细节可能与原图不同。
 
-本轮仅完成模板与预览，尚未提供帮助图片接口或接入 AstrBot `/minthelp`。现有机器人仍返回文字帮助。管理员专用同步菜单/面板指令不属于这份普通用户海报。
+`GET /help/image` 返回 PNG 帮助海报，沿用 API 的 `access_token` 鉴权，无需绑定玩家或调用 osu!。渲染失败返回 `500 / RENDER_FAILED`，繁忙返回 `503 / SERVICE_BUSY` 与 `Retry-After`；错误均为 `application/problem+json`，包括仅接受 `image/png` 的请求。AstrBot `/minthelp` 优先显示海报，配置未完成或请求失败时回退到文字帮助。管理员专用同步菜单/面板指令作为额外文字，仅在 QQ 官方机器人管理员私聊中显示。
 
 重新生成：
 

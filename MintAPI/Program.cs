@@ -89,6 +89,7 @@ try
         maxConcurrency: config.GetValue("Rendering:MaxConcurrency", 4),
         timeout: TimeSpan.FromMilliseconds(config.GetValue("Rendering:TimeoutMs", 8000))));
 
+    builder.Services.AddSingleton<MintAPI.Rendering.HelpTheme.HelpTheme>();
     builder.Services.AddSingleton<MintAPI.Rendering.AvatarCardTheme.AvatarCardTheme>();
     builder.Services.AddSingleton<MintAPI.Rendering.ScoreTheme.DefaultScoreTheme>();
     builder.Services.AddSingleton<MintAPI.Rendering.UserInfoTheme.DefaultUserInfoTheme>();
