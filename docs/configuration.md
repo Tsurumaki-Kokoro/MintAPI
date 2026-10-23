@@ -84,3 +84,7 @@
 默认文件保留数量和大小采用原 Serilog 文件 sink 的默认值。若需达到文件大小后继续写新文件，设置 `RollOnFileSizeLimit=true`。不要同时通过 `Serilog:WriteTo` 重复注册相同的 Console/File sink。
 
 日志导出使用唯一临时 ZIP 文件，避免同时请求共用 `logs.zip`。停止文件日志不会删除既有日志，导出接口仍可导出目录中的历史文件。
+
+## 玩家周报与动态订阅
+
+`History.BestSnapshotEnabled` 控制每日四模式 BP 快照，默认启用。`PlayerWatch.Enabled` 默认 true，`PollSeconds` 默认 300（60–86400），`SubscriptionDays` 默认 7（1–90），`MaxTrackedUsers` 默认 100（1–1000）。环境变量采用 `PlayerWatch__PollSeconds` 等命名。修改后重启生效；只有活跃订阅才轮询，共用 osu! 全局限流额度。接口与统计口径见 [玩家功能](player-features.md)。

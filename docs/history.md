@@ -63,3 +63,7 @@ GET /score/history?platform=qq&platform_uid=123&beatmap_id=456&mods=HD,HR&page=1
 应用启动时自动应用 `AddScheduledHistory` 迁移，新增 `score_history` 和 `history_task_run`，并为资料历史建立玩家/模式/日期唯一索引。旧历史表存在重复快照时，同组仅保留 ID 最大的一条。升级前按现有运维流程备份数据库。
 
 既有资料卡的日期对比采用配置时区，并按实际查询到的 osu! 玩家寻找历史数据。
+
+## 周报所需的 BP 快照
+
+`History.BestSnapshotEnabled` 默认为 true，在资料采集之后、`InfoTime` 到时额外采集已绑定玩家四模式的前 100 BP。每日榜单按玩家/模式/日期唯一保存；不补造安装前或停机期间的榜单。新增 `best` 任务完成记录及 `best_play_snapshot` 表由 `AddPlayerFeatures` 迁移管理。详见 [个人周报与玩家动态](player-features.md)。

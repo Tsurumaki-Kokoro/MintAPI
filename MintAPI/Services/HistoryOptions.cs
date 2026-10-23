@@ -9,6 +9,7 @@ public sealed class HistoryOptions
     public string InfoTime { get; set; } = "00:00";
     public string ScoreTime { get; set; } = "02:00";
     public bool CatchUpOnStartup { get; set; } = true;
+    public bool BestSnapshotEnabled { get; set; } = true;
     public bool ScoreCollectionEnabled { get; set; } = true;
     public int RecentLimit { get; set; } = 200;
     public bool OsuTrackEnabled { get; set; } = true;

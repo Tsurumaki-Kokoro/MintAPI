@@ -44,6 +44,12 @@ try
     builder.Services.AddOptions<HistoryOptions>().Bind(config.GetSection("History"))
         .Validate(options => options.IsValid(), "History requires a valid time zone, HH:mm times, ScoreTime >= InfoTime, and valid limits.")
         .ValidateOnStart();
+    builder.Services.AddScoped<MintAPI.Services.PlayerFeatures.PlayerReportService>();
+    builder.Services.AddScoped<MintAPI.Services.PlayerFeatures.PlayerWatchService>();
+    builder.Services.AddSingleton<MintAPI.Rendering.PlayerFeatures.PlayerFeatureRenderer>();
+    builder.Services.AddOptions<MintAPI.Services.PlayerFeatures.PlayerWatchOptions>().Bind(config.GetSection("PlayerWatch"))
+        .Validate(x => x.IsValid(), "Invalid PlayerWatch polling interval, retention or limits.").ValidateOnStart();
+    builder.Services.AddHostedService<MintAPI.Services.PlayerFeatures.PlayerWatchWorker>();
     builder.Services.AddScoped<HistoryService>();
     builder.Services.AddScoped<HistoryCollector>();
     builder.Services.AddSingleton<HistoryRenderer>();

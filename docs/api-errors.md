@@ -66,3 +66,7 @@ return ApiErrors.Result(ErrorCatalog.InternalError,
 预览生成服务使用 `502 / PREVIEW_UNAVAILABLE`，以区别 osu! 上游查询失败。
 
 `POST /users/bindings` 用于筛选调用方提供的候选账号，每批最多 100 人：无绑定为成功的空列表；无效候选列表使用 `INVALID_ARGUMENT`，数据库失败由全局错误处理返回 `INTERNAL_ERROR`。不把数据库故障当作未绑定。
+
+玩家周报、同图对比及动态订阅的错误分支见 [玩家功能](player-features.md#错误契约)。订阅无变化是成功空结果；已取消、已过期或超出保留窗口使用 `RESOURCE_EXPIRED`，不返回“没有成绩”。
+
+群订阅管理沿用原有错误码：群身份缺失、不完整或与 scope 冲突为 `INVALID_ARGUMENT`；单条查询/取消的群归属不匹配为 `RECORD_NOT_FOUND`；空列表及群内取消零条为成功结果。数据库故障不能转换为空列表。详见 [订阅查询与群内取消](player-features.md#3-按群分组与查询订阅)。

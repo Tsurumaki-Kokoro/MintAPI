@@ -21,10 +21,11 @@ public sealed class HistoryScheduler(IServiceScopeFactory scopes, IOptions<Histo
             {
                 var now = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, settings.Zone);
                 var date = DateOnly.FromDateTime(now.DateTime);
-                foreach (var job in new[] { "info", "scores" })
+                foreach (var job in new[] { "info", "best", "scores" })
                 {
                     if (job == "scores" && !settings.ScoreCollectionEnabled) continue;
-                    var time = HistoryOptions.ParseTime(job == "info" ? settings.InfoTime : settings.ScoreTime);
+                    if (job == "best" && !settings.BestSnapshotEnabled) continue;
+                    var time = HistoryOptions.ParseTime(job != "scores" ? settings.InfoTime : settings.ScoreTime);
                     if (TimeOnly.FromDateTime(now.DateTime) < time) continue;
                     if (!settings.CatchUpOnStartup && date == DateOnly.FromDateTime(started.DateTime)
                         && time < TimeOnly.FromDateTime(started.DateTime)) continue;
@@ -39,7 +40,7 @@ public sealed class HistoryScheduler(IServiceScopeFactory scopes, IOptions<Histo
                     try
                     {
                         if (await db.HistoryTaskRuns.AnyAsync(r => r.Job == job && r.Date == date, stoppingToken)) continue;
-                        if (job == "scores" && !await db.HistoryTaskRuns.AnyAsync(r => r.Job == "info" && r.Date == date, stoppingToken)) continue;
+                        if (job != "info" && !await db.HistoryTaskRuns.AnyAsync(r => r.Job == "info" && r.Date == date, stoppingToken)) continue;
                         var failures = await scope.ServiceProvider.GetRequiredService<HistoryCollector>().RunAsync(job, date, stoppingToken);
                         db.HistoryTaskRuns.Add(new() { Job = job, Date = date, FailedTargets = failures, CompletedAt = DateTimeOffset.UtcNow });
                         await db.SaveChangesAsync(stoppingToken);
@@ -53,6 +54,7 @@ public sealed class HistoryScheduler(IServiceScopeFactory scopes, IOptions<Histo
                 }
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { return; }
+            catch (RetryableException ex) { logger.LogWarning(ex, "History task busy; retrying at the next scheduler check"); }
             catch (Exception ex) { logger.LogError(ex, "History task failed; retrying at the next scheduler check"); }
         } while (await timer.WaitForNextTickAsync(stoppingToken));
     }
@@ -77,7 +79,13 @@ public sealed class HistoryCollector(AppDbContext db, IOsuApiService osuApi, His
                 try
                 {
                     var current = await db.UserOsuInfoHistories.FirstOrDefaultAsync(h => h.OsuUid == uid && h.GameMode == mode && h.Date == date, ct);
-                    if (job == "info")
+                    if (job == "best")
+                    {
+                        // Scheduled once per local day, including inactive users: BP recalculation can change lists.
+                        var report = new PlayerFeatures.PlayerReportService(db, osuApi, history, options);
+                        await report.CaptureBestAsync(int.Parse(uid), mode, date, ct);
+                    }
+                    else if (job == "info")
                     {
                         if (current != null) continue;
                         var user = await osuApi.GetUserAsync(uid, (GameMode)mode).WaitAsync(ct);
@@ -107,6 +115,7 @@ public sealed class HistoryCollector(AppDbContext db, IOsuApiService osuApi, His
                         }
                     }
                 }
+                catch (RetryableException) { throw; }
                 catch (Exception ex) when (!ct.IsCancellationRequested)
                 {
                     failures++;
