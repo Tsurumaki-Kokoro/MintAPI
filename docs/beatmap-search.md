@@ -1,6 +1,6 @@
 # 谱面搜索 JSON 接口
 
-`GET /beatmap/search`，使用与现有接口相同的 API Key 验证方式。
+`GET /beatmap/search`，使用 `access_token` 请求头鉴权。
 
 示例：
 
@@ -25,9 +25,8 @@ GET /beatmap/search?query=Freedom%20Dive&mode=osu&status=ranked&sort=relevance_d
 
 搜索单位是谱面集，不能把 `total` 当作具体难度数量。模式和搜索表达式透传官方接口；本接口不额外删减谱面集内的难度、不重排官方结果，也不提供自定义 page_size。无结果返回 200、`total: 0` 和空数组。
 
-相同关键词、模式、状态、排序和游标缓存 2 分钟。请求使用现有 osu! 限流服务；无效参数返回 400，上游 HTTP 请求失败返回 502，配额不足由现有中间件返回可重试错误。失败结果不缓存。
+相同搜索条件和游标默认缓存 2 分钟。无效参数返回 400，上游失败返回 502，服务繁忙返回 503 并附 `Retry-After`。详见 [API 错误响应](api-errors.md)。
 
-未增加机器人对接。
 
 ## 搜索结果图片
 
@@ -37,7 +36,7 @@ GET /beatmap/search?query=Freedom%20Dive&mode=osu&status=ranked&sort=relevance_d
 GET /beatmap/search/image?query=Freedom%20Dive&mode=osu&status=ranked&page=1
 ```
 
-图片宽 900px，每页最多 5 个谱面集，行高 96px。行背景使用官方背景封面，叠加透明渐变；展示歌名、艺术家、谱师和状态。每个难度以模式图标展示，颜色采用 osu-web 官方难度色谱；按模式和星级排序，指定模式优先，其他模式降低透明度。最多显示 18 个难度图标，超出显示 `+N`。首版不解析 `query` 内的星级条件做图标高亮。
+图片宽 900px，每页最多 5 个谱面集，显示标题、艺术家、谱师、状态及难度图标。难度按模式和星级排序，指定模式优先；最多显示 18 个难度图标，其余显示为 `+N`。图标颜色表示难度，不额外高亮搜索表达式中的星级区间。
 
 导航响应头：
 
@@ -46,6 +45,4 @@ GET /beatmap/search/image?query=Freedom%20Dive&mode=osu&status=ranked&page=1
 - `X-Total`：官方匹配的谱面集总数。
 - `X-Next-Cursor`：下一官方批次的游标（如有）。
 
-先用相同搜索条件和游标逐页读取本批结果；到达 `X-Page-Count` 后，使用 `X-Next-Cursor` 并把 `page` 重置为 1。图片底部标记“本批”，不会把它误当成全局页码。无结果返回空状态图片；超出本批页码返回 400。搜索数据与 JSON 接口共享缓存，背景封面缓存 30 分钟，封面加载失败时仍展示文字和图标。
-
-官方图标沿用项目已有 osu-web 资源。色谱参考：https://github.com/ppy/osu-web/blob/master/resources/js/utils/beatmap-helper.ts 。
+先用相同搜索条件和游标逐页读取本批结果；到达 `X-Page-Count` 后，使用 `X-Next-Cursor` 并把 `page` 重置为 1。页码只针对本批结果。无结果返回空状态图片；超出本批页码返回 400。搜索数据与 JSON 接口共享缓存，背景封面缓存 30 分钟，封面加载失败时仍展示文字和图标。

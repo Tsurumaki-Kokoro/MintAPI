@@ -1,4 +1,6 @@
-# 数据库迁移
+# 数据库初始化与迁移
+
+供部署维护者和数据库开发者使用。
 
 服务启动时执行 EF Core 迁移。默认数据库名称为 `mintapi`。已创建的空数据库会应用 `InitialCreate`，之后新增的迁移也会依次应用。不要再用 `EnsureCreated` 建库；迁移工具版本由仓库中的 `.config/dotnet-tools.json` 固定：
 
@@ -12,7 +14,7 @@ dotnet tool run dotnet-ef migrations script --project MintAPI/MintAPI.csproj --s
 
 ## MintAPI 初始化
 
-项目改名后使用 `mintapi` 数据库。对全新的数据库，先创建空库，然后让服务启动时应用现有迁移；无需删除或重新生成迁移文件。
+默认数据库名为 `mintapi`。对全新的数据库，先创建空库，然后让服务启动时应用现有迁移；无需删除或重新生成迁移文件。
 
 ```sql
 CREATE DATABASE `mintapi` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -24,9 +26,9 @@ CREATE DATABASE `mintapi` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 dotnet tool run dotnet-ef database update --project MintAPI/MintAPI.csproj --startup-project MintAPI/MintAPI.csproj
 ```
 
-设计时工厂默认使用占位凭据，仅供生成迁移；执行数据库操作时需要设置实际连接。重置已有数据库前应停止写入并备份，再删除、重建目标库和应用迁移。不会把重置行为加入每次服务启动。
+设计时工厂默认使用占位凭据，仅供生成迁移；执行数据库操作时需要设置实际连接。重置已有数据库前应停止写入并备份，再删除、重建目标库和应用迁移。服务启动不会删除已有数据库。
 
-初始化完成后，应有 `user`、`user_osu_info_history`、`score_history`、`history_task_run` 四张业务表及 `__EFMigrationsHistory` 迁移记录表。
+初始化后包含 `user`、`user_osu_info_history`、`score_history`、`history_task_run`、`best_play_snapshot`、`player_watch`、`player_subscription`、`player_watch_event` 八张业务表，以及 `__EFMigrationsHistory` 迁移记录表。
 
 ## 接管旧版 `EnsureCreated` 数据库
 

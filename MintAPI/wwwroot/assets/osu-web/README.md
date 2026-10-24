@@ -4,8 +4,7 @@
 
 上游提交：`e8dc75555a6e6cc9e9790b895224cabeb60a8938`
 
-提取日期：2026-10-01。共 469 个文件：134 SVG、252 PNG、82 JPG、1 ICO，合计 16,898,997 字节。
-保留上游路径和原始字节，包含仓库内全部支持的图片；不包含外部 CDN 图片、字体文件或构建时生成的素材。
+该目录供模板开发者使用，保留上游路径；不含外部 CDN 图片、字体或生成文件。完整素材列表见 `manifest.json`。
 
 ## 调用
 
@@ -17,13 +16,13 @@
 <img src="/assets/osu-web/public/images/layout/avatar-guest.png" alt="Guest">
 ```
 
-项目渲染模板使用已有的 `base_url`：
+使用 `base_url` 的渲染模板可这样引用：
 
 ```html
 <img src="{{ base_url }}/assets/osu-web/public/images/layout/osu-logo-white.svg" alt="osu!">
 ```
 
-本地文件位于 `MintAPI/wwwroot/assets/osu-web/`。现有项目配置会将 wwwroot 资源复制到构建及发布输出。
+本地文件位于 `MintAPI/wwwroot/assets/osu-web/`。构建和发布会复制 wwwroot 资源。
 
 ## 更新
 
@@ -34,7 +33,7 @@ python3 scripts/import-osu-web-assets.py /path/to/osu-web
 ```
 
 脚本按同样的目录结构重新提取图片、更新清单和许可证，并删除上一版清单中已被上游移除的素材。
-更新后同步修改本说明中的提交、日期及数量。
+更新后同步修改本说明中的上游提交。
 
 ## 来源与许可
 

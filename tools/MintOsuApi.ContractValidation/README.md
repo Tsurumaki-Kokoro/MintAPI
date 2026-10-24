@@ -1,35 +1,33 @@
-# MintOsuApi contract validation
+# MintOsuApi 响应契约检查
 
-Opt-in public read/compute runner. It does not start MintAPI, MySQL, or Redis and is not part of the normal test suite. Credentials come from the ignored `MintAPI/appsettings.Development.json` (`OsuApi` section).
+供客户端开发者使用，检查真实 osu! 响应与客户端模型是否匹配。工具独立于 MintAPI 服务运行，不需要 MySQL 或 Redis；在线采集需要 `MintAPI/appsettings.Development.json` 中的 osu! 凭证。
 
-From the repository root, capture current responses:
+## 采集与回放
 
-```sh
-dotnet run --project tools/MintOsuApi.ContractValidation -- "$PWD" tools/MintOsuApi.ContractValidation/cases.json MintAPI/cache/mintosuapi-validation/new-run
-```
-
-Replay a completed capture without credentials or network:
+在仓库根目录执行：
 
 ```sh
-dotnet run --project tools/MintOsuApi.ContractValidation -- "$PWD" tools/MintOsuApi.ContractValidation/cases.json MintAPI/cache/mintosuapi-validation/validated --replay
+dotnet run --project tools/MintOsuApi.ContractValidation -- "$PWD" tools/MintOsuApi.ContractValidation/cases.json MintAPI/cache/mintosuapi-validation/run
+
+dotnet run --project tools/MintOsuApi.ContractValidation -- "$PWD" tools/MintOsuApi.ContractValidation/cases.json MintAPI/cache/mintosuapi-validation/run --replay
 ```
 
-`validated` was collected locally during the 2026-10-04 audit and is ignored by Git; other checkouts must first capture their own responses and replay that directory. Old public IDs may become unavailable. The committed manifest contains 115 concrete cases for 46 methods; it can be reduced to a small batch before making real requests. `devdocs/mintosuapi-validation-inputs.json` records the user-provided seeds; the manifest also contains IDs discovered from list responses.
+首次采集访问官方接口；回放使用同一目录，不需要网络或凭证。请求间隔至少 1.1 秒，遇到 429 会停止并记录 Retry-After，不自动重试。工具仅允许公开读取和只读难度计算，不执行聊天、论坛写入或需要用户授权的读取。
 
-Each case has a unique `name`, a client `method`, an `arguments` object using C# parameter names, and optional `resultPath` for methods which unwrap a response array. Enum arguments accept C# names; modes use API names (`osu`, `taiko`, `fruits`, `mania`), mods accept legacy acronyms. Missing parameters use method defaults.
+采集目录包含原始响应、请求信息、时间、HTTP 版本及校验值，不记录认证头或密钥。响应和令牌缓存保存在忽略目录中，不应提交到仓库。
 
-The runner serially captures the original HTTP status/body, request path/body, response version, time, effective redirect URL, and body SHA-256 before model conversion. Authorization headers and secrets are excluded. Raw bodies and token caches stay in the ignored output directory. Requests are at least 1.1 seconds apart; a 429 stops the batch and records Retry-After rather than continuing requests. There are no automatic retries. Read-only difficulty calculation is the sole allowed POST; chat/forum writes and user-authenticated reads are blocked.
+## 用例清单
 
-Replay verifies request identity and compares raw JSON with the typed result from exactly that captured body. It checks nested keys, arrays, numbers, nulls, dates and values. Intentional rank-status and legacy-mod representations are normalized. Match mods settings are retained in `RawMods` and current score fields in `ModernScore`. Added default model fields are not considered server guarantees. The exit code is nonzero on failures or remaining differences; empty arrays can have zero differences and still do not prove item-field coverage.
+每个用例包含唯一的 `name`、客户端 `method`、使用 C# 参数名的 `arguments`，可选 `resultPath` 指定响应数组。枚举支持 C# 名称；模式使用 `osu`、`taiko`、`fruits`、`mania`，Mods 可用传统缩写。省略参数使用方法默认值。
 
-This is observed-response verification, not a full OpenAPI schema validator. Undocumented metadata explicitly kept as JObject/JToken is retained without imposing a guessed schema. Additional nullable/conditional payloads, grants, unavailable rooms, invalid inputs, and optional filter combinations must remain separate coverage items. Representative public payloads are reduced into `../mint-osuapi/tests/MintOsuApi.Tests/Fixtures/contract_live_samples.json`; synthetic overflow/null/error cases are separately identified in tests.
+可复制 `cases.json` 并删减为需要检查的用例。公开 ID 可能失效，失败时应先核对资源是否仍存在。
 
-See `devdocs/mintosuapi-validation-results.md` for findings, compatibility changes, exclusions, and field/pagination checks.
+## 结果与语义检查
 
-For the complete supplied sample capture, verify ID relationships, Mod effects and pagination as well:
+回放比较原始 JSON 与类型转换结果，差异或失败时退出码非零。空数组没有差异不表示已覆盖数组元素的字段。该工具只检查已采集响应，不替代完整 OpenAPI 校验或空值、错误、授权场景测试。
 
 ```sh
-python3 tools/MintOsuApi.ContractValidation/check_semantics.py MintAPI/cache/mintosuapi-validation/validated
+python3 tools/MintOsuApi.ContractValidation/check_semantics.py MintAPI/cache/mintosuapi-validation/run
 ```
 
-The semantic checker is intentionally tied to the recorded UID and named cases. Adapt its expected identities alongside the manifest for another sample set. Some payloads and assertions are time dependent; a failed future run should be investigated, not mechanically rebaselined.
+语义检查依赖清单中的用例名、玩家 ID 与分页关系；更换样本时应同步修改预期。可保留的匿名样本放入 `../mint-osuapi/tests/MintOsuApi.Tests/Fixtures/`。

@@ -17,7 +17,7 @@ dotnet build MintAPI.sln
 dotnet test MintAPI.sln
 ```
 
-解决方案中的 MintOsuApi 和 MintOsuApi.Tests 均来自独立仓库。原仓库的库与测试副本已删除；保留的契约验证工具也引用独立库，后续库和库测试修改应在 `../mint-osuapi` 中进行。
+客户端代码和测试请在 `../mint-osuapi` 修改；MintAPI 控制器和服务请在本仓库修改。
 
 Docker 构建需要通过命名构建上下文提供独立仓库。在 MintAPI 仓库根目录执行：
 
@@ -26,4 +26,4 @@ docker buildx build --build-context mint-osuapi=../mint-osuapi \
   -f MintAPI/Dockerfile -t mintapi --load .
 ```
 
-CI 构建同样需要检出两个相邻仓库。正式切换 NuGet 引用后，可以移除这一目录结构要求。
+发布构建使用 `deploy/dependencies.json` 指定的客户端提交。准备发布时先将相邻客户端仓库检出到该提交，并确保其工作区干净。

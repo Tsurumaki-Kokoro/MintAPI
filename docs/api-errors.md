@@ -1,6 +1,6 @@
 # API 错误响应
 
-控制器错误统一返回 `application/problem+json`，成功响应保留原有图片或 JSON。
+控制器错误统一返回 `application/problem+json`，成功响应为接口约定的图片、视频、文本或 JSON。
 即使请求声明 `Accept: image/png`，错误也返回 JSON，保留真实状态码。
 
 ```json
@@ -32,18 +32,15 @@
 | 410 | RESOURCE_EXPIRED | 资源已过期 |
 | 409 | CONFLICT | 当前状态与请求冲突 |
 | 502 | OSU_API_UNAVAILABLE | 上游服务查询失败，请稍后重试 |
+| 502 | PREVIEW_UNAVAILABLE | 预览引擎不可用或执行失败 |
 | 503 | SERVICE_BUSY | 资源繁忙，可按 Retry-After 重试 |
 | 503 | SERVICE_NOT_READY | 依赖未就绪，可按 Retry-After 重试 |
 | 500 | RENDER_FAILED | 图片生成失败 |
 | 500 | INTERNAL_ERROR | 其他服务内部错误 |
 
-日志中的 API error / API exception 记录包含状态、code、traceId、请求方法、路径和白名单定位参数。
-业务查无记录使用 Information，服务故障使用 Error；异常日志保留堆栈。
-文件日志的 traceId 同时关联控制器已有的异常日志与最终错误响应。
-不记录请求令牌、完整请求头或完整查询字符串；服务故障响应不暴露异常详情。
+排查问题时提供 `traceId`，可在服务日志中查找对应请求。不要解析 `message` 或将所有非 200 视为查无记录；未知 code 使用通用错误提示。
 
-机器人应优先处理已列出的 code，并为未知 code 保留通用提示。
-鉴权中间件的 403、静态资源以及未匹配路由不属于控制器错误契约，仍保留原有行为。
+鉴权中间件的 403、静态资源及未匹配路由不属于控制器错误契约。
 
 ## 新接口实现与验证
 
@@ -58,20 +55,16 @@ return ApiErrors.Result(ErrorCatalog.InternalError,
     diagnostic: "Score has no beatmap info");
 ```
 
-全局过滤器补齐 traceId、记录业务/故障日志并固定 JSON 类型。捕获异常时需记录原始异常对象；不捕获时由全局异常处理记录。`ApiLookupException` 接受目录定义，用来标识明确的资源查询 404。
-错误提示可调整，错误码语义保持稳定；新代码不依赖旧文字分类器。
+新增业务结果时，在错误目录添加定义，并为端点更新 XML 注释和功能文档。保持已有 code 的含义及 HTTP 状态稳定。
 
-新接口的 HTTP 测试复用 `ApiErrorAssertions.AssertAsync(response, ErrorCatalog.ScoreNotFound)`，共用断言检查状态码、JSON 类型、code、message、traceId 和内部诊断隔离。
-`ApiErrorContractTests` 覆盖公共传输和日志机制；`ScoreErrorContractTests` 示例覆盖真实成绩接口的未绑定、官方空成绩、本地未收录、谱面缺失及上游故障。两层均应保留，公共测试不能代替接口业务分类测试。
+捕获异常时记录原始异常对象，不把路径、凭证或上游响应传给客户端；未捕获异常由全局处理器记录。
 
-预览生成服务使用 `502 / PREVIEW_UNAVAILABLE`，以区别 osu! 上游查询失败。
+新增端点使用真实 HTTP 测试，复用 `ApiErrorAssertions.AssertAsync`，覆盖业务错误、依赖失败与 `Accept: image/png`。公共错误测试见 `ApiErrorContractTests`，成绩业务示例见 `ScoreErrorContractTests`。
 
-`POST /users/bindings` 用于筛选调用方提供的候选账号，每批最多 100 人：无绑定为成功的空列表；无效候选列表使用 `INVALID_ARGUMENT`，数据库失败由全局错误处理返回 `INTERNAL_ERROR`。不把数据库故障当作未绑定。
+## 订阅与批量查询
 
-玩家周报、同图对比及动态订阅的错误分支见 [玩家功能](player-features.md#错误契约)。订阅无变化是成功空结果；已取消、已过期或超出保留窗口使用 `RESOURCE_EXPIRED`，不返回“没有成绩”。
+- `POST /users/bindings`：每批最多 100 人，未绑定返回成功空列表；参数无效为 `INVALID_ARGUMENT`。
+- 玩家订阅：无变化返回成功空结果，取消、过期或游标失效为 `RESOURCE_EXPIRED`。
+- 群管理：身份不完整或 scope 冲突为 `INVALID_ARGUMENT`，归属不匹配为 `RECORD_NOT_FOUND`；零匹配查询或取消仍成功。
 
-群订阅管理沿用原有错误码：群身份缺失、不完整或与 scope 冲突为 `INVALID_ARGUMENT`；单条查询/取消的群归属不匹配为 `RECORD_NOT_FOUND`；空列表及群内取消零条为成功结果。数据库故障不能转换为空列表。详见 [订阅查询与群内取消](player-features.md#3-按群分组与查询订阅)。
-
-`GET /help/image`：帮助海报生成失败使用 `RENDER_FAILED`；渲染繁忙使用 `SERVICE_BUSY` 和 `Retry-After`，即使 `Accept: image/png` 也返回 `application/problem+json`。无需玩家绑定或 osu! 上游查询。
-
-`GET /health/ready` 依赖未就绪返回 `503 / SERVICE_NOT_READY` 与 `Retry-After: 10`，即使仅接受图片也返回 `application/problem+json`。接口说明见 [服务信息与帮助](service-info.md)。
+接口参数与状态说明见 [玩家功能](player-features.md)。
