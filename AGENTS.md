@@ -6,7 +6,7 @@
 
 ## Build, Test, and Development Commands
 
-- `dotnet build MintAPI.sln` builds all .NET projects; building the API also runs `cargo build --release` for the native library. Install the .NET 9 SDK and Rust toolchain first.
+- `dotnet build MintAPI.sln` builds all .NET projects; building the API also runs `cargo build --release` for the native library. Install the .NET 10 SDK and Rust toolchain first.
 - `dotnet test MintAPI.sln` runs both xUnit suites.
 - `dotnet run --project MintAPI --launch-profile http` starts the development API on `http://localhost:5251`. Supply local configuration and reachable MySQL and Redis services first. Development OpenAPI and Scalar pages are enabled by this profile.
 

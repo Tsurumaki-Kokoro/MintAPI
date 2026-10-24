@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
     <PropertyGroup>
-        <TargetFramework>net9.0</TargetFramework>
+        <TargetFramework>net10.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
@@ -34,7 +34,7 @@
         <PackageReference Include="StackExchange.Redis" Version="2.8.16"/>
 
         <!-- Playwright -->
-        <PackageReference Include="Microsoft.Playwright" Version="1.51.0"/>
+        <PackageReference Include="Microsoft.Playwright" Version="1.64.1"/>
 
         <!-- 模板引擎 -->
         <PackageReference Include="Scriban" Version="5.12.1" NoWarn="NU1902;NU1903;NU1904"/>
