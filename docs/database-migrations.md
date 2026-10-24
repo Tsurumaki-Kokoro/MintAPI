@@ -54,3 +54,21 @@ VALUES ('20260930023304_InitialCreate', '9.0.4');
 如果数据库已由 EF 迁移管理，直接正常部署，勿重复执行基线 SQL。
 
 `AddPlayerFeatures` 新增每日 BP 快照、玩家动态观测、订阅和纯文本事件四张表。旧表不回填或改写历史；新周报的 BP 数据从部署后的定时采集开始积累。迁移不会发送历史 BP 提醒。
+
+## 历史与订阅结构升级
+
+`RefineHistoryAndSubscriptions` 保留已有迁移，按顺序升级八张业务表，不要求重建数据库：
+
+- `user.osu_uid`、`user_osu_info_history.osu_uid` 改为 `int`，与其他业务表和 osu! 客户端的用户 ID 类型一致；平台账号和群号仍为字符串。现有 HTTP 字段名及 ID 的 JSON 类型保持不变。
+- `total_hits` 扩为可空 `bigint`。日统计新增可空的 `ranked_score`、`total_score`、`observed_at`；成绩历史新增可空的 `CollectedAt`。新增时间记录实际观测或首次收录时刻，按 UTC 存储；日统计的 `date` 仍按 `History.TimeZone` 归档。旧记录的新增字段保持 `NULL`，不根据游玩日期或迁移时间回填。
+- 订阅新增可空的 `Platform`、`GroupId`，从符合现有群 Scope 规则的数据提取。原始 `Scope`、订阅 ID、游标和到期时间保留；自定义 Scope 不强制转成群订阅。平台统一为小写，群号与自定义 Scope 按大小写区分。应用写入时同步生成群字段，直接写数据库也必须保持它们与 Scope 一致。
+- 新索引用于群查询及唯一性、Scope 查询、到期筛选和事件保留期清理。列表、群统计、分页和到期筛选由数据库执行；查询不会续期，也不会请求 osu!。
+
+升级前停止旧版本的写入并备份。迁移在修改永久表之前检查两类冲突：
+
+1. **`Invalid or noncanonical osu_uid`**：两个旧表存在空值文本、非数字、前导零、非正数或超过 `2147483647` 的 ID。先查明对应玩家并修正；不要直接把异常值转成零。
+2. **`Duplicate normalized group subscriptions`**：同一玩家、模式、平台和群有多个 Scope 别名。检查 `player_subscription` 的 `Id`、`Scope`、`StartCursor` 和 `ExpiresAt`，明确保留哪条订阅后再处理冲突。迁移不会自动删除或合并订阅。
+
+异常会以临时校验表的重复键错误显示上述原因；修正数据后可重新启动服务或执行 `database update`。迁移需要临时表权限，以及支持 `REGEXP_REPLACE` 的 MySQL 8 / MariaDB 服务。
+
+回退到旧结构会删除新增列；应优先从备份恢复。若 `total_hits` 已超过旧 `int` 范围，或 Scope 在旧排序规则下发生唯一键冲突，回退迁移会在改表前拒绝执行，避免截断数据或部分回退。

@@ -81,11 +81,11 @@ public sealed class UserRankingController(AppDbContext db, IOsuApiService osuApi
         foreach (var gameMode in topFive ? new[] { 0, 1, 2, 3 } : new[] { mode!.Value })
         {
             var entries = new List<UserRankingEntry>();
-            foreach (var group in bindings.GroupBy(u => u.OsuUid))
+            foreach (var group in bindings.GroupBy(u => u.OsuUserId))
             {
-                var user = await osuApi.GetUserAsync(group.Key, (GameMode)gameMode).WaitAsync(ct);
+                var user = await osuApi.GetUserAsync(group.Key.ToString(System.Globalization.CultureInfo.InvariantCulture), (GameMode)gameMode).WaitAsync(ct);
                 var stats = user.Statistics;
-                entries.AddRange(group.Select(binding => new UserRankingEntry(binding.PlatformUid, binding.OsuUid,
+                entries.AddRange(group.Select(binding => new UserRankingEntry(binding.PlatformUid, binding.OsuUserId.ToString(System.Globalization.CultureInfo.InvariantCulture),
                     user.Username, stats?.GlobalRank is > 0 ? stats.GlobalRank : null, stats?.Pp, stats?.HitAccuracy, user.AvatarUrl, user.CountryCode)));
             }
             var ordered = entries.OrderBy(e => e.Rank ?? int.MaxValue)

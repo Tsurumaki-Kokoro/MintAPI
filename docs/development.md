@@ -60,6 +60,14 @@ Windows 的最后一条命令为 CLI 路径加 `.exe`。渲染测试需要 Chrom
 MULTIPLAYER_PREVIEW_DIR="$PWD/artifacts/multiplayer" dotnet test tests/MintAPI.Tests/MintAPI.Tests.csproj --filter FullyQualifiedName~MultiplayerRenderingTests
 ```
 
+数据库升级测试默认跳过。要验证 MySQL / MariaDB 的真实迁移和查询，将 `MINTAPI_TEST_MYSQL` 设为**专用测试实例**的连接字符串，再运行：
+
+```sh
+dotnet test tests/MintAPI.Tests/MintAPI.Tests.csproj --filter FullyQualifiedName~SchemaMigrationTests
+```
+
+测试账号需要创建、删除数据库和创建临时表的权限；测试会创建随机命名的独立数据库，并在结束时删除。不要使用生产实例。
+
 模板修改后检查真实 PNG，确认长文本、缺失值和不同模式均可阅读。客户端真实响应检查见 [契约检查工具](../tools/MintOsuApi.ContractValidation/README.md)。
 
 ## 代码位置

@@ -37,7 +37,7 @@ public sealed class AvatarCardController(AppDbContext db, IOsuApiService osuApi,
             var binding = await db.Users.AsNoTracking().FirstOrDefaultAsync(
                 u => u.Platform == platform && u.PlatformUid == platform_uid, ct);
             if (binding == null) return ApiErrors.Result(ErrorCatalog.UserNotBound, diagnostic: "User binding not found");
-            target = binding.OsuUid;
+            target = binding.OsuUserId.ToString(System.Globalization.CultureInfo.InvariantCulture);
         }
         try
         {

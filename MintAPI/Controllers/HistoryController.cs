@@ -32,10 +32,10 @@ public sealed class HistoryController(AppDbContext db, IOsuApiService osuApi, Hi
         if (user == null) return ApiErrors.Result(ErrorCatalog.UserNotBound, diagnostic: "User not found");
         var mode = game_mode ?? user.GameMode;
         if (mode is < 0 or > 3) return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "Invalid bound game mode");
-        var points = await history.GetUserHistoryAsync(user.OsuUid, mode, days, ct);
+        var points = await history.GetUserHistoryAsync(user.OsuUserId, mode, days, ct);
         if (points.Count == 0) return ApiErrors.Result(ErrorCatalog.HistoryNotFound, diagnostic: "No history found");
-        if (format == "json") return Ok(new { user_id = user.OsuUid, game_mode = mode, sources = points.Select(p => p.Source).Distinct(), points });
-        return File(await renderer.RenderTrendAsync($"osu! {user.OsuUid} · {(GameMode)mode} · PP / Rank", points, ct), "image/png");
+        if (format == "json") return Ok(new { user_id = user.OsuUserId.ToString(System.Globalization.CultureInfo.InvariantCulture), game_mode = mode, sources = points.Select(p => p.Source).Distinct(), points });
+        return File(await renderer.RenderTrendAsync($"osu! {user.OsuUserId} · {(GameMode)mode} · PP / Rank", points, ct), "image/png");
     }
 
     /// <summary>查询谱面成绩列表：有榜谱面使用官网最佳成绩，无榜谱面使用本地采集历史。</summary>
@@ -65,7 +65,7 @@ public sealed class HistoryController(AppDbContext db, IOsuApiService osuApi, Hi
         if (binding == null) return ApiErrors.Result(ErrorCatalog.UserNotBound, diagnostic: "User not found");
         var mode = game_mode ?? binding.GameMode;
         if (mode is < 0 or > 3) return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "Invalid bound game mode");
-        var user = await osuApi.GetUserAsync(binding.OsuUid, (GameMode)mode).WaitAsync(ct);
+        var user = await osuApi.GetUserAsync(binding.OsuUserId.ToString(System.Globalization.CultureInfo.InvariantCulture), (GameMode)mode).WaitAsync(ct);
         var result = await history.GetMapScoresAsync(user.Id, beatmap_id, mode, ct);
         var scores = result.Scores.AsEnumerable();
         if (legacy_only) scores = scores.Where(s => s.LegacyScoreId is > 0);

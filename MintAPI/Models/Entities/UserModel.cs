@@ -11,10 +11,8 @@ public class UserModel
     [Column("id")]
     public int Id { get; set; }
 
-    [Required]
-    [MaxLength(255)]
     [Column("osu_uid")]
-    public string OsuUid { get; set; } = string.Empty;
+    public int OsuUserId { get; set; }
 
     [Column("game_mode")]
     public int GameMode { get; set; } = 0;

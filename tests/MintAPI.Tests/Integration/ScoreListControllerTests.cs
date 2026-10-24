@@ -30,7 +30,7 @@ public class ScoreListControllerTests
         await connection.OpenAsync();
         await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options);
         await db.Database.EnsureCreatedAsync();
-        db.Users.Add(new UserModel { Platform = "qq", PlatformUid = "1", OsuUid = "42", GameMode = 0 });
+        db.Users.Add(new UserModel { Platform = "qq", PlatformUid = "1", OsuUserId = 42, GameMode = 0 });
         await db.SaveChangesAsync();
         var score = new Score
         {
@@ -87,7 +87,7 @@ public class ScoreListControllerTests
         await connection.OpenAsync();
         await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options);
         await db.Database.EnsureCreatedAsync();
-        db.Users.Add(new UserModel { Platform = "qq", PlatformUid = "1", OsuUid = "42", GameMode = 3 });
+        db.Users.Add(new UserModel { Platform = "qq", PlatformUid = "1", OsuUserId = 42, GameMode = 3 });
         await db.SaveChangesAsync();
         var api = new RecordingOsuApiService
         {

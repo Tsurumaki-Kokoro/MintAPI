@@ -21,7 +21,7 @@ public sealed class UserRankingControllerTests
         await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options);
         await db.Database.EnsureCreatedAsync();
         for (var i = 1; i <= 7; i++)
-            db.Users.Add(new UserModel { Platform = "qq", PlatformUid = i.ToString(), OsuUid = i.ToString() });
+            db.Users.Add(new UserModel { Platform = "qq", PlatformUid = i.ToString(), OsuUserId = i });
         await db.SaveChangesAsync();
         var api = new RecordingOsuApiService { UserHandler = (id, mode) => new User
         {

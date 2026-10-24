@@ -11,10 +11,8 @@ public class UserOsuInfoHistory
     [Column("id")]
     public int Id { get; set; }
 
-    [Required]
-    [MaxLength(255)]
     [Column("osu_uid")]
-    public string OsuUid { get; set; } = string.Empty;
+    public int OsuUserId { get; set; }
 
     [Column("game_mode")]
     public int GameMode { get; set; }
@@ -38,7 +36,16 @@ public class UserOsuInfoHistory
     public int? PlayTime { get; set; }
 
     [Column("total_hits")]
-    public int? TotalHits { get; set; }
+    public long? TotalHits { get; set; }
+
+    [Column("ranked_score")]
+    public long? RankedScore { get; set; }
+
+    [Column("total_score")]
+    public long? TotalScore { get; set; }
+
+    [Column("observed_at")]
+    public DateTimeOffset? ObservedAt { get; set; }
 
     [Column("date")]
     public DateOnly Date { get; set; } = DateOnly.FromDateTime(DateTime.UtcNow);

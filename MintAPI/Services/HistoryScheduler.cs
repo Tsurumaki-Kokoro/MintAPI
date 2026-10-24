@@ -68,7 +68,7 @@ public sealed class HistoryCollector(AppDbContext db, IOsuApiService osuApi, His
 
     public async Task<int> RunAsync(string job, DateOnly date, CancellationToken ct)
     {
-        var users = await db.Users.Select(u => u.OsuUid).Distinct().ToListAsync(ct);
+        var users = await db.Users.Select(u => u.OsuUserId).Distinct().ToListAsync(ct);
         var failures = 0;
         var saved = 0;
         foreach (var uid in users)
@@ -78,37 +78,38 @@ public sealed class HistoryCollector(AppDbContext db, IOsuApiService osuApi, His
                 ct.ThrowIfCancellationRequested();
                 try
                 {
-                    var current = await db.UserOsuInfoHistories.FirstOrDefaultAsync(h => h.OsuUid == uid && h.GameMode == mode && h.Date == date, ct);
+                    var current = await db.UserOsuInfoHistories.FirstOrDefaultAsync(h => h.OsuUserId == uid && h.GameMode == mode && h.Date == date, ct);
                     if (job == "best")
                     {
                         // Scheduled once per local day, including inactive users: BP recalculation can change lists.
                         var report = new PlayerFeatures.PlayerReportService(db, osuApi, history, options);
-                        await report.CaptureBestAsync(int.Parse(uid), mode, date, ct);
+                        await report.CaptureBestAsync(uid, mode, date, ct);
                     }
                     else if (job == "info")
                     {
                         if (current != null) continue;
-                        var user = await osuApi.GetUserAsync(uid, (GameMode)mode).WaitAsync(ct);
+                        var user = await osuApi.GetUserAsync(uid.ToString(System.Globalization.CultureInfo.InvariantCulture), (GameMode)mode).WaitAsync(ct);
                         var stats = user.Statistics ?? throw new InvalidOperationException("User statistics missing");
                         db.UserOsuInfoHistories.Add(new()
                         {
-                            OsuUid = uid, GameMode = mode, Date = date, CountryRank = stats.CountryRank,
+                            OsuUserId = uid, GameMode = mode, Date = date, CountryRank = stats.CountryRank,
                             GlobalRank = stats.GlobalRank, Pp = stats.Pp, Accuracy = stats.HitAccuracy,
-                            PlayCount = stats.PlayCount, PlayTime = stats.PlayTime, TotalHits = checked((int?)stats.TotalHits)
+                            PlayCount = stats.PlayCount, PlayTime = stats.PlayTime, TotalHits = stats.TotalHits,
+                            RankedScore = stats.RankedScore, TotalScore = stats.TotalScore, ObservedAt = DateTimeOffset.UtcNow
                         });
                         await db.SaveChangesAsync(ct);
                     }
                     else if (current != null)
                     {
                         var previous = await db.UserOsuInfoHistories.AsNoTracking()
-                            .Where(h => h.OsuUid == uid && h.GameMode == mode && h.Date < date)
+                            .Where(h => h.OsuUserId == uid && h.GameMode == mode && h.Date < date)
                             .OrderByDescending(h => h.Date).FirstOrDefaultAsync(ct);
                         if (!IsActive(current, previous)) continue;
                         // Sequential requests share the existing global quota gate with interactive API calls.
                         for (var offset = 0; offset < options.Value.RecentLimit; offset += 100)
                         {
                             var limit = Math.Min(100, options.Value.RecentLimit - offset);
-                            var scores = await osuApi.GetUserScoresAsync(int.Parse(uid), ScoreType.Recent, (GameMode)mode,
+                            var scores = await osuApi.GetUserScoresAsync(uid, ScoreType.Recent, (GameMode)mode,
                                 limit: limit, offset: offset, includeFails: true, legacyOnly: false, cancellationToken: ct);
                             saved += await history.SaveScoresAsync(scores, ct);
                             if (scores.Count < limit) break;

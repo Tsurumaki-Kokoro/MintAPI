@@ -33,7 +33,7 @@ public sealed class UserInfoControllerTests
         await connection.OpenAsync();
         await using var db = CreateDb(connection);
         await db.Database.EnsureCreatedAsync();
-        var binding = new UserModel { OsuUid = "123", Platform = "qq", PlatformUid = "100", GameMode = 3 };
+        var binding = new UserModel { OsuUserId = 123, Platform = "qq", PlatformUid = "100", GameMode = 3 };
         db.Users.Add(binding);
         await db.SaveChangesAsync();
         var api = new RecordingOsuApiService
@@ -80,7 +80,7 @@ public sealed class UserInfoControllerTests
         await connection.OpenAsync();
         await using var db = CreateDb(connection);
         await db.Database.EnsureCreatedAsync();
-        db.Users.Add(new UserModel { OsuUid = "123", Platform = "qq", PlatformUid = "100", GameMode = 3 });
+        db.Users.Add(new UserModel { OsuUserId = 123, Platform = "qq", PlatformUid = "100", GameMode = 3 });
         await db.SaveChangesAsync();
         string? target = null;
         GameMode? receivedMode = null;
@@ -144,12 +144,12 @@ public sealed class UserInfoControllerTests
         var today = new HistoryOptions().Today(DateTimeOffset.UtcNow);
         db.UserOsuInfoHistories.Add(new UserOsuInfoHistory
         {
-            OsuUid = "123", GameMode = 0, Date = today.AddDays(-7), Pp = 100
+            OsuUserId = 123, GameMode = 0, Date = today.AddDays(-7), Pp = 100
         });
         if (hasToday)
             db.UserOsuInfoHistories.Add(new UserOsuInfoHistory
             {
-                OsuUid = "123", GameMode = 0, Date = today, Pp = 200
+                OsuUserId = 123, GameMode = 0, Date = today, Pp = 200
             });
         await db.SaveChangesAsync();
         var renderer = new Renderer();

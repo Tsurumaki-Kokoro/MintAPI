@@ -37,7 +37,7 @@ public sealed class HistoryService(
         db.ScoreHistories.AddRange(missing.Select(s => new ScoreHistory
         {
             ScoreId = s.Id!.Value, UserId = s.UserId, BeatmapId = s.Beatmap!.Id,
-            GameMode = s.RulesetId, EndedAt = s.EndedAt, Payload = JsonConvert.SerializeObject(s)
+            GameMode = s.RulesetId, EndedAt = s.EndedAt, CollectedAt = DateTimeOffset.UtcNow, Payload = JsonConvert.SerializeObject(s)
         }));
         await db.SaveChangesAsync(ct);
         return missing.Length;
@@ -74,10 +74,10 @@ public sealed class HistoryService(
         external.Concat(local).Where(p => p.GlobalRank > 0 && double.IsFinite(p.Pp))
             .GroupBy(p => p.Date).Select(g => g.Last()).OrderBy(p => p.Date).ToList();
 
-    public async Task<List<HistoryPoint>> GetUserHistoryAsync(string userId, int mode, int days, CancellationToken ct)
+    public async Task<List<HistoryPoint>> GetUserHistoryAsync(int userId, int mode, int days, CancellationToken ct)
     {
         var today = options.Value.Today(DateTimeOffset.UtcNow);
-        var query = db.UserOsuInfoHistories.AsNoTracking().Where(h => h.OsuUid == userId && h.GameMode == mode && h.Date <= today);
+        var query = db.UserOsuInfoHistories.AsNoTracking().Where(h => h.OsuUserId == userId && h.GameMode == mode && h.Date <= today);
         if (days > 0) { var start = today.AddDays(-days); query = query.Where(h => h.Date >= start); }
         var rows = await query.ToListAsync(ct);
         var local = rows.Where(h => h.Pp.HasValue && h.GlobalRank is > 0)
@@ -93,7 +93,7 @@ public sealed class HistoryService(
                 try
                 {
                     var client = clients.CreateClient("OsuTrack");
-                    using var response = await client.GetAsync($"stats_history?user={Uri.EscapeDataString(userId)}&mode={mode}&from={start:yyyy-MM-dd}&to={today:yyyy-MM-dd}", ct);
+                    using var response = await client.GetAsync($"stats_history?user={userId.ToString(CultureInfo.InvariantCulture)}&mode={mode}&from={start:yyyy-MM-dd}&to={today:yyyy-MM-dd}", ct);
                     if (response.StatusCode != System.Net.HttpStatusCode.NotFound)
                     {
                         response.EnsureSuccessStatusCode();

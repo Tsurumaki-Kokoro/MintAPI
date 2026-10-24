@@ -55,7 +55,7 @@ public sealed class PlayerFeaturesController(AppDbContext db, PlayerReportServic
         if (binding == null) return ApiErrors.Result(ErrorCatalog.UserNotBound);
         var mode = game_mode ?? binding.GameMode;
         if (mode is < 0 or > 3) return ApiErrors.Result(ErrorCatalog.InvalidArgument);
-        var data = await reports.WeeklyAsync(binding.OsuUid, mode, start, ct);
+        var data = await reports.WeeklyAsync(binding.OsuUserId.ToString(System.Globalization.CultureInfo.InvariantCulture), mode, start, ct);
         return await PngAsync(() => renderer.WeeklyAsync(data, ct));
     }
 

@@ -66,8 +66,8 @@ public sealed class PlayerFeatureTests
     {
         await using var f = new Fixture(); await f.InitAsync();
         var start = new DateOnly(2026, 10, 5); var end = start.AddDays(7);
-        f.Db.UserOsuInfoHistories.AddRange(new UserOsuInfoHistory { OsuUid = "42", Date = start, Pp = 5900 },
-            new UserOsuInfoHistory { OsuUid = "42", Date = start.AddDays(2), Pp = 5950 });
+        f.Db.UserOsuInfoHistories.AddRange(new UserOsuInfoHistory { OsuUserId = 42, Date = start, Pp = 5900 },
+            new UserOsuInfoHistory { OsuUserId = 42, Date = start.AddDays(2), Pp = 5950 });
         var before = Fixture.Score(1); before.EndedAt = new DateTimeOffset(2026, 10, 4, 15, 59, 0, TimeSpan.Zero);
         var within = Fixture.Score(2); within.EndedAt = new DateTimeOffset(2026, 10, 4, 16, 0, 0, TimeSpan.Zero);
         var after = Fixture.Score(3); after.EndedAt = new DateTimeOffset(2026, 10, 11, 16, 0, 0, TimeSpan.Zero);
@@ -179,7 +179,7 @@ public sealed class PlayerFeatureTests
     public async Task New_endpoints_keep_problem_json_for_png_accept(string path, string code, int status)
     {
         await using var f = new Fixture(); await f.InitAsync();
-        f.Db.Users.Add(new() { Platform = "qq", PlatformUid = "123", OsuUid = "42" });
+        f.Db.Users.Add(new() { Platform = "qq", PlatformUid = "123", OsuUserId = 42 });
         await f.Db.SaveChangesAsync();
         await using var app = await AppAsync(f, new CaptureRenderer());
         using var http = Http(app); http.DefaultRequestHeaders.Accept.ParseAdd("image/png");
@@ -259,9 +259,9 @@ public sealed class PlayerFeatureTests
         await using var f = new Fixture(); await f.InitAsync();
         var today = f.HistoryOptions.Value.Today(DateTimeOffset.UtcNow);
         var end = today.AddDays(-((int)today.DayOfWeek + 6) % 7); var start = end.AddDays(-7);
-        f.Db.Users.Add(new() { Platform = "qq", PlatformUid = "123", OsuUid = "42" });
+        f.Db.Users.Add(new() { Platform = "qq", PlatformUid = "123", OsuUserId = 42 });
         f.Db.UserOsuInfoHistories.AddRange(Enumerable.Range(0, 8).Select(i => new UserOsuInfoHistory
-        { OsuUid = "42", Date = start.AddDays(i), Pp = 6000 + i, PlayCount = 100 + i, GlobalRank = 26000 - i }));
+        { OsuUserId = 42, Date = start.AddDays(i), Pp = 6000 + i, PlayCount = 100 + i, GlobalRank = 26000 - i }));
         var score = Fixture.Score(); score.EndedAt = new DateTimeOffset(start.AddDays(1).ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
         f.Db.BestPlaySnapshots.Add(new() { UserId = 42, Date = end, ObservedAt = DateTimeOffset.UtcNow, Payload = JsonConvert.SerializeObject(new[] { score }) });
         await f.Db.SaveChangesAsync();

@@ -22,24 +22,25 @@ public sealed class PlayerWatchService(AppDbContext db, IOsuApiService api, Play
         var now = DateTimeOffset.UtcNow;
         var group = PlayerWatchGroup.Parse(scope);
         if (group != null) scope = group.Scope;
-        var candidates = await db.PlayerSubscriptions.Where(x => x.UserId == user.Id && x.GameMode == mode).ToListAsync(ct);
-        var existing = candidates.Where(x => group != null ? PlayerWatchGroup.Parse(x.Scope) == group : x.Scope == scope)
-            .OrderByDescending(x => x.ExpiresAt > now).ThenBy(x => x.Id, StringComparer.Ordinal).FirstOrDefault();
+        var existingQuery = db.PlayerSubscriptions.Where(x => x.UserId == user.Id && x.GameMode == mode);
+        var existing = group == null
+            ? await existingQuery.SingleOrDefaultAsync(x => x.Scope == scope, ct)
+            : await existingQuery.SingleOrDefaultAsync(x => x.Platform == group.Platform && x.GroupId == group.GroupId, ct);
         if (existing != null && existing.ExpiresAt > now)
         {
             existing.ExpiresAt = now.AddDays(options.Value.SubscriptionDays);
             await SaveAsync(ct);
             return new(existing.Id, user.Id, mode, existing.StartCursor, existing.ExpiresAt);
         }
-        var subscriptions = await db.PlayerSubscriptions.AsNoTracking().ToListAsync(ct);
-        var active = subscriptions.Where(x => x.ExpiresAt > now).ToArray();
-        if (active.Length >= options.Value.MaxTrackedUsers * 10 ||
-            (!active.Any(x => x.UserId == user.Id && x.GameMode == mode)
-            && active.Select(x => (x.UserId, x.GameMode)).Distinct().Count() >= options.Value.MaxTrackedUsers))
+        var active = db.PlayerSubscriptions.AsNoTracking().Where(x => x.ExpiresAt > now);
+        var hasActiveWatch = await active.AnyAsync(x => x.UserId == user.Id && x.GameMode == mode, ct);
+        if (await active.CountAsync(ct) >= options.Value.MaxTrackedUsers * 10 ||
+            (!hasActiveWatch && await active.Select(x => new { x.UserId, x.GameMode }).Distinct().CountAsync(ct)
+                >= options.Value.MaxTrackedUsers))
             throw new ApiLookupException(ErrorCatalog.Conflict, new InvalidOperationException("Player subscription limit"));
         var watch = await db.PlayerWatches.SingleOrDefaultAsync(x => x.UserId == user.Id && x.GameMode == mode, ct);
         // An inactive watch must establish a fresh baseline: never replay activity from before subscription.
-        if (watch == null || !active.Any(x => x.UserId == user.Id && x.GameMode == mode))
+        if (watch == null || !hasActiveWatch)
         {
             var scores = await api.GetUserScoresAsync(user.Id, ScoreType.Best, (GameMode)mode,
                 limit: 100, legacyOnly: false, cancellationToken: ct);
@@ -51,7 +52,8 @@ public sealed class PlayerWatchService(AppDbContext db, IOsuApiService api, Play
         if (existing != null) db.PlayerSubscriptions.Remove(existing);
         var subscription = new PlayerSubscription
         {
-            UserId = user.Id, GameMode = mode, Scope = scope, StartCursor = watch.Revision,
+            UserId = user.Id, GameMode = mode, Scope = scope, Platform = group?.Platform, GroupId = group?.GroupId,
+            StartCursor = watch.Revision,
             ExpiresAt = now.AddDays(options.Value.SubscriptionDays)
         };
         db.PlayerSubscriptions.Add(subscription);
@@ -79,24 +81,30 @@ public sealed class PlayerWatchService(AppDbContext db, IOsuApiService api, Play
     public async Task<PlayerSubscriptionPage> ListAsync(PlayerWatchGroup? group, string? scope, int? userId,
         int? mode, bool includeExpired, int page, int pageSize, CancellationToken ct)
     {
-        var rows = await FilterSubscriptionsAsync(group, scope, userId, mode, includeExpired, ct);
-        var items = rows.OrderBy(x => x.Scope, StringComparer.Ordinal).ThenBy(x => x.UserId).ThenBy(x => x.GameMode)
-            .ThenBy(x => x.Id, StringComparer.Ordinal).Skip((page - 1) * pageSize).Take(pageSize).ToList();
+        var query = FilterSubscriptions(group, scope, userId, mode, includeExpired).AsNoTracking();
+        var total = await query.CountAsync(ct);
+        var items = await query.OrderBy(x => x.Scope).ThenBy(x => x.UserId).ThenBy(x => x.GameMode)
+            .ThenBy(x => x.Id).Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(ct);
         var userIds = items.Select(x => x.UserId).Distinct().ToArray();
         var watches = await db.PlayerWatches.AsNoTracking().Where(x => userIds.Contains(x.UserId)).ToListAsync(ct);
-        return new(page, pageSize, rows.Count, items.Select(x => Describe(x,
+        return new(page, pageSize, total, items.Select(x => Describe(x,
             watches.FirstOrDefault(w => w.UserId == x.UserId && w.GameMode == x.GameMode))).ToList());
     }
 
     public async Task<PlayerGroupPage> GroupsAsync(string? platform, bool includeExpired, int page, int pageSize, CancellationToken ct)
     {
-        var rows = await FilterSubscriptionsAsync(null, null, null, null, includeExpired, ct);
-        var groups = rows.Select(x => (Subscription: x, Group: PlayerWatchGroup.Parse(x.Scope)))
-            .Where(x => x.Group != null && (platform == null || x.Group.Platform == platform))
-            .GroupBy(x => x.Group!).OrderBy(x => x.Key.Platform, StringComparer.Ordinal)
-            .ThenBy(x => x.Key.GroupId, StringComparer.Ordinal).ToList();
-        return new(page, pageSize, groups.Count, groups.Skip((page - 1) * pageSize).Take(pageSize)
-            .Select(x => new PlayerGroupInfo(x.Key.Platform, x.Key.GroupId, x.Count(), x.Select(y => y.Subscription.UserId).Distinct().Count())).ToList());
+        var query = FilterSubscriptions(null, null, null, null, includeExpired).AsNoTracking()
+            .Where(x => x.Platform != null && x.GroupId != null);
+        if (platform != null) query = query.Where(x => x.Platform == platform);
+        var groups = query.GroupBy(x => new { x.Platform, x.GroupId }).Select(x => new
+        {
+            x.Key.Platform, x.Key.GroupId, SubscriptionCount = x.Count(), UserCount = x.Select(y => y.UserId).Distinct().Count()
+        });
+        var total = await groups.CountAsync(ct);
+        var items = await groups.OrderBy(x => x.Platform).ThenBy(x => x.GroupId)
+            .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(ct);
+        return new(page, pageSize, total, items.Select(x => new PlayerGroupInfo(
+            x.Platform!, x.GroupId!, x.SubscriptionCount, x.UserCount)).ToList());
     }
 
     public async Task<PlayerSubscriptionInfo> GetAsync(string id, PlayerWatchGroup? group, CancellationToken ct)
@@ -110,37 +118,38 @@ public sealed class PlayerWatchService(AppDbContext db, IOsuApiService api, Play
     public async Task<int> CancelGroupAsync(PlayerWatchGroup group, int? userId, int? mode, CancellationToken ct)
     {
         // Cancellation is bounded to an explicitly identified group, including its expired subscriptions.
-        var rows = await FilterSubscriptionsAsync(group, null, userId, mode, true, ct);
+        var rows = await FilterSubscriptions(group, null, userId, mode, true).ToListAsync(ct);
         db.PlayerSubscriptions.RemoveRange(rows);
         await SaveAsync(ct);
         return rows.Count;
     }
 
-    private async Task<List<PlayerSubscription>> FilterSubscriptionsAsync(PlayerWatchGroup? group, string? scope,
-        int? userId, int? mode, bool includeExpired, CancellationToken ct)
+    private IQueryable<PlayerSubscription> FilterSubscriptions(PlayerWatchGroup? group, string? scope,
+        int? userId, int? mode, bool includeExpired)
     {
         var query = db.PlayerSubscriptions.AsQueryable();
         if (userId.HasValue) query = query.Where(x => x.UserId == userId);
         if (mode.HasValue) query = query.Where(x => x.GameMode == mode);
         if (scope != null) query = query.Where(x => x.Scope == scope);
-        // Expiry comparison stays in memory for both the MySQL and SQLite providers.
-        var rows = await query.ToListAsync(ct);
-        var now = DateTimeOffset.UtcNow;
-        return rows.Where(x => (includeExpired || x.ExpiresAt > now)
-            && (group == null || PlayerWatchGroup.Parse(x.Scope) == group)).ToList();
+        if (group != null) query = query.Where(x => x.Platform == group.Platform && x.GroupId == group.GroupId);
+        if (!includeExpired)
+        {
+            var now = DateTimeOffset.UtcNow;
+            query = query.Where(x => x.ExpiresAt > now);
+        }
+        return query;
     }
 
     private static PlayerSubscriptionInfo Describe(PlayerSubscription sub, PlayerWatch? watch)
     {
-        var group = PlayerWatchGroup.Parse(sub.Scope);
         var snapshot = watch == null ? null : JsonConvert.DeserializeObject<WatchSnapshot>(watch.Payload, PlayerReportService.JsonSettings);
-        return new(sub.Id, sub.UserId, snapshot?.User.Username, sub.GameMode, sub.Scope, group?.Platform, group?.GroupId,
+        return new(sub.Id, sub.UserId, snapshot?.User.Username, sub.GameMode, sub.Scope, sub.Platform, sub.GroupId,
             sub.StartCursor, sub.ExpiresAt, sub.ExpiresAt <= DateTimeOffset.UtcNow, watch?.CheckedAt);
     }
 
     private static void EnsureGroup(PlayerSubscription sub, PlayerWatchGroup? group)
     {
-        if (group != null && PlayerWatchGroup.Parse(sub.Scope) != group)
+        if (group != null && (sub.Platform != group.Platform || sub.GroupId != group.GroupId))
             throw new ApiLookupException(ErrorCatalog.RecordNotFound, new InvalidOperationException("Subscription is outside the requested group"));
     }
 
@@ -180,8 +189,9 @@ public sealed class PlayerWatchService(AppDbContext db, IOsuApiService api, Play
             UserId = uid, GameMode = mode, Cursor = watch.Revision, ObservedAt = now, Text = text
         });
         // Retain a bounded seven-to-ninety-day replay window; report stale cursors explicitly.
-        var old = (await db.PlayerWatchEvents.Where(x => x.UserId == uid && x.GameMode == mode).ToListAsync(ct))
-            .Where(x => x.ObservedAt < now.AddDays(-options.Value.SubscriptionDays)).ToList();
+        var cutoff = now.AddDays(-options.Value.SubscriptionDays);
+        var old = await db.PlayerWatchEvents.Where(x => x.UserId == uid && x.GameMode == mode
+            && x.ObservedAt < cutoff).ToListAsync(ct);
         if (old.Count > 0)
         {
             watch.FloorCursor = Math.Max(watch.FloorCursor, old.Max(x => x.Cursor));
@@ -249,20 +259,21 @@ public sealed class PlayerWatchWorker(IServiceScopeFactory scopes, IOptions<Play
             {
                 using var scope = scopes.CreateScope();
                 var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                var subscriptions = await db.PlayerSubscriptions.AsNoTracking().ToListAsync(stoppingToken);
-                var targets = subscriptions.Where(x => x.ExpiresAt > DateTimeOffset.UtcNow)
-                    .Select(x => (x.UserId, x.GameMode)).Distinct().ToArray();
-                foreach (var (uid, mode) in targets)
+                var now = DateTimeOffset.UtcNow;
+                var targets = await db.PlayerSubscriptions.AsNoTracking().Where(x => x.ExpiresAt > now)
+                    .Select(x => new { x.UserId, x.GameMode }).Distinct().ToArrayAsync(stoppingToken);
+                foreach (var target in targets)
                 {
                     stoppingToken.ThrowIfCancellationRequested();
                     using var pollScope = scopes.CreateScope();
-                    try { await pollScope.ServiceProvider.GetRequiredService<PlayerWatchService>().PollAsync(uid, mode, stoppingToken); }
-                    catch (RetryableException ex) { logger.LogWarning(ex, "Player watch busy for {UserId} mode {Mode}; retry later", uid, mode); }
+                    try { await pollScope.ServiceProvider.GetRequiredService<PlayerWatchService>().PollAsync(target.UserId, target.GameMode, stoppingToken); }
+                    catch (RetryableException ex) { logger.LogWarning(ex, "Player watch busy for {UserId} mode {Mode}; retry later", target.UserId, target.GameMode); }
                     catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
-                    { logger.LogError(ex, "Player watch failed for {UserId} mode {Mode}; baseline preserved", uid, mode); }
+                    { logger.LogError(ex, "Player watch failed for {UserId} mode {Mode}; baseline preserved", target.UserId, target.GameMode); }
                 }
                 // Expired scopes are no longer needed, but watches preserve deduplication across restarts.
-                db.PlayerSubscriptions.RemoveRange(subscriptions.Where(x => x.ExpiresAt <= DateTimeOffset.UtcNow));
+                var expired = await db.PlayerSubscriptions.Where(x => x.ExpiresAt <= now).ToListAsync(stoppingToken);
+                db.PlayerSubscriptions.RemoveRange(expired);
                 await db.SaveChangesAsync(stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { return; }

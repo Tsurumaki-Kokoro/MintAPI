@@ -7,6 +7,7 @@ public sealed class ScoreHistory
     public int BeatmapId { get; set; }
     public int GameMode { get; set; }
     public DateTimeOffset EndedAt { get; set; }
+    public DateTimeOffset? CollectedAt { get; set; }
     public string Payload { get; set; } = "";
 }
 

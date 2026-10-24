@@ -27,7 +27,7 @@ public sealed class AvatarCardControllerTests
         await connection.OpenAsync();
         await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options);
         await db.Database.EnsureCreatedAsync();
-        db.Users.Add(new UserModel { OsuUid = "123", Platform = "qq", PlatformUid = "1" });
+        db.Users.Add(new UserModel { OsuUserId = 123, Platform = "qq", PlatformUid = "1" });
         await db.SaveChangesAsync();
         string? target = null;
         var api = new RecordingOsuApiService { UserHandler = (id, _) =>

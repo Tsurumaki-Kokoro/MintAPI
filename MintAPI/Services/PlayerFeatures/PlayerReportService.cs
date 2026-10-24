@@ -41,7 +41,7 @@ public sealed class PlayerReportService(AppDbContext db, IOsuApiService api, His
         var user = await UserAsync(uid, mode, ct);
         var end = start.AddDays(7);
         var rows = await db.UserOsuInfoHistories.AsNoTracking()
-            .Where(x => x.OsuUid == user.Id.ToString() && x.GameMode == mode && x.Date >= start && x.Date <= end)
+            .Where(x => x.OsuUserId == user.Id && x.GameMode == mode && x.Date >= start && x.Date <= end)
             .OrderBy(x => x.Date).ToListAsync(ct);
         var bp = await db.BestPlaySnapshots.AsNoTracking()
             .SingleOrDefaultAsync(x => x.UserId == user.Id && x.GameMode == mode && x.Date == end, ct);

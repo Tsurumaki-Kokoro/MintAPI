@@ -23,8 +23,8 @@ public sealed class BoundUsersHttpTests
         await connection.OpenAsync();
         await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options);
         await db.Database.EnsureCreatedAsync();
-        db.Users.Add(new UserModel { Platform = "qq", PlatformUid = "1", OsuUid = "123" });
-        db.Users.Add(new UserModel { Platform = "discord", PlatformUid = "2", OsuUid = "456" });
+        db.Users.Add(new UserModel { Platform = "qq", PlatformUid = "1", OsuUserId = 123 });
+        db.Users.Add(new UserModel { Platform = "discord", PlatformUid = "2", OsuUserId = 456 });
         await db.SaveChangesAsync();
         var builder = WebApplication.CreateSlimBuilder();
         builder.Logging.ClearProviders();

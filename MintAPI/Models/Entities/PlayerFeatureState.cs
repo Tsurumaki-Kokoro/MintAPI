@@ -25,6 +25,8 @@ public sealed class PlayerSubscription
     public int UserId { get; set; }
     public int GameMode { get; set; }
     public string Scope { get; set; } = "";
+    public string? Platform { get; set; }
+    public string? GroupId { get; set; }
     public long StartCursor { get; set; }
     public DateTimeOffset ExpiresAt { get; set; }
 }

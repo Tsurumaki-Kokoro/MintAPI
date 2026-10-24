@@ -33,7 +33,7 @@ public sealed class ScoreErrorContractTests
         await db.Database.EnsureCreatedAsync();
         if (scenario != "unbound")
         {
-            db.Users.Add(new UserModel { Platform = "Test", PlatformUid = "123", OsuUid = "6764156", GameMode = 0 });
+            db.Users.Add(new UserModel { Platform = "Test", PlatformUid = "123", OsuUserId = 6764156, GameMode = 0 });
             await db.SaveChangesAsync();
         }
         var api = new RecordingOsuApiService

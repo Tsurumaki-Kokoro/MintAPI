@@ -61,7 +61,7 @@ public class UserInfoController(
         if (string.IsNullOrWhiteSpace(target) && userModel is null)
             return ApiErrors.Result(ErrorCatalog.UserNotBound, diagnostic: "User not found");
 
-        target = string.IsNullOrWhiteSpace(target) ? userModel!.OsuUid : target;
+        target = string.IsNullOrWhiteSpace(target) ? userModel!.OsuUserId.ToString(System.Globalization.CultureInfo.InvariantCulture) : target;
         var gameModeInt = game_mode ?? userModel?.GameMode ?? 0;
         if (gameModeInt is < 0 or > 3)
             return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "Invalid bound game mode.");
@@ -88,7 +88,7 @@ public class UserInfoController(
         if (compare_with.GetValueOrDefault() == 0)
         {
             history = await db.UserOsuInfoHistories.AsNoTracking()
-                .FirstOrDefaultAsync(h => h.OsuUid == userInfo.Id.ToString()
+                .FirstOrDefaultAsync(h => h.OsuUserId == userInfo.Id
                     && h.GameMode == gameModeInt && h.Date == today);
         }
         else
@@ -97,7 +97,7 @@ public class UserInfoController(
             var compareDay = (long)today.DayNumber - compare_with!.Value;
             // Try to find the record closest to the target date
             var candidates = await db.UserOsuInfoHistories.AsNoTracking()
-                .Where(h => h.OsuUid == userInfo.Id.ToString() && h.GameMode == gameModeInt)
+                .Where(h => h.OsuUserId == userInfo.Id && h.GameMode == gameModeInt)
                 .ToListAsync();
             history = candidates
                 .OrderBy(h => Math.Abs(h.Date.DayNumber - compareDay))
@@ -146,11 +146,11 @@ public class UserInfoController(
 
         try
         {
-            await imageCache.SaveUserBackgroundAsync(int.Parse(userModel.OsuUid), data);
+            await imageCache.SaveUserBackgroundAsync(userModel.OsuUserId, data);
         }
         catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
-            logger.LogError(ex, "Failed to save background for user {OsuUid}", userModel.OsuUid);
+            logger.LogError(ex, "Failed to save background for user {OsuUid}", userModel.OsuUserId);
             return ApiErrors.Result(ErrorCatalog.InternalError, diagnostic: "Failed to save background");
         }
 
@@ -182,7 +182,7 @@ public class UserInfoController(
         MintOsuApi.Models.User userInfo;
         try
         {
-            userInfo = await osuApi.GetUserAsync(userModel.OsuUid, mode);
+            userInfo = await osuApi.GetUserAsync(userModel.OsuUserId.ToString(System.Globalization.CultureInfo.InvariantCulture), mode);
         }
         catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
@@ -190,7 +190,7 @@ public class UserInfoController(
         }
         catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
-            logger.LogError(ex, "Failed to get user info for {OsuUid}", userModel.OsuUid);
+            logger.LogError(ex, "Failed to get user info for {OsuUid}", userModel.OsuUserId);
             return ApiErrors.Result(ErrorCatalog.OsuApiUnavailable, diagnostic: "Failed to get user info");
         }
 
@@ -249,7 +249,7 @@ public class UserInfoController(
         MintOsuApi.Models.User userInfo;
         try
         {
-            userInfo = await osuApi.GetUserAsync(userModel.OsuUid, mode);
+            userInfo = await osuApi.GetUserAsync(userModel.OsuUserId.ToString(System.Globalization.CultureInfo.InvariantCulture), mode);
         }
         catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
@@ -257,7 +257,7 @@ public class UserInfoController(
         }
         catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
-            logger.LogError(ex, "Failed to get user info for {OsuUid}", userModel.OsuUid);
+            logger.LogError(ex, "Failed to get user info for {OsuUid}", userModel.OsuUserId);
             return ApiErrors.Result(ErrorCatalog.OsuApiUnavailable, diagnostic: "Failed to get user info");
         }
 

@@ -47,7 +47,7 @@ public class UserController(
 
         var user = new UserModel
         {
-            OsuUid = osuUser.Id.ToString(),
+            OsuUserId = osuUser.Id,
             Platform = data.Platform,
             PlatformUid = data.PlatformUid,
             GameMode = 0

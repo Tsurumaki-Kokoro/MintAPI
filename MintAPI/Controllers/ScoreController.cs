@@ -63,7 +63,7 @@ public class ScoreController(
         User userInfo;
         try
         {
-            userInfo = await osuApi.GetUserAsync(userModel.OsuUid, mode);
+            userInfo = await osuApi.GetUserAsync(userModel.OsuUserId.ToString(System.Globalization.CultureInfo.InvariantCulture), mode);
         }
         catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
@@ -71,7 +71,7 @@ public class ScoreController(
         }
         catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
-            logger.LogError(ex, "Failed to get user info for {OsuUid}", userModel.OsuUid);
+            logger.LogError(ex, "Failed to get user info for {OsuUid}", userModel.OsuUserId);
             return ApiErrors.Result(ErrorCatalog.OsuApiUnavailable, diagnostic: "Failed to get user info");
         }
 
@@ -157,7 +157,7 @@ public class ScoreController(
         User userInfo;
         try
         {
-            userInfo = await osuApi.GetUserAsync(userModel.OsuUid, mode);
+            userInfo = await osuApi.GetUserAsync(userModel.OsuUserId.ToString(System.Globalization.CultureInfo.InvariantCulture), mode);
         }
         catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
@@ -165,7 +165,7 @@ public class ScoreController(
         }
         catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
-            logger.LogError(ex, "Failed to get user info for {OsuUid}", userModel.OsuUid);
+            logger.LogError(ex, "Failed to get user info for {OsuUid}", userModel.OsuUserId);
             return ApiErrors.Result(ErrorCatalog.OsuApiUnavailable, diagnostic: "Failed to get user info");
         }
 
@@ -224,7 +224,7 @@ public class ScoreController(
         var mode = (GameMode)(game_mode ?? binding.GameMode);
         try
         {
-            var user = await osuApi.GetUserAsync(binding.OsuUid, mode);
+            var user = await osuApi.GetUserAsync(binding.OsuUserId.ToString(System.Globalization.CultureInfo.InvariantCulture), mode);
             var scores = await osuApi.GetUserScoresAsync(user.Id, ScoreType.Best, mode, limit: 100,
                 offset: 0, legacyOnly: legacy_only, cancellationToken: cancellationToken);
             if (scores.Count == 100)
@@ -236,7 +236,7 @@ public class ScoreController(
         }
         catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
-            logger.LogError(ex, "Failed to render new BP for {OsuUid}", binding.OsuUid);
+            logger.LogError(ex, "Failed to render new BP for {OsuUid}", binding.OsuUserId);
             return ApiErrors.Result(ErrorCatalog.RenderFailed, diagnostic: "Failed to get or render new best plays");
         }
     }
@@ -264,7 +264,7 @@ public class ScoreController(
         var mode = (GameMode)(game_mode ?? binding.GameMode);
         try
         {
-            var user = await osuApi.GetUserAsync(binding.OsuUid, mode);
+            var user = await osuApi.GetUserAsync(binding.OsuUserId.ToString(System.Globalization.CultureInfo.InvariantCulture), mode);
             var scores = await osuApi.GetUserScoresAsync(user.Id, ScoreType.Best, mode, limit: 100,
                 legacyOnly: legacy_only, cancellationToken: HttpContext.RequestAborted);
             if (scores.Count == 0) return ApiErrors.Result(ErrorCatalog.BestPlayNotFound, diagnostic: "No best play record found");
@@ -276,7 +276,7 @@ public class ScoreController(
         }
         catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
-            logger.LogError(ex, "Failed to render BP Fix for {OsuUid}", binding.OsuUid);
+            logger.LogError(ex, "Failed to render BP Fix for {OsuUid}", binding.OsuUserId);
             return ApiErrors.Result(ErrorCatalog.InternalError, diagnostic: "Failed to analyze BP Fix");
         }
     }
@@ -314,7 +314,7 @@ public class ScoreController(
         User userInfo;
         try
         {
-            userInfo = await osuApi.GetUserAsync(userModel.OsuUid, mode);
+            userInfo = await osuApi.GetUserAsync(userModel.OsuUserId.ToString(System.Globalization.CultureInfo.InvariantCulture), mode);
         }
         catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
@@ -322,7 +322,7 @@ public class ScoreController(
         }
         catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
         {
-            logger.LogError(ex, "Failed to get user info for {OsuUid}", userModel.OsuUid);
+            logger.LogError(ex, "Failed to get user info for {OsuUid}", userModel.OsuUserId);
             return ApiErrors.Result(ErrorCatalog.OsuApiUnavailable, diagnostic: "Failed to get user info");
         }
 

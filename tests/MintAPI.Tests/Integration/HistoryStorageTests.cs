@@ -99,15 +99,15 @@ public sealed class HistoryStorageTests
         await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options);
         await db.Database.EnsureCreatedAsync();
         var date = new DateOnly(2026, 9, 30);
-        db.Users.AddRange(new UserModel { OsuUid = "2", Platform = "qq", PlatformUid = "1" },
-            new UserModel { OsuUid = "2", Platform = "discord", PlatformUid = "1" });
-        db.UserOsuInfoHistories.Add(new UserOsuInfoHistory { OsuUid = "2", GameMode = 0, Date = date.AddDays(-1), PlayCount = 10 });
+        db.Users.AddRange(new UserModel { OsuUserId = 2, Platform = "qq", PlatformUid = "1" },
+            new UserModel { OsuUserId = 2, Platform = "discord", PlatformUid = "1" });
+        db.UserOsuInfoHistories.Add(new UserOsuInfoHistory { OsuUserId = 2, GameMode = 0, Date = date.AddDays(-1), PlayCount = 10 });
         await db.SaveChangesAsync();
         var userCalls = 0;
         var offsets = new List<int>();
         var api = new RecordingOsuApiService
         {
-            UserHandler = (_, _) => { userCalls++; return new User { Statistics = new UserStatistics { PlayCount = 11 } }; },
+            UserHandler = (_, _) => { userCalls++; return new User { Statistics = new UserStatistics { PlayCount = 11, TotalHits = 3_000_000_000, RankedScore = 4_000_000_000, TotalScore = 5_000_000_000 } }; },
             ScoresHandler = (_, type, mode, limit, offset, fails, legacy) =>
             {
                 Assert.Equal(ScoreType.Recent, type);
@@ -128,11 +128,19 @@ public sealed class HistoryStorageTests
         var collector = new HistoryCollector(db, api, history, options, NullLogger<HistoryCollector>.Instance);
         Assert.Equal(0, await collector.RunAsync("info", date, default));
         Assert.Equal(4, userCalls);
+        var snapshot = await db.UserOsuInfoHistories.SingleAsync(x => x.OsuUserId == 2 && x.GameMode == 0 && x.Date == date);
+        Assert.Equal(3_000_000_000, snapshot.TotalHits);
+        Assert.Equal(4_000_000_000, snapshot.RankedScore);
+        Assert.Equal(5_000_000_000, snapshot.TotalScore);
+        Assert.NotNull(snapshot.ObservedAt);
+        var old = await db.UserOsuInfoHistories.SingleAsync(x => x.Date == date.AddDays(-1));
+        Assert.Null(old.ObservedAt); Assert.Null(old.RankedScore); Assert.Null(old.TotalScore);
         Assert.Equal(0, await collector.RunAsync("info", date, default));
         Assert.Equal(4, userCalls);
         Assert.Equal(0, await collector.RunAsync("scores", date, default));
         Assert.Equal(new[] { 0, 100 }, offsets);
         Assert.Equal(101, await db.ScoreHistories.CountAsync());
+        Assert.All(await db.ScoreHistories.ToListAsync(), x => Assert.NotNull(x.CollectedAt));
     }
 
     [Theory]
@@ -147,7 +155,7 @@ public sealed class HistoryStorageTests
         await db.Database.EnsureCreatedAsync();
         var options = new HistoryOptions();
         var today = options.Today(DateTimeOffset.UtcNow);
-        db.UserOsuInfoHistories.Add(new UserOsuInfoHistory { OsuUid = "2", GameMode = 0, Date = today, Pp = 500, GlobalRank = 100 });
+        db.UserOsuInfoHistories.Add(new UserOsuInfoHistory { OsuUserId = 2, GameMode = 0, Date = today, Pp = 500, GlobalRank = 100 });
         await db.SaveChangesAsync();
         var body = $$"""
             [{"timestamp":"{{today:yyyy-MM-dd}}T00:00:00Z","pp_raw":"100","pp_rank":"500"},
@@ -158,11 +166,11 @@ public sealed class HistoryStorageTests
         using var cache = new MemoryCache(new MemoryCacheOptions());
         var service = new HistoryService(db, new RecordingOsuApiService(), factory, cache,
             Options.Create(options), NullLogger<HistoryService>.Instance);
-        var points = await service.GetUserHistoryAsync("2", 0, 7, default);
+        var points = await service.GetUserHistoryAsync(2, 0, 7, default);
         Assert.Equal(status == HttpStatusCode.OK ? 2 : 1, points.Count);
         Assert.Equal(500, points[^1].Pp);
         Assert.Equal("local", points[^1].Source);
-        await service.GetUserHistoryAsync("2", 0, 7, default);
+        await service.GetUserHistoryAsync(2, 0, 7, default);
         Assert.Equal(status == HttpStatusCode.InternalServerError ? 2 : 1, factory.Calls);
     }
 }
