@@ -118,6 +118,12 @@ jobs:
         run: |
           docker build -f deploy/build-linux.Dockerfile -t mintapi-linux-builder .
           docker run --rm -v "$PWD/..:/work" -w /work/mintapi mintapi-linux-builder python3 scripts/package-release.py --rid linux-x64 --version '${{ steps.settings.outputs.version }}'
+      - name: Restore ownership of Linux package output
+        if: always() && runner.os == 'Linux'
+        run: |
+          if [ -d artifacts ]; then
+            sudo chown -R "$(id -u):$(id -g)" artifacts
+          fi
       - name: Verify all preview formats
         run: |
           CLI=MintAPI/tools/osu-preview/osu-beatmap-preview-cli
