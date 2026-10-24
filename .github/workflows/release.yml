@@ -207,10 +207,23 @@ jobs:
           MYSQL_ROOT_PASSWORD: ciRootPassword
           REDIS_PASSWORD: ciCachePassword
         run: |
+          cleanup() {
+            result=$?
+            if [ "$result" -ne 0 ]; then
+              docker compose ps -a
+              docker compose logs --no-color --tail 200
+              container=$(docker compose ps -aq mintapi)
+              if [ -n "$container" ]; then
+                docker inspect --format '{{json .State}}' "$container"
+              fi
+            fi
+            docker compose down -v || true
+            exit "$result"
+          }
+          trap cleanup EXIT
           docker compose up -d --wait --wait-timeout 240
           curl --fail -H 'access_token: ci-smoke-only' http://127.0.0.1:8080/api/info
           curl --fail -H 'access_token: ci-smoke-only' http://127.0.0.1:8080/help/image -o /tmp/help.png
-          docker compose down -v
       - name: Publish tested image tags
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
         env:
