@@ -6,10 +6,11 @@ ENV DEBIAN_FRONTEND=noninteractive DOTNET_ROOT=/usr/share/dotnet \
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates curl git build-essential python3 libicu72 libssl3 zlib1g libgssapi-krb5-2 \
     && rm -rf /var/lib/apt/lists/*
-RUN curl --proto '=https' --tlsv1.2 -sSf https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh \
+RUN curl --location --proto '=https' --tlsv1.2 -sSf https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh \
     && bash /tmp/dotnet-install.sh --channel 10.0 --install-dir /usr/share/dotnet \
+    && dotnet --info \
     && rm /tmp/dotnet-install.sh
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+RUN curl --location --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
     | sh -s -- -y --no-modify-path --profile minimal --default-toolchain stable
 RUN git config --global --add safe.directory /work/mintapi \
     && git config --global --add safe.directory /work/mint-osuapi
