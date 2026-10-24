@@ -11,5 +11,6 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://dot.net/v1/dotnet-install.sh -o
     && rm /tmp/dotnet-install.sh
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
     | sh -s -- -y --no-modify-path --profile minimal --default-toolchain stable
-RUN git config --global --add safe.directory /work/mintapi
+RUN git config --global --add safe.directory /work/mintapi \
+    && git config --global --add safe.directory /work/mint-osuapi
 WORKDIR /work/mintapi
