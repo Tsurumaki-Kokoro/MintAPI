@@ -26,6 +26,13 @@ Recent commits use a type prefix and emoji marker, for example `feat: :memo: 控
 
 Copy `MintAPI/appsettings.Development.json.example` to the ignored `appsettings.Development.json` and fill in `ApiKey`, osu! credentials, and connection strings. Do not commit secrets, `cache/`, or `logs/`. Production settings can use environment variables such as `OsuApi__ClientSecret` and `ConnectionStrings__DefaultConnection`.
 
+## Documentation
+
+- Public documentation must address either users or developers and help them complete a concrete task: installation, configuration, API integration, upgrades, troubleshooting, development, testing, or publishing. Keep instructions concise, current, and actionable.
+- Historical acceptance and validation logs, obsolete plans, implementation-process records, implementation rationale, and explanatory write-ups about internal mechanisms belong in `devdocs/`, not in the public README, `docs/`, or documentation shipped with releases. When such material must be retained, move it to `devdocs/` rather than appending it to public guides. `devdocs/` is ignored by Git; do not force-add it without an explicit user request.
+- Document current behavior, supported parameters, defaults, error contracts, limitations, and required compatibility or migration steps. Remove conversational history, repeated explanations, and superseded descriptions; do not remove information needed to use or maintain the service correctly.
+- Public documents must not depend on files in `devdocs/`, local machine paths, or private validation outputs. After reorganizing documentation, check links, heading anchors, example commands, and documentation included in release packages.
+
 ## API Error and Logging Contract
 
 - New and changed controller error branches must use `ApiErrors.Result(ErrorCatalog.X)`. Do not return raw error strings, anonymous error objects, or duplicate status/code/message definitions. Add a named `ErrorDefinition` to `MintAPI/Errors/ErrorCatalog.cs` when a distinct business result is needed; document it in `docs/api-errors.md` and test it. Error codes are client contracts: wording may change, but existing code meanings and HTTP status must remain stable unless a compatibility change is explicitly approved.
