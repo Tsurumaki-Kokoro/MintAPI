@@ -23,6 +23,7 @@ public static class ErrorCatalog
     public static readonly ErrorDefinition OsuApiUnavailable = new(502, "OSU_API_UNAVAILABLE", "osu! 服务暂时不可用，请稍后重试");
     public static readonly ErrorDefinition PreviewUnavailable = new(502, "PREVIEW_UNAVAILABLE", "预览生成服务暂时不可用，请稍后重试");
     public static readonly ErrorDefinition ServiceBusy = new(503, "SERVICE_BUSY", "服务繁忙，请稍后重试");
+    public static readonly ErrorDefinition ServiceNotReady = new(503, "SERVICE_NOT_READY", "服务依赖尚未就绪，请稍后重试");
     public static readonly ErrorDefinition RenderFailed = new(500, "RENDER_FAILED", "图片生成失败，请稍后重试");
     public static readonly ErrorDefinition InternalError = new(500, "INTERNAL_ERROR", "服务发生异常，请联系维护者");
 }

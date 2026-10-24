@@ -17,6 +17,9 @@ Log.Logger = new LoggerConfiguration().WriteTo.Console().CreateBootstrapLogger()
 try
 {
     var builder = WebApplication.CreateBuilder(args);
+    builder.Services.AddSingleton<RuntimeComponentState>();
+    builder.Services.AddSingleton<ServiceInformation>();
+    builder.Services.AddScoped<IReadinessProbe, ReadinessProbe>();
     builder.Services.AddOperationalConfiguration(builder.Configuration, builder.Environment);
     Log.Logger = OperationalConfiguration.CreateLogger(builder.Configuration,
         new StoragePaths(builder.Configuration, builder.Environment));

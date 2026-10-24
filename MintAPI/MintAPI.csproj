@@ -6,6 +6,9 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <Version Condition="'$(Version)' == ''">0.1.0</Version>
+        <BuildTimestamp Condition="'$(BuildTimestamp)' == ''">unknown</BuildTimestamp>
+        <SourceRevisionId Condition="'$(SourceRevisionId)' == ''">unknown</SourceRevisionId>
         <!-- XML 文档注释：OpenAPI 描述文字的唯一来源，见 OpenApi/XmlCommentsProvider.cs -->
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <!-- 注释只写给控制器；其余公开成员缺注释不告警 -->
@@ -48,6 +51,11 @@
     <ItemGroup>
         <!-- MintOsuApi 库引用 -->
         <ProjectReference Include="..\..\mint-osuapi\src\MintOsuApi\MintOsuApi.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <AssemblyMetadata Include="BuildTimestamp" Value="$(BuildTimestamp)" />
+        <AssemblyMetadata Include="SourceRevisionId" Value="$(SourceRevisionId)" />
     </ItemGroup>
 
     <!-- Install the pinned preview CLI before publishing; preserve executable mode on Unix. -->

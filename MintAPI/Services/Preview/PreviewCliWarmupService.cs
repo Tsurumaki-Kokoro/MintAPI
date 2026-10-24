@@ -3,7 +3,7 @@ using Microsoft.Extensions.Options;
 namespace MintAPI.Services.Preview;
 
 public sealed class PreviewCliWarmupService(IOptions<BeatmapPreviewOptions> options,
-    IPreviewCliRunner runner, ILogger<PreviewCliWarmupService> logger) : IHostedService
+    IPreviewCliRunner runner, ILogger<PreviewCliWarmupService> logger, RuntimeComponentState? components = null) : IHostedService
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -17,6 +17,7 @@ public sealed class PreviewCliWarmupService(IOptions<BeatmapPreviewOptions> opti
             if (!File.Exists(path)) throw new PreviewFailedException("Preview CLI is not installed.");
             var result = await runner.RunAsync(path, ["--version"], timeout.Token);
             if (result.ExitCode != 0) throw new PreviewFailedException(result.StandardError);
+            if (components != null) components.PreviewVersion = result.StandardOutput.Trim();
             logger.LogInformation("Preview CLI ready: {Version}", result.StandardOutput.Trim());
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)

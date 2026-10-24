@@ -33,6 +33,7 @@
 | 409 | CONFLICT | 当前状态与请求冲突 |
 | 502 | OSU_API_UNAVAILABLE | 上游服务查询失败，请稍后重试 |
 | 503 | SERVICE_BUSY | 资源繁忙，可按 Retry-After 重试 |
+| 503 | SERVICE_NOT_READY | 依赖未就绪，可按 Retry-After 重试 |
 | 500 | RENDER_FAILED | 图片生成失败 |
 | 500 | INTERNAL_ERROR | 其他服务内部错误 |
 
@@ -72,3 +73,5 @@ return ApiErrors.Result(ErrorCatalog.InternalError,
 群订阅管理沿用原有错误码：群身份缺失、不完整或与 scope 冲突为 `INVALID_ARGUMENT`；单条查询/取消的群归属不匹配为 `RECORD_NOT_FOUND`；空列表及群内取消零条为成功结果。数据库故障不能转换为空列表。详见 [订阅查询与群内取消](player-features.md#3-按群分组与查询订阅)。
 
 `GET /help/image`：帮助海报生成失败使用 `RENDER_FAILED`；渲染繁忙使用 `SERVICE_BUSY` 和 `Retry-After`，即使 `Accept: image/png` 也返回 `application/problem+json`。无需玩家绑定或 osu! 上游查询。
+
+`GET /health/ready` 依赖未就绪返回 `503 / SERVICE_NOT_READY` 与 `Retry-After: 10`，即使仅接受图片也返回 `application/problem+json`。接口说明见 [服务信息与帮助](service-info.md)。

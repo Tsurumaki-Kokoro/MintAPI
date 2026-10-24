@@ -27,7 +27,7 @@ public class ApiKeyMiddleware(RequestDelegate next, IConfiguration configuration
     {
         // OpenAPI / health 路径跳过鉴权
         var path = context.Request.Path.Value ?? string.Empty;
-        if (path.StartsWith("/openapi") || path.StartsWith("/scalar") || path.StartsWith("/health"))
+        if (path.StartsWith("/openapi") || path.StartsWith("/scalar") || path is "/health/live" or "/health/ready")
         {
             await next(context);
             return;
