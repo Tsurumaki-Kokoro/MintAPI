@@ -67,6 +67,9 @@ def package(rid, version, output, with_mysql=True):
     for name in ('cache', 'logs', 'token_cache'):
         shutil.rmtree(app / name, ignore_errors=True)
     node = app / '.playwright/node' / ('win32_x64/node.exe' if rid.startswith('win') else 'linux-x64/node')
+    if rid == 'linux-x64':
+        # The service account differs from the build user; NuGet ships Node with owner-only execution.
+        node.chmod(node.stat().st_mode | 0o055)
     env = dict(os.environ, PLAYWRIGHT_BROWSERS_PATH=str(app / 'browsers'))
     run(node, app / '.playwright/package/cli.js', 'install', '--only-shell', *(['--with-deps'] if rid == 'linux-x64' else []), 'chromium', env=env)
     launcher = 'install.ps1' if rid.startswith('win') else 'install.sh'

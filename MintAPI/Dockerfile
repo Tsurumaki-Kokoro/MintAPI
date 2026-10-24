@@ -27,13 +27,14 @@ ENV ASPNETCORE_URLS=http://+:8080 ASPNETCORE_ENVIRONMENT=Production PLAYWRIGHT_B
 WORKDIR /app
 COPY --from=build /publish/ ./
 # Install the exact browser required by the restored Playwright package. No runtime downloads.
-RUN /app/.playwright/node/linux-x64/node /app/.playwright/package/cli.js install --with-deps --only-shell chromium \
-    && /app/MintAPI --self-test \
+RUN chmod a+rx /app/.playwright/node/linux-x64/node \
+    && /app/.playwright/node/linux-x64/node /app/.playwright/package/cli.js install --with-deps --only-shell chromium \
     && mkdir -p /data/cache /data/logs /data/tokens \
     && chown -R 10001:10001 /data \
     && rm -rf /var/lib/apt/lists/*
 ENV CacheDir=/data/cache Storage__LogDirectory=/data/logs Storage__TokenCacheDirectory=/data/tokens
 USER 10001:10001
+RUN /app/MintAPI --self-test
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=10s --start-period=120s CMD ["/app/MintAPI", "--probe"]
 ENTRYPOINT ["/app/MintAPI"]
