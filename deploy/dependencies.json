@@ -1,0 +1,17 @@
+{
+  "mintOsuApi": {
+    "repository": "Tsurumaki-Kokoro/mint-osuapi",
+    "revision": "0768d18f914c4b667817e983869f797928df731b"
+  },
+  "preview": {
+    "repository": "2710165659/osu-beatmap-preview",
+    "revision": "e3883affa62ae00224a2e16e28755ea712b943bc"
+  },
+  "windowsMySql": {
+    "version": "8.4.8",
+    "url": "https://cdn.mysql.com/archives/mysql-8.4/mysql-8.4.8-winx64.zip"
+  },
+  "windowsVcRuntime": {
+    "url": "https://aka.ms/vs/17/release/vc_redist.x64.exe"
+  }
+}

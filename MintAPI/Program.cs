@@ -12,11 +12,27 @@ using Serilog;
 using StackExchange.Redis;
 using System.Threading.RateLimiting;
 
+if (args.Contains("--setup") || args.Contains("--check") || args.Contains("--self-test") || args.Contains("--probe") || args.Contains("--wait-ready"))
+{
+    Environment.ExitCode = await MintAPI.Deployment.DeploymentCommands.RunAsync(args);
+    return;
+}
+
+var bundledBrowsers = Path.Combine(AppContext.BaseDirectory, "browsers");
+if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("PLAYWRIGHT_BROWSERS_PATH")) && Directory.Exists(bundledBrowsers))
+    Environment.SetEnvironmentVariable("PLAYWRIGHT_BROWSERS_PATH", bundledBrowsers);
+
 Log.Logger = new LoggerConfiguration().WriteTo.Console().CreateBootstrapLogger();
 
 try
 {
     var builder = WebApplication.CreateBuilder(args);
+    // Installed configuration is separate from versioned application files; env/CLI remain highest priority.
+    var configFile = Environment.GetEnvironmentVariable("MINTAPI_CONFIG_FILE");
+    if (!string.IsNullOrWhiteSpace(configFile))
+        builder.Configuration.AddJsonFile(Path.GetFullPath(configFile), optional: false, reloadOnChange: false)
+            .AddEnvironmentVariables().AddCommandLine(args);
+    builder.Services.AddWindowsService(options => options.ServiceName = "MintAPI");
     builder.Services.AddSingleton<RuntimeComponentState>();
     builder.Services.AddSingleton<ServiceInformation>();
     builder.Services.AddScoped<IReadinessProbe, ReadinessProbe>();
@@ -170,6 +186,7 @@ try
 catch (Exception ex)
 {
     Log.Fatal(ex, "Application terminated unexpectedly");
+    Environment.ExitCode = 1;
 }
 finally
 {

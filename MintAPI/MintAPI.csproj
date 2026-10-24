@@ -42,6 +42,8 @@
         <!-- 模板引擎 -->
         <PackageReference Include="Scriban" Version="5.12.1" NoWarn="NU1902;NU1903;NU1904"/>
 
+        <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.1" />
+
         <!-- 日志 -->
         <PackageReference Include="Serilog.AspNetCore" Version="8.0.3"/>
         <PackageReference Include="Serilog.Sinks.File" Version="6.0.0"/>
@@ -56,6 +58,8 @@
     <ItemGroup>
         <AssemblyMetadata Include="BuildTimestamp" Value="$(BuildTimestamp)" />
         <AssemblyMetadata Include="SourceRevisionId" Value="$(SourceRevisionId)" />
+        <Content Include="../deploy/provision-*" Link="deployment/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+        <Content Include="../deploy/dependencies.json" Link="deployment/dependencies.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     </ItemGroup>
 
     <!-- Install the pinned preview CLI before publishing; preserve executable mode on Unix. -->
@@ -98,6 +102,10 @@
         <Copy SourceFiles="$(RustNativeLib)"
               DestinationFolder="$(OutDir)"
               SkipUnchangedFiles="true" />
+    </Target>
+
+    <Target Name="CopyRosuPpFfiToPublish" AfterTargets="Publish" DependsOnTargets="BuildRosuPpFfi">
+        <Copy SourceFiles="$(RustNativeLib)" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" />
     </Target>
 
     <!-- 单一来源 RosuPP.cs，从 native/ 链接进来 -->

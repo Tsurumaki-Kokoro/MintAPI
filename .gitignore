@@ -31,3 +31,11 @@ MintAPI/tools/osu-preview/
 
 # 本地开发台账、审计与验证记录
 /devdocs/
+
+# Release artifacts and deployment secrets
+/artifacts/
+/deploy/.env
+/deploy/secrets/
+MintAPI/appsettings.Production.json
+
+__pycache__/

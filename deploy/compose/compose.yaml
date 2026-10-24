@@ -1,0 +1,69 @@
+services:
+  mintapi:
+    image: ${MINTAPI_IMAGE:?请在.env填写Docker Hub镜像名}:${MINTAPI_VERSION:?请填写固定版本号}
+    restart: unless-stopped
+    ports:
+      - "${MINTAPI_BIND:-127.0.0.1}:${MINTAPI_PORT:-8080}:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ApiKey: ${MINTAPI_API_KEY:?请生成API Key}
+      OsuApi__ClientId: ${OSU_CLIENT_ID:?请填写osu Client ID}
+      OsuApi__ClientSecret: ${OSU_CLIENT_SECRET:?请填写osu Client Secret}
+      ConnectionStrings__DefaultConnection: Server=mysql;Port=3306;Database=mintapi;User=mintapi;Password=${MYSQL_PASSWORD:?请生成数据库密码};
+      ConnectionStrings__Redis: redis:6379,password=${REDIS_PASSWORD:?请生成缓存密码},defaultDatabase=1
+      CacheDir: /data/cache
+      Storage__LogDirectory: /data/logs
+      Storage__TokenCacheDirectory: /data/tokens
+    volumes:
+      - mintapi-data:/data
+    shm_size: 256mb
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/app/MintAPI", "--probe"]
+      interval: 30s
+      timeout: 10s
+      start_period: 120s
+      retries: 3
+  mysql:
+    image: mysql:8.4.8
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: mintapi
+      MYSQL_USER: mintapi
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?请生成数据库密码}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?请生成root密码}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", 'MYSQL_PWD="$$MYSQL_ROOT_PASSWORD" mysql -uroot --protocol=socket --execute="SELECT 1" >/dev/null']
+      interval: 10s
+      timeout: 5s
+      start_period: 60s
+      retries: 12
+  redis:
+    image: redis:7.4.2-bookworm
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?请生成缓存密码}
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        umask 077
+        printf 'appendonly yes\nrequirepass %s\n' "$$REDIS_PASSWORD" > /data/mintapi.conf
+        exec /usr/local/bin/docker-entrypoint.sh redis-server /data/mintapi.conf
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", 'REDISCLI_AUTH="$$REDIS_PASSWORD" redis-cli ping | grep -q PONG']
+      interval: 10s
+      timeout: 5s
+      retries: 6
+volumes:
+  mintapi-data:
+  mysql-data:
+  redis-data:
