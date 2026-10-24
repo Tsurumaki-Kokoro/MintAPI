@@ -91,7 +91,7 @@ jobs:
       - uses: ilammy/msvc-dev-cmd@v1
         if: runner.os == 'Windows'
       - name: Build solution
-        run: dotnet build MintAPI.sln -c Release
+        run: dotnet build MintAPI.sln -c Release -p:Platform="Any CPU"
       - name: Install test browser
         run: |
           if [ "$RUNNER_OS" = Windows ]; then
@@ -100,7 +100,7 @@ jobs:
             MintAPI/bin/Release/net10.0/.playwright/node/linux-x64/node MintAPI/bin/Release/net10.0/.playwright/package/cli.js install --with-deps --only-shell chromium
           fi
       - name: Test solution
-        run: dotnet test MintAPI.sln -c Release --no-build
+        run: dotnet test MintAPI.sln -c Release -p:Platform="Any CPU" --no-build
       - name: Validate deployment scripts
         run: python -m unittest discover -s tests/deployment -v
       - name: Package Windows and execute bundled self-test

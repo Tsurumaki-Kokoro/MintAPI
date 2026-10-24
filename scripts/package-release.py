@@ -57,7 +57,7 @@ def package(rid, version, output, with_mysql=True):
     # Native engine and FFI are built here; operators never need Cargo or an SDK.
     run(sys.executable, ROOT / 'scripts/install-preview-cli.py')
     run('dotnet', 'publish', 'MintAPI/MintAPI.csproj', '-c', 'Release', '-r', rid, '--self-contained', 'true',
-        '-o', app, f'-p:Version={version}', f'-p:SourceRevisionId={revision}',
+        '-o', app, '-p:Platform=AnyCPU', f'-p:Version={version}', f'-p:SourceRevisionId={revision}',
         f'-p:BuildTimestamp={datetime.now(timezone.utc).isoformat()}', '-p:PublishSingleFile=false', '-p:PublishTrimmed=false')
     native_name = 'rosu_pp_ffi.dll' if rid.startswith('win') else 'librosu_pp_ffi.so'
     shutil.copy2(ROOT / 'native/rosu-pp-ffi/target/release' / native_name, app)
