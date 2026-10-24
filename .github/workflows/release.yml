@@ -1,0 +1,235 @@
+name: Release packages
+on:
+  push:
+    tags: ['v[0-9]*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Build-only semantic version (no v prefix); manual runs do not publish'
+        required: true
+        default: '0.1.0-preview.1'
+permissions:
+  contents: read
+# Prevent docker/build-push-action from uploading its build record as an Actions artifact.
+env:
+  DOCKER_BUILD_RECORD_UPLOAD: 'false'
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate release version
+        env:
+          MANUAL_VERSION: ${{ inputs.version }}
+        run: |
+          python3 - <<'PY'
+          import os, re
+          version = os.environ.get('MANUAL_VERSION') or os.environ['GITHUB_REF_NAME'].removeprefix('v')
+          if not re.fullmatch(r'\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?', version):
+              raise SystemExit('Expected a semantic version, for example v0.1.0 or v0.1.0-preview.1')
+          PY
+      - name: Prepare draft Release for direct package uploads
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" --json isDraft --jq .isDraft > /tmp/release-draft; then
+            test "$(cat /tmp/release-draft)" = true || { echo 'Refusing to modify an already published Release'; exit 1; }
+          else
+            gh release create "$GITHUB_REF_NAME" --draft --verify-tag --generate-notes
+          fi
+  package:
+    needs: prepare
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            rid: linux-x64
+          - os: windows-2022
+            rid: win-x64
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: mintapi
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: mintapi
+      - id: settings
+        run: |
+          python - <<'PY'
+          import json, os
+          from datetime import datetime, timezone
+          from pathlib import Path
+          lock = json.loads(Path('deploy/dependencies.json').read_text())
+          version = os.environ['RELEASE_VERSION'] or os.environ['GITHUB_REF_NAME'].removeprefix('v')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as out:
+              out.write(f"library={lock['mintOsuApi']['revision']}\nversion={version}\n")
+          PY
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+      - uses: actions/checkout@v4
+        with:
+          repository: Tsurumaki-Kokoro/mint-osuapi
+          ref: ${{ steps.settings.outputs.library }}
+          path: mint-osuapi
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            10.0.x
+            8.0.x
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: ilammy/msvc-dev-cmd@v1
+        if: runner.os == 'Windows'
+      - name: Build solution
+        run: dotnet build MintAPI.sln -c Release
+      - name: Install test browser
+        run: |
+          if [ "$RUNNER_OS" = Windows ]; then
+            MintAPI/bin/Release/net10.0/.playwright/node/win32_x64/node.exe MintAPI/bin/Release/net10.0/.playwright/package/cli.js install --only-shell chromium
+          else
+            MintAPI/bin/Release/net10.0/.playwright/node/linux-x64/node MintAPI/bin/Release/net10.0/.playwright/package/cli.js install --with-deps --only-shell chromium
+          fi
+      - name: Test solution
+        run: dotnet test MintAPI.sln -c Release --no-build
+      - name: Validate deployment scripts
+        run: python -m unittest discover -s tests/deployment -v
+      - name: Package Windows and execute bundled self-test
+        if: runner.os == 'Windows'
+        run: python scripts/package-release.py --rid win-x64 --version '${{ steps.settings.outputs.version }}'
+      - name: Package Linux on Debian 12 baseline
+        if: runner.os == 'Linux'
+        run: |
+          docker build -f deploy/build-linux.Dockerfile -t mintapi-linux-builder .
+          docker run --rm -v "$PWD/..:/work" -w /work/mintapi mintapi-linux-builder python3 scripts/package-release.py --rid linux-x64 --version '${{ steps.settings.outputs.version }}'
+      - name: Verify all preview formats
+        run: |
+          CLI=MintAPI/tools/osu-preview/osu-beatmap-preview-cli
+          if [ "$RUNNER_OS" = Windows ]; then CLI="$CLI.exe"; fi
+          python scripts/smoke-preview-cli.py "$CLI" artifacts/preview-smoke
+      - name: Attach native package directly to draft Release
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          shopt -s nullglob
+          packages=(artifacts/*.zip artifacts/*.tar.gz artifacts/*.sha256)
+          test ${#packages[@]} -gt 0
+          gh release upload "$GITHUB_REF_NAME" "${packages[@]}" --clobber
+  docker:
+    needs: package
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: mintapi
+      - id: settings
+        working-directory: mintapi
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from datetime import datetime, timezone
+          from pathlib import Path
+          revision = json.loads(Path('deploy/dependencies.json').read_text())['mintOsuApi']['revision']
+          account = os.environ.get('DOCKERHUB_ACCOUNT') or 'mintapi-local'
+          if os.environ['GITHUB_EVENT_NAME'] == 'push' and os.environ['GITHUB_REF'].startswith('refs/tags/') and account == 'mintapi-local':
+              raise RuntimeError('Set repository variable DOCKERHUB_USERNAME before releasing')
+          version = os.environ.get('RELEASE_VERSION') or os.environ['GITHUB_REF_NAME'].removeprefix('v')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as out:
+              out.write(f"library={revision}\nversion={version}\nbuiltAt={datetime.now(timezone.utc).isoformat()}\nimage={account}/mintapi\n")
+          PY
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+          DOCKERHUB_ACCOUNT: ${{ vars.DOCKERHUB_USERNAME }}
+      - uses: actions/checkout@v4
+        with:
+          repository: Tsurumaki-Kokoro/mint-osuapi
+          ref: ${{ steps.settings.outputs.library }}
+          path: mint-osuapi
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - id: metadata
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.settings.outputs.image }}
+          tags: |
+            type=raw,value=${{ steps.settings.outputs.version }}
+            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./mintapi
+          file: ./mintapi/MintAPI/Dockerfile
+          build-contexts: mint-osuapi=./mint-osuapi
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: ${{ steps.metadata.outputs.tags }}
+          labels: ${{ steps.metadata.outputs.labels }}
+          build-args: |
+            VERSION=${{ steps.settings.outputs.version }}
+            SOURCE_REVISION=${{ github.sha }}
+            BUILD_TIMESTAMP=${{ steps.settings.outputs.builtAt }}
+      - name: Smoke Compose before publishing the image
+        working-directory: mintapi/deploy/compose
+        env:
+          MINTAPI_IMAGE: ${{ steps.settings.outputs.image }}
+          MINTAPI_VERSION: ${{ steps.settings.outputs.version }}
+          MINTAPI_API_KEY: ci-smoke-only
+          OSU_CLIENT_ID: '1'
+          OSU_CLIENT_SECRET: ci-smoke-not-real-oauth
+          MYSQL_PASSWORD: ciDatabasePassword
+          MYSQL_ROOT_PASSWORD: ciRootPassword
+          REDIS_PASSWORD: ciCachePassword
+        run: |
+          docker compose up -d --wait --wait-timeout 240
+          curl --fail -H 'access_token: ci-smoke-only' http://127.0.0.1:8080/api/info
+          curl --fail -H 'access_token: ci-smoke-only' http://127.0.0.1:8080/help/image -o /tmp/help.png
+          docker compose down -v
+      - name: Publish tested image tags
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        env:
+          TAGS: ${{ steps.metadata.outputs.tags }}
+        run: |
+          while IFS= read -r tag; do docker push "$tag"; done <<< "$TAGS"
+  github-release:
+    needs: [package, docker]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package Compose and combine checksums from Release attachments
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p artifacts
+          # Small checksum files come directly from the draft Release, not the Actions artifact service.
+          gh release download "$GITHUB_REF_NAME" --pattern '*.sha256' --dir artifacts
+          test "$(find artifacts -maxdepth 1 -name '*.sha256' | wc -l)" -eq 2
+          python3 scripts/export-doc.py docs/deployment.md deploy/compose/DEPLOYMENT.md --ref "$GITHUB_REF_NAME"
+          tar -czf artifacts/mintapi-compose.tar.gz -C deploy compose
+          cd artifacts
+          sed 's/\r$//' ./*.sha256 > SHA256SUMS
+          sha256sum mintapi-compose.tar.gz >> SHA256SUMS
+      - name: Publish Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          prerelease=()
+          if [[ "$GITHUB_REF_NAME" == *-* ]]; then prerelease=(--prerelease); fi
+          gh release upload "$GITHUB_REF_NAME" artifacts/mintapi-compose.tar.gz artifacts/SHA256SUMS --clobber
+          gh release edit "$GITHUB_REF_NAME" --draft=false "${prerelease[@]}"
