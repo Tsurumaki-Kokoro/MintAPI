@@ -160,7 +160,7 @@ public sealed class BeatmapPreviewTests : IDisposable
         Directory.CreateDirectory(_directory);
         var input = Path.Combine(_directory, "map with spaces.osu");
         if (!File.Exists(input)) File.Copy(Path.Combine(AppContext.BaseDirectory, "Fixtures", "3881559.osu"), input);
-        var executable = Path.Combine(_directory, "engine");
+        var executable = Path.Combine(_directory, OperatingSystem.IsWindows() ? "engine.exe" : "engine");
         File.WriteAllText(executable, "test engine");
         return new(Options.Create(new BeatmapPreviewOptions { ExecutablePath = executable, ImageTimeoutSeconds = timeout }),
             new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["CacheDir"] = _directory }).Build(),
