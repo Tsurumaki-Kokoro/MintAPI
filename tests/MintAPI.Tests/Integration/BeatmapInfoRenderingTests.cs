@@ -357,7 +357,7 @@ public class BeatmapInfoRenderingTests
                     Assert.Contains("792.13", capture.Html);
                     Assert.Equal(0, await page.Locator(".skills-panel").CountAsync());
                     Assert.True(await page.EvaluateAsync<bool>("document.querySelector('.performance').nextElementSibling.classList.contains('details')"));
-                    var overflowing = await page.Locator(".pp-row, .analysis-row, .fc-panel, .component-panel, .mods-panel, .skills-panel, .details, .a-value, .mod-table td").EvaluateAllAsync<string[]>("els => els.filter(e => e.scrollHeight > e.clientHeight + 1 || e.scrollWidth > e.clientWidth + 1).map(e => e.className + ': ' + e.textContent + ' [' + e.scrollWidth + '/' + e.clientWidth + ']')");
+                    var overflowing = await page.Locator(".pp-row, .analysis-row, .fc-panel, .component-panel, .mods-panel, .skills-panel, .details, .a-value, .mod-table td").EvaluateAllAsync<string[]>("els => els.filter(e => e.scrollHeight > e.clientHeight + 1 || e.scrollWidth > e.clientWidth + 1).map(e => e.className + ': ' + e.textContent + ' [' + e.scrollWidth + '/' + e.clientWidth + '; height ' + e.scrollHeight + '/' + e.clientHeight + ']')");
                     Assert.True(overflowing.Length == 0, string.Join("; ", overflowing));
                     Assert.Equal(2, await page.Locator(".curve-panel .strain-curve").CountAsync());
                     Assert.True(await page.Locator(".mod-icon-slot").EvaluateAllAsync<bool>("slots => slots.every(e => { const r = e.getBoundingClientRect(); const icon = e.firstElementChild.getBoundingClientRect(); return Math.abs((r.top + r.bottom) / 2 - (icon.top + icon.bottom) / 2) < 1; })"));
@@ -437,7 +437,8 @@ public class BeatmapInfoRenderingTests
             Assert.Equal(4, await page.Locator(".fc-panel .analysis-cell").CountAsync());
             Assert.Equal(5, await page.Locator(".mod-table tbody tr").CountAsync());
             Assert.Equal(modColumns, await page.Locator(".mod-table th").CountAsync());
-            Assert.True(await page.Locator(".pp-row, .analysis-row, .fc-panel, .component-panel, .mods-panel, .skills-panel, .details, .a-value, .mod-table td, .reference-detail, .composition-head, .skill-cell").EvaluateAllAsync<bool>("els => els.every(e => e.scrollHeight <= e.clientHeight + 1 && e.scrollWidth <= e.clientWidth + 1)"));
+            var overflowing = await page.Locator(".pp-row, .analysis-row, .fc-panel, .component-panel, .mods-panel, .skills-panel, .details, .a-value, .mod-table td, .reference-detail, .composition-head, .skill-cell").EvaluateAllAsync<string[]>("els => els.filter(e => e.scrollHeight > e.clientHeight + 1 || e.scrollWidth > e.clientWidth + 1).map(e => e.className + ': ' + e.textContent + ' [width ' + e.scrollWidth + '/' + e.clientWidth + '; height ' + e.scrollHeight + '/' + e.clientHeight + ']')");
+            Assert.True(overflowing.Length == 0, string.Join("; ", overflowing));
             Assert.True(await page.Locator(".analysis-row > section").EvaluateAllAsync<bool>("els => els.every(e => e.getBoundingClientRect().bottom <= document.querySelector('footer').getBoundingClientRect().top)"));
             Assert.True(await page.EvaluateAsync<bool>("document.querySelector('.performance').nextElementSibling.classList.contains('details')"));
             if (mode == 1)
