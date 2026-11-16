@@ -28,11 +28,13 @@ public sealed class MultiplayerData
     public string TimeRange { get; init; } = "";
     public bool Complete { get; init; }
     public IReadOnlyList<MatchRound> Rounds { get; init; } = [];
+    public int TrimStart { get; init; }
+    public int TrimEnd { get; init; }
     public int RedWins => Rounds.Count(round => round.IsTeam && round.Winner == "red");
     public int BlueWins => Rounds.Count(round => round.IsTeam && round.Winner == "blue");
     public int PlayerCount => Rounds.SelectMany(round => round.Players).Select(player => player.UserId).Distinct().Count();
 
-    public static MultiplayerData Build(MatchResponse match, string? teamType = null)
+    public static MultiplayerData Build(MatchResponse match, string? teamType = null, int trimStart = 0, int trimEnd = 0)
     {
         var users = match.Users.ToDictionary(user => user.Id);
         var games = match.EventList.Where(item => item.Game?.EndTime != null).Select(item => item.Game!)
@@ -59,6 +61,12 @@ public sealed class MultiplayerData
                 redMetric > blueMetric ? "red" : blueMetric > redMetric ? "blue" : "draw", red, blue));
         }
         if (rounds.Count == 0) throw new ArgumentException("该多人房没有已结束且包含成绩的对局。");
+        if (trimStart < 0 || trimEnd < 0)
+            throw new ArgumentException("裁剪局数必须为非负整数。");
+        if ((long)trimStart + trimEnd >= rounds.Count)
+            throw new ArgumentException($"裁剪后没有剩余对局。当前有 {rounds.Count} 局可用。");
+        if (trimStart != 0 || trimEnd != 0)
+            rounds = rounds.GetRange(trimStart, rounds.Count - trimStart - trimEnd);
         var names = Regex.Match(match.MatchInfo.Name, @"^(.+?):\s*[（(](.+?)[）)]\s+vs\s+[（(](.+?)[）)]", RegexOptions.IgnoreCase);
         var start = match.MatchInfo.StartTime.ToOffset(TimeSpan.FromHours(8));
         var end = match.MatchInfo.EndTime?.ToOffset(TimeSpan.FromHours(8));
@@ -67,7 +75,7 @@ public sealed class MultiplayerData
             MatchId = match.MatchInfo.Id, Title = names.Success ? names.Groups[1].Value : match.MatchInfo.Name,
             RedName = names.Success ? names.Groups[2].Value : "红队", BlueName = names.Success ? names.Groups[3].Value : "蓝队",
             TimeRange = $"{start:yyyy/MM/dd HH:mm} — {(end.HasValue ? end.Value.ToString("yyyy/MM/dd HH:mm", CultureInfo.InvariantCulture) : "进行中")} · UTC+8",
-            Complete = end.HasValue, Rounds = rounds
+            Complete = end.HasValue, Rounds = rounds, TrimStart = trimStart, TrimEnd = trimEnd
         };
     }
 

@@ -17,6 +17,7 @@ section{padding-top:36px}section+section{margin-top:36px;border-top:1px solid #d
 </div>
 <h1>{{ title }}</h1>
 <div class="time">{{ time_range }}</div>
+{{ if trim_note != "" }}<div class="time">{{ trim_note }}</div>{{ end }}
 <div class="summary">
 <span>
 <b>{{ game_count }}</b> 局对局</span>

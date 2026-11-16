@@ -1,3 +1,10 @@
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using MintAPI.Controllers;
+using MintAPI.Errors;
 using MintAPI.Tests.TestDoubles;
 using MintAPI.Rendering.MultiplayerTheme;
 using MintAPI.Services;
@@ -58,6 +65,96 @@ public class MultiplayerRenderingTests
         Assert.Equal(new byte[] { 0x89, 0x50, 0x4e, 0x47 }, rating[..4]);
         if (directory != null)
             await File.WriteAllBytesAsync(Path.Combine(directory, team ? "rating-team.png" : "rating-individual.png"), rating);
+    }
+
+    [Fact]
+    public async Task HTTP_trim_applies_to_history_and_rating_images_and_uses_problem_details_for_errors()
+    {
+        await using var provider = new PlaywrightBrowserProvider(NullLogger<PlaywrightBrowserProvider>.Instance);
+        await provider.StartAsync();
+        var capture = new CaptureRenderer(new PlaywrightRenderer(provider));
+        var match = MultiplayerDataTests.Sample(rounds: 17);
+        for (var id = 3; id <= 25; id++)
+            match.EventList[0].Game!.Scores.Add(new MintOsuApi.Models.LegacyScore { UserId = id, Score = 100 });
+        var upstreamUnavailable = false;
+        var api = new RecordingOsuApiService
+        {
+            MatchHandler = _ => upstreamUnavailable
+                ? throw new HttpRequestException("upstream unavailable")
+                : match
+        };
+        var builder = WebApplication.CreateSlimBuilder(new WebApplicationOptions { EnvironmentName = "Development" });
+        builder.Logging.ClearProviders();
+        builder.Services.AddControllers(options => options.Filters.Add<ApiErrorFilter>())
+            .AddApplicationPart(typeof(MultiplayerController).Assembly);
+        builder.Services.AddSingleton(new MultiplayerService(api));
+        builder.Services.AddSingleton(new MultiplayerTheme(capture, new EmptyImageCache(), NullLogger<MultiplayerTheme>.Instance));
+        await using var app = builder.Build();
+        app.MapControllers();
+        app.Urls.Add("http://127.0.0.1:0");
+        await app.StartAsync();
+        using var http = new HttpClient
+        {
+            BaseAddress = new Uri(app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.Single())
+        };
+        http.DefaultRequestHeaders.Accept.ParseAdd("image/png");
+
+        foreach (var trim in new[] { "", "-1,0", "2", "2147483648,0" })
+        {
+            using var malformed = await http.GetAsync($"/multiplayer/history?mp_id=12345&trim={trim}");
+            await ApiErrorAssertions.AssertAsync(malformed, ErrorCatalog.InvalidArgument);
+        }
+        Assert.Equal(0, api.CallCount);
+        using var empty = await http.GetAsync("/multiplayer/rating?mp_id=12345&trim=2147483647,2147483647");
+        await ApiErrorAssertions.AssertAsync(empty, ErrorCatalog.InvalidArgument);
+        using var invalidPage = await http.GetAsync("/multiplayer/history?mp_id=12345&trim=2,14&page=2");
+        await ApiErrorAssertions.AssertAsync(invalidPage, ErrorCatalog.InvalidArgument);
+
+        var directory = Environment.GetEnvironmentVariable("MULTIPLAYER_PREVIEW_DIR");
+        foreach (var endpoint in new[] { "history", "rating" })
+        {
+            var url = $"/multiplayer/{endpoint}?mp_id=12345";
+            if (directory is not null)
+            {
+                Directory.CreateDirectory(directory);
+                await File.WriteAllBytesAsync(Path.Combine(directory, $"trim-before-{endpoint}.png"), await http.GetByteArrayAsync(url));
+            }
+            using var response = await http.GetAsync(url + "&trim=2%2C14");
+            response.EnsureSuccessStatusCode();
+            Assert.Equal("image/png", response.Content.Headers.ContentType?.MediaType);
+            Assert.Equal("1", response.Headers.GetValues("X-Page-Count").Single());
+            var png = await response.Content.ReadAsByteArrayAsync();
+            Assert.Equal(new byte[] { 137, 80, 78, 71 }, png[..4]);
+            Assert.Contains("已跳过开头 2 局、结尾 14 局", capture.Html);
+            if (endpoint == "history")
+            {
+                Assert.Contains("round-index\">03</span>", capture.Html);
+                Assert.Single(System.Text.RegularExpressions.Regex.Matches(capture.Html, "<section>"));
+            }
+            await CheckLayoutAsync(provider, capture);
+            if (directory is not null)
+                await File.WriteAllBytesAsync(Path.Combine(directory, $"trim-after-{endpoint}.png"), png);
+        }
+
+        using var allRatings = await http.GetAsync("/multiplayer/rating?mp_id=12345&page=0");
+        allRatings.EnsureSuccessStatusCode();
+        Assert.Equal("0", allRatings.Headers.GetValues("X-Page").Single());
+        Assert.Equal("1", allRatings.Headers.GetValues("X-Page-Count").Single());
+        Assert.Contains("全部 25 位玩家", capture.Html);
+        Assert.Equal(25, System.Text.RegularExpressions.Regex.Matches(capture.Html, "<td>\\d+</td>\\s*<td>\\s*<div class=\"player\">").Count);
+        await CheckLayoutAsync(provider, capture);
+        if (directory is not null)
+            await File.WriteAllBytesAsync(Path.Combine(directory, "rating-unpaged.png"), await allRatings.Content.ReadAsByteArrayAsync());
+
+        using var secondPage = await http.GetAsync("/multiplayer/rating?mp_id=12345&page=2");
+        secondPage.EnsureSuccessStatusCode();
+        Assert.Equal("2", secondPage.Headers.GetValues("X-Page-Count").Single());
+        Assert.Contains("<td>25</td>", capture.Html);
+        Assert.DoesNotContain("<td>24</td>", capture.Html);
+
+        upstreamUnavailable = true;
+        using var failed = await http.GetAsync("/multiplayer/history?mp_id=12345&trim=1,0");
+        await ApiErrorAssertions.AssertAsync(failed, ErrorCatalog.OsuApiUnavailable);
     }
 
     private static async Task CheckLayoutAsync(PlaywrightBrowserProvider provider, CaptureRenderer capture)

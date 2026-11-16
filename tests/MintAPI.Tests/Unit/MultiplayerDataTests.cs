@@ -80,6 +80,39 @@ public class MultiplayerDataTests
     }
 
     [Fact]
+    public void Trim_counts_only_finished_scored_games_of_selected_type_and_preserves_indices()
+    {
+        var match = Sample(rounds: 7);
+        match.EventList[0].Game!.EndTime = null;
+        match.EventList[1].Game!.TeamType = TeamType.HeadToHead;
+        match.EventList[2].Game!.Scores.Clear();
+        match.EventList[3].Game!.Scores[1].UserId = 3;
+        match.EventList[4].Game!.Scores[0].Score = 300;
+        match.EventList[6].Game!.Scores[1].Score = 300;
+
+        var data = MultiplayerData.Build(match, "team-vs", trimStart: 1, trimEnd: 1);
+
+        Assert.Equal(new[] { 2, 3 }, data.Rounds.Select(round => round.Index));
+        Assert.Equal(new[] { 5, 6 }, data.Rounds.Select(round => (int)round.Source.Id));
+        Assert.Equal(2, data.PlayerCount);
+        Assert.Equal(1, data.RedWins);
+        Assert.Equal(0, data.BlueWins);
+        Assert.All(data.Rate("osuplus"), player => Assert.Equal(2, player.Played));
+    }
+
+    [Fact]
+    public void Bathbot_recalculates_tiebreak_after_trimming_the_last_game()
+    {
+        var match = Sample(rounds: 4);
+        match.EventList[0].Game!.Scores[0].Score = 300;
+        match.EventList[1].Game!.Scores[1].Score = 300;
+        match.EventList[2].Game!.Scores[0].Score = 300;
+        var data = MultiplayerData.Build(match, trimEnd: 1);
+        var red = data.Rate("bathbot").Single(player => player.UserId == 1);
+        Assert.Equal((1.5 + .5 + 1.5 + 1.5 + 1.5) / 3 * Math.Pow(1.4, .6), red.Rating, 8);
+    }
+
+    [Fact]
     public void Accuracy_history_orders_by_accuracy_and_rating_rejects_it()
     {
         var match = Sample();

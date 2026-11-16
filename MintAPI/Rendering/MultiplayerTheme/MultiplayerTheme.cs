@@ -58,10 +58,11 @@ public sealed class MultiplayerTheme(IRenderService renderer, IImageCacheService
     {
         var players = data.Rate(algorithm);
         var pages = (players.Count + 23) / 24;
-        if (page < 1 || page > pages) throw new ArgumentException($"page 必须在 1 至 {pages} 之间。");
-        var shown = players.Skip((page - 1) * 24).Take(24).ToArray();
+        if (page < 0 || page > pages) throw new ArgumentException($"page 必须为 0 或在 1 至 {pages} 之间。");
+        var offset = page == 0 ? 0 : (page - 1) * 24;
+        var shown = page == 0 ? players : players.Skip(offset).Take(24).ToArray();
         var avatars = await AvatarsAsync(shown.Append(players[0]).Select(player => (player.UserId, player.Avatar)));
-        var values = Common(data, page, pages);
+        var values = Common(data, page, page == 0 ? 1 : pages);
         values["algorithm"] = algorithm.ToUpperInvariant();
         values["is_team"] = data.Rounds[0].IsTeam;
         values["mvp_name"] = Escape(players[0].Name);
@@ -71,7 +72,7 @@ public sealed class MultiplayerTheme(IRenderService renderer, IImageCacheService
         values["rating_player_count"] = players.Count;
         values["players"] = shown.Select((player, index) => new
         {
-            rank = (page - 1) * 24 + index + 1, name = Escape(player.Name), team = TeamClass(player.Team),
+            rank = offset + index + 1, name = Escape(player.Name), team = TeamClass(player.Team),
             team_name = player.Team switch { "red" => "红队", "blue" => "蓝队", "mixed" => "换队", _ => "个人" },
             avatar = avatars[player.UserId], initial = Escape(Initial(player.Name)),
             rating = player.Rating.ToString("0.00", CultureInfo.InvariantCulture), total = Number(player.TotalScore),
@@ -134,6 +135,8 @@ public sealed class MultiplayerTheme(IRenderService renderer, IImageCacheService
     {
         ["base_url"] = new Uri(Path.Combine(AppContext.BaseDirectory, "wwwroot") + Path.DirectorySeparatorChar).AbsoluteUri.TrimEnd('/'),
         ["match_id"] = data.MatchId, ["title"] = Escape(data.Title), ["time_range"] = data.TimeRange,
+        ["trim_note"] = data.TrimStart == 0 && data.TrimEnd == 0
+            ? "" : $"已跳过开头 {data.TrimStart} 局、结尾 {data.TrimEnd} 局",
         ["complete"] = data.Complete, ["red_name"] = Escape(data.RedName), ["blue_name"] = Escape(data.BlueName),
         ["red_wins"] = data.RedWins, ["blue_wins"] = data.BlueWins,
         ["has_teams"] = data.Rounds.Any(round => round.IsTeam),

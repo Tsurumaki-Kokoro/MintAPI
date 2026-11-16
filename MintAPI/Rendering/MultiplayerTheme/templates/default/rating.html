@@ -15,6 +15,7 @@
 </div>
 <h1>{{ title }}</h1>
 <div class="time">{{ time_range }}</div>
+{{ if trim_note != "" }}<div class="time">{{ trim_note }}</div>{{ end }}
 <div class="summary">
 <span>
 <b>{{ game_count }}</b> 局对局</span>
@@ -84,7 +85,7 @@
 </table>
 <footer>
 <span>osu! · MintAPI / Multiplayer</span>
-<span>{{ page }} / {{ pages }}</span>
+<span>{{ if page == 0 }}全部 {{ rating_player_count }} 位玩家{{ else }}{{ page }} / {{ pages }}{{ end }}</span>
 </footer>
 </main>
 </body>

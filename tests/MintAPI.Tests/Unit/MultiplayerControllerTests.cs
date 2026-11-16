@@ -44,7 +44,7 @@ public class MultiplayerControllerTests
     }
 
     [Fact]
-    public async Task History_page_zero_renders_every_round_and_rating_rejects_zero()
+    public async Task History_page_zero_renders_every_round()
     {
         var api = new RecordingOsuApiService { MatchHandler = _ => MultiplayerDataTests.Sample(rounds: 20) };
         var renderer = new StubRenderer();
@@ -54,9 +54,6 @@ public class MultiplayerControllerTests
         Assert.Equal("1", controller.Response.Headers["X-Page-Count"].ToString());
         Assert.Equal(20, System.Text.RegularExpressions.Regex.Matches(renderer.Html, "<section>").Count);
         Assert.Contains("全部 20 局", renderer.Html);
-        var calls = api.CallCount;
-        Assert.IsType<BadRequestObjectResult>(await controller.GetRating(12345, page: 0));
-        Assert.Equal(calls, api.CallCount);
     }
 
     [Fact]
