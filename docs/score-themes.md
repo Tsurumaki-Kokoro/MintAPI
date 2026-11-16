@@ -26,6 +26,16 @@ GET /score/recent_play?platform=qq&platform_uid=123&recent_index=1&recent_end=5&
 
 Standard 单条图片包含本地 AIM / SPEED / ACC PP 分项。分项不等于 API 总 PP 的拆分，也不能直接相加得到总 PP。无 Mods 显示 NM，缺失数据为“—”。
 
+## BP 谱面集数据
+
+```text
+GET /score/best_play_beatmapsets?platform=qq&platform_uid=123&game_mode=3
+```
+
+从指定绑定玩家的前 100 条 BP 提取谱面集，按谱面集 ID 去重。省略 `game_mode` 时使用绑定模式。JSON 返回 `userId`、`username`（成绩未附带用户名时为 `null`）、`gameMode` 和 `beatmapsets`。每项包含 `id`、`title`、`titleUnicode`、`artist` 和 `artistUnicode`。存在 BP 但缺少有效谱面集元数据时返回空列表。
+
+未绑定、osu! 用户不存在、该模式没有 BP 时返回对应的 404 错误码 `USER_NOT_BOUND`、`OSU_USER_NOT_FOUND`、`BEST_PLAY_NOT_FOUND`。上游服务失败返回 `OSU_API_UNAVAILABLE`，限流时按响应的 `Retry-After` 重试。参见 [API 错误契约](api-errors.md)。
+
 ## BP 补 FC 分析
 
 ```text

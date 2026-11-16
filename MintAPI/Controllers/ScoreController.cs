@@ -136,6 +136,65 @@ public class ScoreController(
         [FromQuery] int best_end = 10, [FromQuery] bool? legacy_only = null)
         => GetBestPlayAsync(platform, platform_uid, game_mode, best_index, "default", legacy_only, best_end);
 
+    /// <summary>读取绑定玩家前 100 条 BP 中的去重谱面集，供音频猜歌等接入方选题。</summary>
+    /// <param name="platform">绑定平台。</param>
+    /// <param name="platform_uid">平台用户 ID。</param>
+    /// <param name="game_mode">模式 0–3，默认使用绑定模式。</param>
+    /// <param name="ct">请求取消令牌。</param>
+    /// <response code="200">谱面集 JSON；缺少可用谱面集元数据时列表为空。</response>
+    /// <response code="400">模式或绑定参数无效。</response>
+    /// <response code="404">账号未绑定、osu! 用户不存在或该模式没有 BP。</response>
+    /// <response code="502">osu! 成绩查询失败。</response>
+    /// <response code="503">服务繁忙，可稍后重试。</response>
+    [HttpGet("best_play_beatmapsets")]
+    [Produces("application/json", "application/problem+json")]
+    [ProducesResponseType(typeof(BestPlayBeatmapsetsResponse), StatusCodes.Status200OK)]
+    public async Task<IActionResult> BestPlayBeatmapsets(
+        [FromQuery] string platform, [FromQuery] string platform_uid,
+        [FromQuery] int? game_mode = null, CancellationToken ct = default)
+    {
+        if (game_mode is < 0 or > 3)
+            return ApiErrors.Result(ErrorCatalog.InvalidArgument, message: "game_mode 必须为 0–3。");
+
+        var binding = await db.Users.AsNoTracking()
+            .FirstOrDefaultAsync(user => user.Platform == platform && user.PlatformUid == platform_uid, ct);
+        if (binding is null)
+            return ApiErrors.Result(ErrorCatalog.UserNotBound);
+
+        var mode = (GameMode)(game_mode ?? binding.GameMode);
+        List<Score> scores;
+        try
+        {
+            scores = await osuApi.GetUserScoresAsync(binding.OsuUserId, ScoreType.Best, mode, cancellationToken: ct);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            logger.LogInformation(ex, "osu! BP lookup did not find user {UserId} in {Mode}", binding.OsuUserId, mode);
+            return ApiErrors.Result(ErrorCatalog.OsuUserNotFound);
+        }
+        catch (Exception ex) when (ex is not RetryableException && ex is not OperationCanceledException)
+        {
+            logger.LogError(ex, "Failed to get best scores for user {UserId} in {Mode}", binding.OsuUserId, mode);
+            return ApiErrors.Result(ErrorCatalog.OsuApiUnavailable);
+        }
+
+        if (scores.Count == 0)
+            return ApiErrors.Result(ErrorCatalog.BestPlayNotFound);
+
+        var beatmapsets = scores.Select(score => score.Beatmapset)
+            .OfType<BeatmapsetCompact>()
+            .Where(set => set.Id > 0 && (!string.IsNullOrWhiteSpace(set.Title) || !string.IsNullOrWhiteSpace(set.TitleUnicode)))
+            .DistinctBy(set => set.Id)
+            .Select(set => new BestPlayBeatmapset(set.Id, set.Title, set.TitleUnicode, set.Artist, set.ArtistUnicode))
+            .ToArray();
+        var username = scores.Select(score => score.User?.Username)
+            .FirstOrDefault(name => !string.IsNullOrWhiteSpace(name));
+        return Ok(new BestPlayBeatmapsetsResponse(binding.OsuUserId, username, (int)mode, beatmapsets));
+    }
+
+    public sealed record BestPlayBeatmapset(int Id, string Title, string TitleUnicode, string Artist, string ArtistUnicode);
+    public sealed record BestPlayBeatmapsetsResponse(int UserId, string? Username, int GameMode, BestPlayBeatmapset[] Beatmapsets);
+
     private async Task<IActionResult> GetBestPlayAsync(string platform, string platform_uid,
         int? game_mode, int best_index, string theme, bool? legacy_only, int? best_end)
     {
