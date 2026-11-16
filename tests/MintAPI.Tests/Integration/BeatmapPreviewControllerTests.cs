@@ -39,6 +39,11 @@ public sealed class BeatmapPreviewControllerTests
             Assert.Equal(HttpStatusCode.OK, image.StatusCode);
             Assert.Equal("image/png", image.Content.Headers.ContentType!.MediaType);
             Assert.Equal(["hr", "hd"], preview.LastRequest!.Mods);
+            Assert.True(preview.LastRequest.ShowTimeLabels);
+            using var quiz = await http.GetAsync("/beatmap/preview/image?beatmap_id=1&format=gif&show_time_labels=false");
+            Assert.Equal(HttpStatusCode.OK, quiz.StatusCode);
+            Assert.Equal("image/gif", quiz.Content.Headers.ContentType!.MediaType);
+            Assert.False(preview.LastRequest!.ShowTimeLabels);
             using var rangeRequest = new HttpRequestMessage(HttpMethod.Get, "/beatmap/preview/video?beatmap_id=1");
             rangeRequest.Headers.Range = new RangeHeaderValue(0, 9);
             using var video = await http.SendAsync(rangeRequest);

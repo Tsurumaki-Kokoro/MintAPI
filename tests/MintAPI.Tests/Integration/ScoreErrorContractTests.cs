@@ -88,7 +88,7 @@ public sealed class ScoreErrorContractTests
                     "empty" => [],
                     "no-metadata" => [new Score()],
                     _ => [new Score { Beatmapset = beatmapset, User = new UserCompact { Username = "Player" } },
-                          new Score { Beatmapset = beatmapset }, new Score()]
+                          new Score { Beatmapset = beatmapset, Beatmap = new Beatmap { Id = 23, Mode = GameMode.Osu } }, new Score()]
                 };
             }
         };
@@ -121,6 +121,8 @@ public sealed class ScoreErrorContractTests
             Assert.Equal("Player", result.Username);
             var set = Assert.Single(result.Beatmapsets);
             Assert.Equal((5, "Song", "曲", "Artist"), (set.Id, set.Title, set.TitleUnicode, set.Artist));
+            Assert.Equal(23, set.BeatmapId);
+            Assert.Equal(0, set.BeatmapMode);
         }
     }
 

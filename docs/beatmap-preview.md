@@ -14,6 +14,7 @@
 - `convert`：`mania`、`ctb`、`taiko`、`standard`。仅 Standard 谱面可转换到其他模式，键数 Mod 仅用于 `convert=mania`。
 - `time_points`：图片起点，重复传入，例如 `time_points=5&time_points=10`，也可使用 `preview`。
 - `duration`：GIF 每片段时长，默认 6 秒，范围 `(0,12]`；视频时长默认 30 秒，最大 60 秒。
+- `show_time_labels=false` 隐藏 GIF 各片段的时间标签，适用于四种模式。默认显示标签。
 
 时间单位为秒，首个可玩物件为 0，允许有限负数；视频音轨开始之前静音。
 

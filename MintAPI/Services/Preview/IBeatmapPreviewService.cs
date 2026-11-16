@@ -1,7 +1,7 @@
 namespace MintAPI.Services.Preview;
 
 public record BeatmapPreviewRequest(int BeatmapId, string Format, string? Convert,
-    string[] Mods, string[] TimePoints, double? DurationSeconds, string Selection = "auto");
+    string[] Mods, string[] TimePoints, double? DurationSeconds, string Selection = "auto", bool ShowTimeLabels = true);
 public record BeatmapPreviewResult(string Path, string ContentType);
 public sealed class PreviewValidationException(string message) : Exception(message);
 public sealed class PreviewFailedException(string message) : Exception(message);

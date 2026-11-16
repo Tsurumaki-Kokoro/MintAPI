@@ -57,9 +57,7 @@ public sealed class BeatmapPreviewService : IBeatmapPreviewService
         // Keep deployment configuration deterministic and represented in the cache key.
         if (File.Exists(Path.Combine(Path.GetDirectoryName(_executable)!, "config.yml")))
             throw new PreviewFailedException("Remove the unmanaged config.yml beside the preview CLI.");
-        var cliConfig = JsonSerializer.Serialize(new { paths = new {
-            CONFIG_DIR = Path.Combine(_cacheRoot, "config"), CACHE_DIR = Path.Combine(_cacheRoot, "downloads")
-        }});
+        var cliConfig = BuildCliConfig(request.ShowTimeLabels);
         var key = Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new { request, _engineHash, cliConfig, selector = BeatmapHardestSegmentSelector.AlgorithmVersion })));
         var directory = Path.Combine(_cacheRoot, "artifacts", key);
         var outputPath = Path.Combine(directory, $"preview.{request.Format}");
@@ -95,17 +93,7 @@ public sealed class BeatmapPreviewService : IBeatmapPreviewService
                             throw new PreviewValidationException("No playable strain windows were found.");
                         request = request with { TimePoints = selection.Segments.Select(segment => segment.StartSeconds.ToString("R", CultureInfo.InvariantCulture)).ToArray() };
                         // Exact capacity prevents the upstream selector from adding unrelated auto segments.
-                        var rows = selection.Segments.Length == 4 ? 2 : 1;
-                        cliConfig = JsonSerializer.Serialize(new {
-                            paths = new { CONFIG_DIR = Path.Combine(_cacheRoot, "config"), CACHE_DIR = Path.Combine(_cacheRoot, "downloads") },
-                            render = new Dictionary<string, object> {
-                                [(int)beatmap.Mode switch { 0 => "standard", 1 => "taiko", 2 => "catch", _ => "mania" }] = new { gif = new { structure = (int)beatmap.Mode switch {
-                                    1 => (object)new { ROW_COUNT = selection.Segments.Length },
-                                    3 => new { IMAGES_PER_ROW = selection.Segments.Length },
-                                    _ => new { ROW_COUNT = rows, IMAGES_PER_ROW = selection.Segments.Length / rows }
-                                } } }
-                            }
-                        });
+                        cliConfig = BuildCliConfig(request.ShowTimeLabels, (int)beatmap.Mode, selection.Segments.Length);
                         arguments.RemoveAll(argument => argument.StartsWith("--config="));
                         arguments.Add($"--config={cliConfig}");
                         await File.WriteAllTextAsync(Path.Combine(directory, "selection.json"), JsonSerializer.Serialize(selection,
@@ -146,6 +134,35 @@ public sealed class BeatmapPreviewService : IBeatmapPreviewService
             finally { _slots.Release(); }
         }
         finally { requestLock.Release(); }
+    }
+
+    private string BuildCliConfig(bool showTimeLabels, int? selectedMode = null, int segmentCount = 0)
+    {
+        var paths = new { CONFIG_DIR = Path.Combine(_cacheRoot, "config"), CACHE_DIR = Path.Combine(_cacheRoot, "downloads") };
+        if (showTimeLabels && selectedMode is null)
+            return JsonSerializer.Serialize(new { paths });
+
+        var modes = new[] { "standard", "taiko", "catch", "mania" };
+        var render = new Dictionary<string, object>();
+        for (var mode = 0; mode < modes.Length; mode++)
+        {
+            var gif = new Dictionary<string, object>();
+            if (!showTimeLabels)
+                gif["style"] = new { SHOW_TIME_LABEL = false };
+            if (selectedMode == mode)
+            {
+                var rows = segmentCount == 4 ? 2 : 1;
+                gif["structure"] = mode switch
+                {
+                    1 => (object)new { ROW_COUNT = segmentCount },
+                    3 => new { IMAGES_PER_ROW = segmentCount },
+                    _ => new { ROW_COUNT = rows, IMAGES_PER_ROW = segmentCount / rows }
+                };
+            }
+            if (gif.Count > 0)
+                render[modes[mode]] = new { gif };
+        }
+        return JsonSerializer.Serialize(new { paths, render });
     }
 
     public async Task ClearCacheAsync(CancellationToken cancellationToken)

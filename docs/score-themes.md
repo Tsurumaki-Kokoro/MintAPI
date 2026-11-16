@@ -34,6 +34,8 @@ GET /score/best_play_beatmapsets?platform=qq&platform_uid=123&game_mode=3
 
 从指定绑定玩家的前 100 条 BP 提取谱面集，按谱面集 ID 去重。省略 `game_mode` 时使用绑定模式。JSON 返回 `userId`、`username`（成绩未附带用户名时为 `null`）、`gameMode` 和 `beatmapsets`。每项包含 `id`、`title`、`titleUnicode`、`artist` 和 `artistUnicode`。存在 BP 但缺少有效谱面集元数据时返回空列表。
 
+每项的 `beatmapId` 和 `beatmapMode` 标识首个附有难度元数据的 BP 谱面及其原生模式，可用于请求谱面预览。缺少难度元数据时这两个字段为 `null`。
+
 未绑定、osu! 用户不存在、该模式没有 BP 时返回对应的 404 错误码 `USER_NOT_BOUND`、`OSU_USER_NOT_FOUND`、`BEST_PLAY_NOT_FOUND`。上游服务失败返回 `OSU_API_UNAVAILABLE`，限流时按响应的 `Retry-After` 重试。参见 [API 错误契约](api-errors.md)。
 
 ## BP 补 FC 分析

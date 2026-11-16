@@ -8,6 +8,8 @@ public static partial class PreviewRequestValidator
     public static BeatmapPreviewRequest Normalize(BeatmapPreviewRequest request, BeatmapPreviewOptions options)
     {
         var format = request.Format.ToLowerInvariant();
+        if (!request.ShowTimeLabels && format != "gif")
+            throw new PreviewValidationException("Hiding time labels is supported only for GIF previews.");
         var selection = request.Selection.ToLowerInvariant();
         if (selection is not ("auto" or "hardest"))
             throw new PreviewValidationException("selection must be auto or hardest.");

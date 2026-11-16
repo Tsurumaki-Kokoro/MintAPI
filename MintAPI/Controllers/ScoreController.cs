@@ -181,18 +181,25 @@ public class ScoreController(
         if (scores.Count == 0)
             return ApiErrors.Result(ErrorCatalog.BestPlayNotFound);
 
-        var beatmapsets = scores.Select(score => score.Beatmapset)
-            .OfType<BeatmapsetCompact>()
-            .Where(set => set.Id > 0 && (!string.IsNullOrWhiteSpace(set.Title) || !string.IsNullOrWhiteSpace(set.TitleUnicode)))
-            .DistinctBy(set => set.Id)
-            .Select(set => new BestPlayBeatmapset(set.Id, set.Title, set.TitleUnicode, set.Artist, set.ArtistUnicode))
+        var beatmapsets = scores
+            .Where(score => score.Beatmapset is { Id: > 0 } set &&
+                (!string.IsNullOrWhiteSpace(set.Title) || !string.IsNullOrWhiteSpace(set.TitleUnicode)))
+            .GroupBy(score => score.Beatmapset!.Id)
+            .Select(group =>
+            {
+                var set = group.First().Beatmapset!;
+                var difficulty = group.Select(score => score.Beatmap).FirstOrDefault(map => map is { Id: > 0 });
+                return new BestPlayBeatmapset(set.Id, set.Title, set.TitleUnicode, set.Artist, set.ArtistUnicode,
+                    difficulty?.Id, (int?)difficulty?.Mode);
+            })
             .ToArray();
         var username = scores.Select(score => score.User?.Username)
             .FirstOrDefault(name => !string.IsNullOrWhiteSpace(name));
         return Ok(new BestPlayBeatmapsetsResponse(binding.OsuUserId, username, (int)mode, beatmapsets));
     }
 
-    public sealed record BestPlayBeatmapset(int Id, string Title, string TitleUnicode, string Artist, string ArtistUnicode);
+    public sealed record BestPlayBeatmapset(int Id, string Title, string TitleUnicode, string Artist, string ArtistUnicode,
+        int? BeatmapId, int? BeatmapMode);
     public sealed record BestPlayBeatmapsetsResponse(int UserId, string? Username, int GameMode, BestPlayBeatmapset[] Beatmapsets);
 
     private async Task<IActionResult> GetBestPlayAsync(string platform, string platform_uid,
