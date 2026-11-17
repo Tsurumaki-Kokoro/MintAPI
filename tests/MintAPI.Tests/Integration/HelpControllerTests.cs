@@ -44,7 +44,8 @@ public sealed class HelpControllerTests
                 Assert.Equal("image/png", response.Content.Headers.ContentType?.MediaType);
                 Assert.Equal(Renderer.Png, await response.Content.ReadAsByteArrayAsync());
                 Assert.Contains("HELP", renderer.Html, StringComparison.OrdinalIgnoreCase);
-                Assert.Contains("/statme", renderer.Html);
+                Assert.Contains("<strong>statme [#天数]</strong>", renderer.Html);
+                Assert.DoesNotContain("/statme", renderer.Html);
                 Assert.Contains("Powered By MintAPI", renderer.Html);
                 Assert.Equal(HelpTheme.Width, renderer.Width);
             }
